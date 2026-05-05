@@ -1,4 +1,4 @@
-const API = "/backend";
+const API = "/api";
 
 const authHeader = (token) => ({
   "Content-Type": "application/json",

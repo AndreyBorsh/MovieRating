@@ -1,0 +1,417 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth";
+import { getMovie, getReviews, getMyRating, sendRating } from "@/lib/api";
+
+const POSTER_LG = (p) => p && `https://image.tmdb.org/t/p/w500${p}`;
+const POSTER_SM = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
+
+// Criteria definition
+const CRITERIA = [
+  { key: "overall",   label: "Общее впечатление", weight: "40%", main: true },
+  { key: "story",     label: "Сценарий",          weight: "15%" },
+  { key: "direction", label: "Режиссура",          weight: "15%" },
+  { key: "acting",    label: "Актёрская игра",     weight: "15%" },
+  { key: "visuals",   label: "Операторская работа",weight: "10%" },
+  { key: "music",     label: "Музыка и звук",      weight: "5%"  },
+];
+
+function calcScore(vals) {
+  const { overall, story, direction, acting, visuals, music } = vals;
+  const base =
+    overall   * 0.40 +
+    story     * 0.15 +
+    direction * 0.15 +
+    acting    * 0.15 +
+    visuals   * 0.10 +
+    music     * 0.05;
+  const techAvg = (story + direction + acting + visuals + music) / 5;
+  const penalty = Math.min(Math.abs(overall - techAvg) * 0.1, 0.5);
+  return Math.max(1, Math.min(10, base - penalty)).toFixed(2);
+}
+
+function ScoreColor({ score }) {
+  const n = parseFloat(score);
+  if (n >= 7.5) return "text-emerald-400";
+  if (n >= 5.5) return "text-amber-400";
+  return "text-red-400";
+}
+
+function ScoreBadge({ score, size = "lg" }) {
+  const cls = ScoreColor({ score });
+  return (
+    <span className={`font-bold ${cls} ${size === "lg" ? "text-4xl" : "text-base"}`}>
+      {score > 0 ? (typeof score === "number" ? score.toFixed(1) : score) : "—"}
+    </span>
+  );
+}
+
+function CriteriaBar({ label, value, weight, main }) {
+  const pct = ((value - 1) / 9) * 100;
+  const barColor = main ? "bg-amber-400" : "bg-slate-500";
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <div className={`w-36 shrink-0 ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
+        {label}
+      </div>
+      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className="w-6 text-right text-slate-300 font-semibold">{value}</div>
+      <div className="w-8 text-right text-slate-600 text-xs">{weight}</div>
+    </div>
+  );
+}
+
+function Slider({ criterion, value, onChange }) {
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-1.5">
+        <span
+          className={`text-sm ${criterion.main ? "text-amber-400 font-semibold" : "text-slate-300"}`}
+        >
+          {criterion.label}
+          {criterion.main && <span className="ml-1 text-xs text-slate-500">(главный)</span>}
+        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-500">{criterion.weight}</span>
+          <span
+            className={`text-lg font-bold w-8 text-right ${
+              criterion.main ? "text-amber-400" : "text-slate-100"
+            }`}
+          >
+            {value}
+          </span>
+        </div>
+      </div>
+      <input
+        type="range"
+        min="1"
+        max="10"
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+      />
+      <div className="flex justify-between text-xs text-slate-600 mt-0.5">
+        <span>1</span>
+        <span>10</span>
+      </div>
+    </div>
+  );
+}
+
+const DEFAULT_FORM = { overall: 7, story: 7, direction: 7, acting: 7, visuals: 7, music: 7 };
+
+export default function MoviePage() {
+  const { id: movieId } = useParams();
+  const { token, user } = useAuth();
+
+  const [movie, setMovie] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [myRating, setMyRating] = useState(null); // existing rating or null
+  const [form, setForm] = useState(DEFAULT_FORM);
+  const [reviewText, setReviewText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!movieId) return;
+    loadAll();
+  }, [movieId, token]);
+
+  const loadAll = async () => {
+    setLoading(true);
+    try {
+      const [movieData, reviewsData] = await Promise.all([
+        getMovie(movieId),
+        getReviews(movieId),
+      ]);
+      setMovie(movieData);
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+
+      if (token) {
+        const mine = await getMyRating(token, movieId);
+        setMyRating(mine);
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setVal = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const submit = async () => {
+    setError("");
+    setSubmitting(true);
+    try {
+      await sendRating(token, {
+        tmdb_id: parseInt(movieId),
+        ...form,
+        review: reviewText.trim() || null,
+      });
+      setSuccess(true);
+      await loadAll();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const preview = calcScore(form);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="text-slate-500 text-sm">Загрузка...</div>
+      </div>
+    );
+  }
+
+  if (!movie) {
+    return (
+      <div className="text-center py-16 text-slate-500">Фильм не найден</div>
+    );
+  }
+
+  const communityScore = movie.score || 0;
+  const ratingCount = movie.count || 0;
+
+  return (
+    <div className="space-y-8">
+      {/* ── Movie header ── */}
+      <div className="flex gap-6">
+        {POSTER_LG(movie.poster) ? (
+          <img
+            src={POSTER_LG(movie.poster)}
+            alt={movie.title}
+            className="w-40 rounded-xl object-cover shrink-0 shadow-lg"
+          />
+        ) : (
+          <div
+            className="w-40 h-56 rounded-xl shrink-0 flex items-center justify-center text-slate-600 text-5xl"
+            style={{ background: "#141d2e" }}
+          >
+            🎬
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0 py-1">
+          <h1 className="text-2xl font-bold text-slate-100">
+            {movie.title}
+            {movie.year && (
+              <span className="ml-2 text-base font-normal text-slate-500">
+                ({movie.year})
+              </span>
+            )}
+          </h1>
+
+          {movie.overview && (
+            <p className="text-sm text-slate-400 mt-2 leading-relaxed line-clamp-4">
+              {movie.overview}
+            </p>
+          )}
+
+          <div className="flex items-end gap-3 mt-4">
+            <ScoreBadge score={communityScore} size="lg" />
+            <span className="text-slate-500 text-sm mb-1">
+              средняя оценка · {ratingCount}{" "}
+              {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-[1fr_380px] gap-8">
+        {/* ── Left: reviews ── */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Рецензии ({reviews.length})
+          </h2>
+
+          {reviews.length === 0 && (
+            <div
+              className="rounded-xl p-6 text-center text-slate-500 text-sm border"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              Пока нет рецензий. Будьте первым!
+            </div>
+          )}
+
+          {reviews.map((r, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl p-4 border space-y-3"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              <div className="flex items-center justify-between">
+                <Link
+                  href={`/profile/${r.user_id}`}
+                  className="text-sm font-semibold text-amber-400 hover:underline"
+                >
+                  {r.username}
+                </Link>
+                <ScoreBadge score={r.score} size="sm" />
+              </div>
+
+              <div className="space-y-1.5">
+                {CRITERIA.map((c) => (
+                  <CriteriaBar
+                    key={c.key}
+                    label={c.label}
+                    value={r[c.key]}
+                    weight={c.weight}
+                    main={c.main}
+                  />
+                ))}
+              </div>
+
+              {r.review && (
+                <p className="text-sm text-slate-300 leading-relaxed border-t pt-3"
+                   style={{ borderColor: "#1e2d45" }}>
+                  {r.review}
+                </p>
+              )}
+
+              <div className="text-xs text-slate-600">
+                {r.created_at
+                  ? new Date(r.created_at).toLocaleDateString("ru-RU", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })
+                  : ""}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Right: rating form ── */}
+        <div>
+          {!token ? (
+            <div
+              className="rounded-xl p-6 border text-center"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              <p className="text-sm text-slate-400 mb-4">
+                Войдите, чтобы оставить оценку
+              </p>
+              <Link
+                href="/login"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
+              >
+                Войти
+              </Link>
+            </div>
+          ) : myRating ? (
+            <div
+              className="rounded-xl p-5 border space-y-3"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-slate-300">
+                  Ваша оценка
+                </span>
+                <ScoreBadge score={myRating.score} size="sm" />
+              </div>
+              <div className="space-y-1.5">
+                {CRITERIA.map((c) => (
+                  <CriteriaBar
+                    key={c.key}
+                    label={c.label}
+                    value={myRating[c.key]}
+                    weight={c.weight}
+                    main={c.main}
+                  />
+                ))}
+              </div>
+              {myRating.review && (
+                <p className="text-sm text-slate-400 border-t pt-3"
+                   style={{ borderColor: "#1e2d45" }}>
+                  {myRating.review}
+                </p>
+              )}
+              <div className="text-xs text-slate-600">Вы уже оценили этот фильм</div>
+            </div>
+          ) : success ? (
+            <div
+              className="rounded-xl p-6 border text-center"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              <div className="text-3xl mb-2">✅</div>
+              <p className="text-sm text-slate-300 font-medium">Оценка сохранена!</p>
+              <p className="text-xs text-slate-500 mt-1">Ваша рецензия добавлена</p>
+            </div>
+          ) : (
+            <div
+              className="rounded-xl p-5 border space-y-5 sticky top-20"
+              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            >
+              <h3 className="text-base font-semibold text-slate-100">
+                Оценить фильм
+              </h3>
+
+              <div className="space-y-4">
+                {CRITERIA.map((c) => (
+                  <Slider
+                    key={c.key}
+                    criterion={c}
+                    value={form[c.key]}
+                    onChange={setVal(c.key)}
+                  />
+                ))}
+              </div>
+
+              {/* Live score */}
+              <div
+                className="flex items-center justify-between rounded-lg px-4 py-3 border"
+                style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+              >
+                <span className="text-sm text-slate-400">Итоговая оценка</span>
+                <span className={`text-2xl font-bold ${ScoreColor({ score: parseFloat(preview) })}`}>
+                  {preview}
+                </span>
+              </div>
+
+              {/* Review textarea */}
+              <div>
+                <label className="block text-xs font-medium text-slate-400 mb-1.5">
+                  Рецензия{" "}
+                  <span className="text-slate-600">(необязательно)</span>
+                </label>
+                <textarea
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  rows={4}
+                  placeholder="Напишите подробный отзыв о фильме..."
+                  className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50 resize-none transition"
+                  style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+                />
+              </div>
+
+              {error && (
+                <div className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">
+                  {error}
+                </div>
+              )}
+
+              <button
+                onClick={submit}
+                disabled={submitting}
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
+              >
+                {submitting ? "Отправляем..." : "Опубликовать рецензию"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

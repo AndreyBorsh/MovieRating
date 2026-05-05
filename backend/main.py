@@ -1,0 +1,488 @@
+import os
+import requests
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
+import psycopg2
+from auth import hash_password, verify_password, create_token, decode_token
+
+TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
+TMDB_BASE = "https://api.themoviedb.org/3"
+
+# Railway injects DATABASE_URL automatically when Postgres is attached
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://admin:admin123@localhost:5432/movies_db",
+)
+
+
+def get_db():
+    return psycopg2.connect(DATABASE_URL)
+
+
+def ensure_tables():
+    """Create tables on first run — safe to call on every startup."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id SERIAL PRIMARY KEY,
+            username TEXT NOT NULL,
+            email TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS movies (
+            tmdb_id INT PRIMARY KEY,
+            title TEXT NOT NULL,
+            overview TEXT,
+            poster_path TEXT,
+            release_year INT,
+            cached_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS ratings (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            tmdb_id INT REFERENCES movies(tmdb_id) ON DELETE CASCADE,
+            overall INT NOT NULL CHECK (overall BETWEEN 1 AND 10),
+            story INT NOT NULL CHECK (story BETWEEN 1 AND 10),
+            direction INT NOT NULL CHECK (direction BETWEEN 1 AND 10),
+            acting INT NOT NULL CHECK (acting BETWEEN 1 AND 10),
+            visuals INT NOT NULL CHECK (visuals BETWEEN 1 AND 10),
+            music INT NOT NULL CHECK (music BETWEEN 1 AND 10),
+            score FLOAT NOT NULL,
+            review TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, tmdb_id)
+        )
+    """)
+    conn.commit()
+    cur.close()
+    conn.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    ensure_tables()
+    yield
+
+
+app = FastAPI(title="WAW Cinema API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+def require_auth(authorization: str = Header(None)) -> dict:
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Требуется авторизация")
+    try:
+        return decode_token(authorization.split(" ", 1)[1])
+    except Exception:
+        raise HTTPException(status_code=401, detail="Недействительный токен")
+
+
+# =========================
+# SCORING FORMULA
+# =========================
+def calculate_score(overall, story, direction, acting, visuals, music) -> float:
+    """
+    Smart weighted score:
+      - Overall impression: 40% (main criterion by user intent)
+      - Story:              15%
+      - Direction:          15%
+      - Acting:             15%
+      - Visuals:            10%
+      - Music/Sound:         5%
+    Consistency penalty: if overall deviates strongly from the technical average,
+    up to 0.5 points are deducted to discourage extremely inconsistent ratings.
+    """
+    base = (
+        overall   * 0.40 +
+        story     * 0.15 +
+        direction * 0.15 +
+        acting    * 0.15 +
+        visuals   * 0.10 +
+        music     * 0.05
+    )
+    tech_avg = (story + direction + acting + visuals + music) / 5
+    penalty = min(abs(overall - tech_avg) * 0.1, 0.5)
+    return round(max(1.0, min(10.0, base - penalty)), 2)
+
+
+# =========================
+# TMDB HELPERS
+# =========================
+def fetch_tmdb_movie(tmdb_id: int) -> dict | None:
+    res = requests.get(
+        f"{TMDB_BASE}/movie/{tmdb_id}",
+        params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
+        timeout=5,
+    )
+    if res.status_code != 200:
+        return None
+    d = res.json()
+    year = None
+    if d.get("release_date"):
+        try:
+            year = int(d["release_date"][:4])
+        except ValueError:
+            pass
+    return {
+        "tmdb_id": d["id"],
+        "title": d.get("title", ""),
+        "overview": d.get("overview", ""),
+        "poster_path": d.get("poster_path"),
+        "release_year": year,
+    }
+
+
+def cache_movie(conn, tmdb_id: int):
+    cur = conn.cursor()
+    cur.execute("SELECT tmdb_id FROM movies WHERE tmdb_id=%s", (tmdb_id,))
+    if cur.fetchone():
+        cur.close()
+        return
+    movie = fetch_tmdb_movie(tmdb_id)
+    if not movie:
+        cur.close()
+        return
+    cur.execute(
+        """INSERT INTO movies (tmdb_id, title, overview, poster_path, release_year)
+           VALUES (%s, %s, %s, %s, %s) ON CONFLICT (tmdb_id) DO NOTHING""",
+        (movie["tmdb_id"], movie["title"], movie["overview"],
+         movie["poster_path"], movie["release_year"]),
+    )
+    conn.commit()
+    cur.close()
+
+
+# =========================
+# AUTH
+# =========================
+
+@app.post("/auth/register")
+def register(data: dict):
+    username = (data.get("username") or "").strip()
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not all([username, email, password]):
+        raise HTTPException(status_code=400, detail="Все поля обязательны")
+    if len(password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль минимум 6 символов")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+
+    cur.execute(
+        "INSERT INTO users (username, email, password) VALUES (%s,%s,%s)",
+        (username, email, hash_password(password)),
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return {"message": "Регистрация успешна"}
+
+
+@app.post("/auth/login")
+def login(data: dict):
+    email = (data.get("email") or "").strip().lower()
+    password = data.get("password") or ""
+
+    if not email or not password:
+        raise HTTPException(status_code=400, detail="Введите email и пароль")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, username, password FROM users WHERE email=%s", (email,))
+    user = cur.fetchone()
+    cur.close(); conn.close()
+
+    if not user or not verify_password(password, user[2]):
+        raise HTTPException(status_code=401, detail="Неверный email или пароль")
+
+    token = create_token({"user_id": user[0], "username": user[1]})
+    return {"token": token, "user_id": user[0], "username": user[1]}
+
+
+@app.get("/auth/me")
+def me(authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    return {"user_id": payload["user_id"], "username": payload["username"]}
+
+
+# =========================
+# MOVIES
+# =========================
+
+@app.get("/movies")
+def get_movies():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT m.tmdb_id, m.title, m.overview, m.poster_path, m.release_year,
+               COALESCE(AVG(r.score), 0) AS avg_score,
+               COUNT(r.id) AS rating_count
+        FROM movies m
+        LEFT JOIN ratings r ON r.tmdb_id = m.tmdb_id
+        GROUP BY m.tmdb_id, m.title, m.overview, m.poster_path, m.release_year
+        ORDER BY rating_count DESC, avg_score DESC
+    """)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [
+        {
+            "id": r[0], "title": r[1], "overview": r[2],
+            "poster": r[3], "year": r[4],
+            "score": round(float(r[5]), 2), "count": r[6],
+        }
+        for r in rows
+    ]
+
+
+@app.get("/movies/{tmdb_id}")
+def get_movie(tmdb_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT m.tmdb_id, m.title, m.overview, m.poster_path, m.release_year,
+               COALESCE(AVG(r.score), 0), COUNT(r.id)
+        FROM movies m
+        LEFT JOIN ratings r ON r.tmdb_id = m.tmdb_id
+        WHERE m.tmdb_id = %s
+        GROUP BY m.tmdb_id, m.title, m.overview, m.poster_path, m.release_year
+    """, (tmdb_id,))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+
+    if row:
+        return {
+            "id": row[0], "title": row[1], "overview": row[2],
+            "poster": row[3], "year": row[4],
+            "score": round(float(row[5]), 2), "count": row[6],
+        }
+
+    # Not cached yet — fetch from TMDB
+    movie = fetch_tmdb_movie(tmdb_id)
+    if not movie:
+        raise HTTPException(status_code=404, detail="Фильм не найден")
+    return {**movie, "id": movie["tmdb_id"], "score": 0.0, "count": 0}
+
+
+@app.get("/movies/{tmdb_id}/score")
+def get_movie_score(tmdb_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT COALESCE(AVG(score),0), COUNT(*) FROM ratings WHERE tmdb_id=%s",
+        (tmdb_id,),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    return {"score": round(float(row[0]), 2), "count": row[1]}
+
+
+# =========================
+# RATINGS
+# =========================
+
+@app.post("/ratings")
+def create_rating(data: dict, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    user_id = payload["user_id"]
+
+    tmdb_id  = data.get("tmdb_id")
+    overall  = data.get("overall")
+    story    = data.get("story")
+    direction = data.get("direction")
+    acting   = data.get("acting")
+    visuals  = data.get("visuals")
+    music    = data.get("music")
+    review   = (data.get("review") or "").strip()
+
+    if None in [tmdb_id, overall, story, direction, acting, visuals, music]:
+        raise HTTPException(status_code=400, detail="Не все критерии заполнены")
+
+    values = [overall, story, direction, acting, visuals, music]
+    if not all(isinstance(v, int) and 1 <= v <= 10 for v in values):
+        raise HTTPException(status_code=400, detail="Оценки должны быть от 1 до 10")
+
+    conn = get_db()
+    cache_movie(conn, int(tmdb_id))
+
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT id FROM ratings WHERE user_id=%s AND tmdb_id=%s",
+        (user_id, tmdb_id),
+    )
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Вы уже оценивали этот фильм")
+
+    score = calculate_score(overall, story, direction, acting, visuals, music)
+    cur.execute(
+        """INSERT INTO ratings
+           (user_id, tmdb_id, overall, story, direction, acting, visuals, music, score, review)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (user_id, tmdb_id, overall, story, direction, acting, visuals, music, score, review or None),
+    )
+    conn.commit()
+    cur.close(); conn.close()
+    return {"score": score}
+
+
+@app.get("/movies/{tmdb_id}/reviews")
+def get_reviews(tmdb_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT r.score, r.overall, r.story, r.direction, r.acting, r.visuals, r.music,
+               r.review, u.username, u.id, r.created_at
+        FROM ratings r
+        JOIN users u ON u.id = r.user_id
+        WHERE r.tmdb_id = %s
+        ORDER BY r.created_at DESC
+    """, (tmdb_id,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [
+        {
+            "score": r[0], "overall": r[1], "story": r[2],
+            "direction": r[3], "acting": r[4], "visuals": r[5], "music": r[6],
+            "review": r[7], "username": r[8], "user_id": r[9],
+            "created_at": r[10].isoformat() if r[10] else None,
+        }
+        for r in rows
+    ]
+
+
+@app.get("/movies/{tmdb_id}/my-rating")
+def get_my_rating(tmdb_id: int, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT score, overall, story, direction, acting, visuals, music, review
+        FROM ratings WHERE user_id=%s AND tmdb_id=%s
+    """, (payload["user_id"], tmdb_id))
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row:
+        return None
+    return {
+        "score": row[0], "overall": row[1], "story": row[2],
+        "direction": row[3], "acting": row[4], "visuals": row[5],
+        "music": row[6], "review": row[7],
+    }
+
+
+# =========================
+# RECENT ACTIVITY
+# =========================
+
+@app.get("/recent")
+def get_recent():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT r.score, r.review, u.username, u.id,
+               m.tmdb_id, m.title, m.poster_path, r.created_at
+        FROM ratings r
+        JOIN users u ON u.id = r.user_id
+        JOIN movies m ON m.tmdb_id = r.tmdb_id
+        ORDER BY r.created_at DESC
+        LIMIT 20
+    """)
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [
+        {
+            "score": r[0], "review": r[1],
+            "username": r[2], "user_id": r[3],
+            "movie_id": r[4], "movie_title": r[5], "poster": r[6],
+            "created_at": r[7].isoformat() if r[7] else None,
+        }
+        for r in rows
+    ]
+
+
+# =========================
+# USER PROFILE
+# =========================
+
+@app.get("/profile/{user_id}")
+def get_profile(user_id: int):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("SELECT id, username, created_at FROM users WHERE id=%s", (user_id,))
+    user = cur.fetchone()
+    if not user:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+
+    cur.execute("""
+        SELECT r.score, r.review, m.tmdb_id, m.title, m.poster_path, r.created_at,
+               r.overall, r.story, r.direction, r.acting, r.visuals, r.music
+        FROM ratings r
+        JOIN movies m ON m.tmdb_id = r.tmdb_id
+        WHERE r.user_id = %s
+        ORDER BY r.created_at DESC
+    """, (user_id,))
+    ratings = cur.fetchall()
+    cur.close(); conn.close()
+
+    return {
+        "user_id": user[0],
+        "username": user[1],
+        "joined": user[2].isoformat() if user[2] else None,
+        "ratings": [
+            {
+                "score": r[0], "review": r[1],
+                "movie_id": r[2], "movie_title": r[3], "poster": r[4],
+                "created_at": r[5].isoformat() if r[5] else None,
+                "overall": r[6], "story": r[7], "direction": r[8],
+                "acting": r[9], "visuals": r[10], "music": r[11],
+            }
+            for r in ratings
+        ],
+    }
+
+
+# =========================
+# SEARCH
+# =========================
+
+@app.get("/search")
+def search_movies(query: str):
+    res = requests.get(
+        f"{TMDB_BASE}/search/movie",
+        params={"api_key": TMDB_API_KEY, "query": query, "language": "ru-RU"},
+        timeout=5,
+    )
+    if res.status_code != 200:
+        raise HTTPException(status_code=500, detail="Ошибка TMDB")
+    data = res.json()
+    return [
+        {
+            "id": m["id"],
+            "title": m.get("title", ""),
+            "overview": m.get("overview", ""),
+            "poster": m.get("poster_path"),
+            "year": m["release_date"][:4] if m.get("release_date") else None,
+        }
+        for m in data.get("results", [])
+    ]

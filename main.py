@@ -2,8 +2,8 @@ import os
 import requests
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header, Request
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from starlette.middleware.base import BaseHTTPMiddleware
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
 
@@ -75,27 +75,26 @@ async def lifespan(app: FastAPI):
     yield
 
 
+CORS_HEADERS = {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+    "Access-Control-Max-Age": "3600",
+}
+
+
+class CORSHandler(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            return Response(status_code=200, headers=CORS_HEADERS)
+        response = await call_next(request)
+        for k, v in CORS_HEADERS.items():
+            response.headers[k] = v
+        return response
+
+
 app = FastAPI(title="WAW Cinema API", lifespan=lifespan)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.options("/{rest_of_path:path}")
-async def preflight(rest_of_path: str):
-    return Response(
-        status_code=200,
-        headers={
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
-            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
-            "Access-Control-Max-Age": "3600",
-        },
-    )
+app.add_middleware(CORSHandler)
 
 
 def require_auth(authorization: str = Header(None)) -> dict:

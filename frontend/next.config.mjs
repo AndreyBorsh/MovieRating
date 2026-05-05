@@ -1,11 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     return [
       {
         source: "/backend/:path*",
-        destination: `${apiUrl}/:path*`,
+        destination: "https://movierrating-production-5025.up.railway.app/:path*",
       },
     ];
   },

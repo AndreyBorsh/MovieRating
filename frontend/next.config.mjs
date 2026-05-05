@@ -4,7 +4,7 @@ const nextConfig = {
     return [
       {
         source: "/backend/:path*",
-        destination: "https://movierrating-production-5025.up.railway.app/:path*",
+        destination: "https://movierrating-production-fe4c.up.railway.app/:path*",
       },
     ];
   },

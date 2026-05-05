@@ -67,7 +67,10 @@ def ensure_tables():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    ensure_tables()
+    try:
+        ensure_tables()
+    except Exception as e:
+        print(f"WARNING: DB init skipped: {e}")
     yield
 
 

@@ -1,8 +1,9 @@
 import os
 import requests
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Header
+from fastapi import FastAPI, HTTPException, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
 
@@ -82,6 +83,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.options("/{rest_of_path:path}")
+async def preflight(rest_of_path: str):
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+            "Access-Control-Allow-Headers": "Authorization, Content-Type, Accept",
+            "Access-Control-Max-Age": "3600",
+        },
+    )
 
 
 def require_auth(authorization: str = Header(None)) -> dict:

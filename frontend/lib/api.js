@@ -49,9 +49,21 @@ export async function getMovieScore(id) {
   return res.json();
 }
 
-export async function getReviews(id) {
-  const res = await fetch(`${API}/movies/${id}/reviews`);
+export async function getReviews(id, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(`${API}/movies/${id}/reviews`, { headers });
   return res.json();
+}
+
+export async function reactToReview(token, ratingId, emoji) {
+  const res = await fetch(`${API}/ratings/${ratingId}/react`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ emoji }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка реакции");
+  return data;
 }
 
 export async function getMyRating(token, tmdbId) {

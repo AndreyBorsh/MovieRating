@@ -61,6 +61,16 @@ def ensure_tables():
             UNIQUE(user_id, tmdb_id)
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS reactions (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            rating_id INT REFERENCES ratings(id) ON DELETE CASCADE,
+            emoji TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, rating_id)
+        )
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -360,11 +370,18 @@ def create_rating(data: dict, authorization: str = Header(None)):
 
 
 @app.get("/movies/{tmdb_id}/reviews")
-def get_reviews(tmdb_id: int):
+def get_reviews(tmdb_id: int, authorization: str = Header(None)):
+    viewer_id = None
+    try:
+        if authorization:
+            viewer_id = decode_token(authorization.replace("Bearer ", ""))["user_id"]
+    except Exception:
+        pass
+
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT r.score, r.overall, r.story, r.direction, r.acting, r.visuals, r.music,
+        SELECT r.id, r.score, r.overall, r.story, r.direction, r.acting, r.visuals, r.music,
                r.review, u.username, u.id, r.created_at
         FROM ratings r
         JOIN users u ON u.id = r.user_id
@@ -372,16 +389,77 @@ def get_reviews(tmdb_id: int):
         ORDER BY r.created_at DESC
     """, (tmdb_id,))
     rows = cur.fetchall()
+
+    rating_ids = [r[0] for r in rows]
+    reactions_map = {}
+    my_reactions = {}
+
+    if rating_ids:
+        cur.execute("""
+            SELECT rating_id, emoji, COUNT(*) FROM reactions
+            WHERE rating_id = ANY(%s) GROUP BY rating_id, emoji
+        """, (rating_ids,))
+        for rating_id, emoji, count in cur.fetchall():
+            reactions_map.setdefault(rating_id, {})[emoji] = count
+
+        if viewer_id:
+            cur.execute("""
+                SELECT rating_id, emoji FROM reactions
+                WHERE rating_id = ANY(%s) AND user_id = %s
+            """, (rating_ids, viewer_id))
+            for rating_id, emoji in cur.fetchall():
+                my_reactions[rating_id] = emoji
+
     cur.close(); conn.close()
     return [
         {
-            "score": r[0], "overall": r[1], "story": r[2],
-            "direction": r[3], "acting": r[4], "visuals": r[5], "music": r[6],
-            "review": r[7], "username": r[8], "user_id": r[9],
-            "created_at": r[10].isoformat() if r[10] else None,
+            "rating_id": r[0], "score": r[1], "overall": r[2], "story": r[3],
+            "direction": r[4], "acting": r[5], "visuals": r[6], "music": r[7],
+            "review": r[8], "username": r[9], "user_id": r[10],
+            "created_at": r[11].isoformat() if r[11] else None,
+            "reactions": reactions_map.get(r[0], {}),
+            "my_reaction": my_reactions.get(r[0]),
         }
         for r in rows
     ]
+
+
+ALLOWED_EMOJIS = {"👍", "❤️", "🔥", "😮", "🤔"}
+
+@app.post("/ratings/{rating_id}/react")
+def react_to_review(rating_id: int, body: dict, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    emoji = body.get("emoji")
+    if emoji not in ALLOWED_EMOJIS:
+        raise HTTPException(status_code=400, detail="Invalid emoji")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM ratings WHERE id = %s", (rating_id,))
+    if not cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Rating not found")
+
+    cur.execute("SELECT emoji FROM reactions WHERE user_id=%s AND rating_id=%s",
+                (payload["user_id"], rating_id))
+    existing = cur.fetchone()
+
+    if existing and existing[0] == emoji:
+        cur.execute("DELETE FROM reactions WHERE user_id=%s AND rating_id=%s",
+                    (payload["user_id"], rating_id))
+        result = None
+    elif existing:
+        cur.execute("UPDATE reactions SET emoji=%s WHERE user_id=%s AND rating_id=%s",
+                    (emoji, payload["user_id"], rating_id))
+        result = emoji
+    else:
+        cur.execute("INSERT INTO reactions (user_id, rating_id, emoji) VALUES (%s,%s,%s)",
+                    (payload["user_id"], rating_id, emoji))
+        result = emoji
+
+    conn.commit()
+    cur.close(); conn.close()
+    return {"my_reaction": result}
 
 
 @app.get("/movies/{tmdb_id}/my-rating")

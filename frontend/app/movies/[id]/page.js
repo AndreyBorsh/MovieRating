@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, reactToReview } from "@/lib/api";
 
 const POSTER_LG = (p) => p && `https://image.tmdb.org/t/p/w500${p}`;
 const POSTER_SM = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
@@ -102,6 +102,48 @@ function Slider({ criterion, value, onChange }) {
   );
 }
 
+const EMOJIS = ["👍", "❤️", "🔥", "😮", "🤔"];
+
+function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
+  const [pending, setPending] = useState(false);
+
+  const handle = async (emoji) => {
+    if (!token || pending) return;
+    setPending(true);
+    try {
+      const res = await reactToReview(token, ratingId, emoji);
+      onUpdate(ratingId, emoji, myReaction, res.my_reaction);
+    } catch (_) {}
+    finally { setPending(false); }
+  };
+
+  return (
+    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "#1e2d45" }}>
+      {EMOJIS.map((emoji) => {
+        const count = reactions[emoji] || 0;
+        const active = myReaction === emoji;
+        return (
+          <button
+            key={emoji}
+            onClick={() => handle(emoji)}
+            disabled={!token || pending}
+            className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm transition-all
+              ${active
+                ? "bg-amber-400/20 border border-amber-400/50 text-amber-300"
+                : "border text-slate-400 hover:border-slate-500 hover:text-slate-200 disabled:opacity-40 disabled:cursor-default"
+              }`}
+            style={{ borderColor: active ? undefined : "#1e2d45" }}
+            title={!token ? "Войдите чтобы реагировать" : undefined}
+          >
+            <span>{emoji}</span>
+            {count > 0 && <span className="text-xs font-medium">{count}</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 const DEFAULT_FORM = { overall: 7, story: 7, direction: 7, acting: 7, visuals: 7, music: 7 };
 
 export default function MoviePage() {
@@ -129,7 +171,7 @@ export default function MoviePage() {
     try {
       const [movieData, reviewsData] = await Promise.all([
         getMovie(movieId),
-        getReviews(movieId),
+        getReviews(movieId, token),
       ]);
       setMovie(movieData);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
@@ -146,6 +188,16 @@ export default function MoviePage() {
   };
 
   const setVal = (key) => (val) => setForm((f) => ({ ...f, [key]: val }));
+
+  const handleReactionUpdate = (ratingId, emoji, prevEmoji, newEmoji) => {
+    setReviews((prev) => prev.map((r) => {
+      if (r.rating_id !== ratingId) return r;
+      const reactions = { ...r.reactions };
+      if (prevEmoji) reactions[prevEmoji] = Math.max(0, (reactions[prevEmoji] || 1) - 1);
+      if (newEmoji) reactions[newEmoji] = (reactions[newEmoji] || 0) + 1;
+      return { ...r, reactions, my_reaction: newEmoji };
+    }));
+  };
 
   const submit = async () => {
     setError("");
@@ -288,15 +340,25 @@ export default function MoviePage() {
                 </p>
               )}
 
-              <div className="text-xs text-slate-600">
-                {r.created_at
-                  ? new Date(r.created_at).toLocaleDateString("ru-RU", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })
-                  : ""}
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-slate-600">
+                  {r.created_at
+                    ? new Date(r.created_at).toLocaleDateString("ru-RU", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })
+                    : ""}
+                </div>
               </div>
+
+              <Reactions
+                ratingId={r.rating_id}
+                reactions={r.reactions || {}}
+                myReaction={r.my_reaction}
+                token={token}
+                onUpdate={handleReactionUpdate}
+              />
             </div>
           ))}
         </div>

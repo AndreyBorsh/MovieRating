@@ -183,9 +183,9 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
             <p className="text-xs text-slate-600">Комментариев пока нет</p>
           )}
           {comments.map((c, i) => (
-            <div key={c.id ?? i} className="flex gap-2 text-xs">
-              <span className="text-amber-400 font-medium shrink-0">{c.username}</span>
-              <span className="text-slate-400 break-words min-w-0">{c.text}</span>
+            <div key={c.id ?? i} className="text-xs overflow-hidden">
+              <span className="text-amber-400 font-medium mr-2">{c.username}</span>
+              <span className="text-slate-400 break-all">{c.text}</span>
             </div>
           ))}
 

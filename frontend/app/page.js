@@ -160,9 +160,11 @@ export default function HomePage() {
               <h2 className="text-lg font-semibold text-slate-100 mb-4">
                 Последние рецензии
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
                 {recent.slice(0, 9).map((item, i) => (
-                  <RecentCard key={i} item={item} />
+                  <div key={i} className="shrink-0 w-72 snap-start">
+                    <RecentCard item={item} />
+                  </div>
                 ))}
               </div>
             </section>

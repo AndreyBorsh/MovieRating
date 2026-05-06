@@ -185,7 +185,7 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
           {comments.map((c, i) => (
             <div key={c.id ?? i} className="flex gap-2 text-xs">
               <span className="text-amber-400 font-medium shrink-0">{c.username}</span>
-              <span className="text-slate-400">{c.text}</span>
+              <span className="text-slate-400 break-words min-w-0">{c.text}</span>
             </div>
           ))}
 

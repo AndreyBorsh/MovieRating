@@ -1,4 +1,4 @@
-const RAILWAY = "https://movierrating-production-fe4c.up.railway.app";
+const RAILWAY = "https://movierating-47ez.onrender.com";
 
 async function handler(request, context) {
   const { params } = context;

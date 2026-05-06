@@ -117,6 +117,7 @@ export default function MoviePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [overviewExpanded, setOverviewExpanded] = useState(false);
 
   useEffect(() => {
     if (!movieId) return;
@@ -213,9 +214,17 @@ export default function MoviePage() {
           </h1>
 
           {movie.overview && (
-            <p className="text-sm text-slate-400 mt-2 leading-relaxed line-clamp-4">
-              {movie.overview}
-            </p>
+            <div className="mt-2">
+              <p className={`text-sm text-slate-400 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
+                {movie.overview}
+              </p>
+              <button
+                onClick={() => setOverviewExpanded((v) => !v)}
+                className="text-xs text-amber-400 hover:text-amber-300 mt-1 transition-colors"
+              >
+                {overviewExpanded ? "Скрыть ▲" : "Читать далее ▼"}
+              </button>
+            </div>
           )}
 
           <div className="flex items-end gap-3 mt-4">

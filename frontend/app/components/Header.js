@@ -41,11 +41,12 @@ export default function Header() {
           href="/"
           className="text-lg font-bold tracking-tight text-amber-400 shrink-0"
         >
-          🎬 What's Andrew Watching
+          <span className="hidden sm:inline">🎬 What's Andrew Watching</span>
+          <span className="sm:hidden">🎬 WAW</span>
         </Link>
 
         {/* Nav */}
-        <nav className="flex items-center gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1">
           {navLink("/", "Главная")}
           {navLink("/search", "Поиск")}
           {token && navLink(`/profile/${user?.user_id}`, "Профиль")}

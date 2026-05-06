@@ -131,7 +131,7 @@ export default function HomePage() {
             Шесть критериев оценки, умный алгоритм расчёта и полноценные рецензии —
             создай собственную критическую базу кинематографа.
           </p>
-          <div className="flex gap-3 justify-center mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-6">
             <Link
               href="/register"
               className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"

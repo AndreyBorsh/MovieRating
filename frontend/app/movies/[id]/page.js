@@ -53,8 +53,8 @@ function CriteriaBar({ label, value, weight, main }) {
   const pct = ((value - 1) / 9) * 100;
   const barColor = main ? "bg-amber-400" : "bg-slate-500";
   return (
-    <div className="flex items-center gap-3 text-sm">
-      <div className={`w-36 shrink-0 ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
+    <div className="flex items-center gap-2 text-sm">
+      <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
         {label}
       </div>
       <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -186,16 +186,16 @@ export default function MoviePage() {
   return (
     <div className="space-y-8">
       {/* ── Movie header ── */}
-      <div className="flex gap-6">
+      <div className="flex flex-col sm:flex-row gap-5">
         {POSTER_LG(movie.poster) ? (
           <img
             src={POSTER_LG(movie.poster)}
             alt={movie.title}
-            className="w-40 rounded-xl object-cover shrink-0 shadow-lg"
+            className="w-32 sm:w-40 rounded-xl object-cover shrink-0 shadow-lg self-start"
           />
         ) : (
           <div
-            className="w-40 h-56 rounded-xl shrink-0 flex items-center justify-center text-slate-600 text-5xl"
+            className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-slate-600 text-5xl"
             style={{ background: "#141d2e" }}
           >
             🎬
@@ -203,7 +203,7 @@ export default function MoviePage() {
         )}
 
         <div className="flex-1 min-w-0 py-1">
-          <h1 className="text-2xl font-bold text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
             {movie.title}
             {movie.year && (
               <span className="ml-2 text-base font-normal text-slate-500">
@@ -350,7 +350,7 @@ export default function MoviePage() {
             </div>
           ) : (
             <div
-              className="rounded-xl p-5 border space-y-5 sticky top-20"
+              className="rounded-xl p-5 border space-y-5 lg:sticky lg:top-20"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <h3 className="text-base font-semibold text-slate-100">

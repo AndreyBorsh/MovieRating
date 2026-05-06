@@ -151,7 +151,7 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
 
-  const canComment = token && currentUserId !== reviewAuthorId;
+  const canComment = !!token;
 
   const submit = async () => {
     if (!text.trim()) return;

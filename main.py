@@ -498,9 +498,6 @@ def add_comment(rating_id: int, body: dict, authorization: str = Header(None)):
     if not row:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Рецензия не найдена")
-    if row[0] == payload["user_id"]:
-        cur.close(); conn.close()
-        raise HTTPException(status_code=400, detail="Нельзя комментировать свою рецензию")
     cur.execute("""
         INSERT INTO comments (user_id, rating_id, text) VALUES (%s, %s, %s)
         RETURNING id, created_at

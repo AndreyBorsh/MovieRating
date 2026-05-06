@@ -71,6 +71,15 @@ def ensure_tables():
             UNIQUE(user_id, rating_id)
         )
     """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS comments (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            rating_id INT REFERENCES ratings(id) ON DELETE CASCADE,
+            text TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
     conn.commit()
     cur.close()
     conn.close()
@@ -394,6 +403,7 @@ def get_reviews(tmdb_id: int, authorization: str = Header(None)):
     reactions_map = {}
     my_reactions = {}
 
+    comments_map = {}
     if rating_ids:
         cur.execute("""
             SELECT rating_id, emoji, COUNT(*) FROM reactions
@@ -410,6 +420,18 @@ def get_reviews(tmdb_id: int, authorization: str = Header(None)):
             for rating_id, emoji in cur.fetchall():
                 my_reactions[rating_id] = emoji
 
+        cur.execute("""
+            SELECT c.rating_id, c.id, u.username, u.id, c.text, c.created_at
+            FROM comments c JOIN users u ON u.id = c.user_id
+            WHERE c.rating_id = ANY(%s) ORDER BY c.created_at ASC
+        """, (rating_ids,))
+        for rating_id, cid, uname, uid, text, cat in cur.fetchall():
+            comments_map.setdefault(rating_id, []).append({
+                "id": cid, "username": uname, "user_id": uid,
+                "text": text,
+                "created_at": cat.isoformat() if cat else None,
+            })
+
     cur.close(); conn.close()
     return [
         {
@@ -419,12 +441,13 @@ def get_reviews(tmdb_id: int, authorization: str = Header(None)):
             "created_at": r[11].isoformat() if r[11] else None,
             "reactions": reactions_map.get(r[0], {}),
             "my_reaction": my_reactions.get(r[0]),
+            "comments": comments_map.get(r[0], []),
         }
         for r in rows
     ]
 
 
-ALLOWED_EMOJIS = {"👍", "❤️", "🔥", "😮", "🤔"}
+ALLOWED_EMOJIS = {"👍", "❤️", "🔥", "😮", "🤔", "👎", "💩", "🤡"}
 
 @app.post("/ratings/{rating_id}/react")
 def react_to_review(rating_id: int, body: dict, authorization: str = Header(None)):
@@ -460,6 +483,31 @@ def react_to_review(rating_id: int, body: dict, authorization: str = Header(None
     conn.commit()
     cur.close(); conn.close()
     return {"my_reaction": result}
+
+
+@app.post("/ratings/{rating_id}/comments")
+def add_comment(rating_id: int, body: dict, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    text = (body.get("text") or "").strip()
+    if not text or len(text) > 500:
+        raise HTTPException(status_code=400, detail="Комментарий должен быть от 1 до 500 символов")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT user_id FROM ratings WHERE id = %s", (rating_id,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Рецензия не найдена")
+    if row[0] == payload["user_id"]:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Нельзя комментировать свою рецензию")
+    cur.execute("""
+        INSERT INTO comments (user_id, rating_id, text) VALUES (%s, %s, %s)
+        RETURNING id, created_at
+    """, (payload["user_id"], rating_id, text))
+    cid, cat = cur.fetchone()
+    conn.commit(); cur.close(); conn.close()
+    return {"id": cid, "text": text, "created_at": cat.isoformat()}
 
 
 @app.get("/movies/{tmdb_id}/my-rating")

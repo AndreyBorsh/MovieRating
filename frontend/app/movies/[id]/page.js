@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating, reactToReview } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, reactToReview, postComment } from "@/lib/api";
 
 const POSTER_LG = (p) => p && `https://image.tmdb.org/t/p/w500${p}`;
 const POSTER_SM = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
@@ -102,7 +102,7 @@ function Slider({ criterion, value, onChange }) {
   );
 }
 
-const EMOJIS = ["👍", "❤️", "🔥", "😮", "🤔"];
+const EMOJIS = ["👍", "❤️", "🔥", "😮", "🤔", "👎", "💩", "🤡"];
 
 function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
   const [pending, setPending] = useState(false);
@@ -140,6 +140,81 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
           </button>
         );
       })}
+    </div>
+  );
+}
+
+function Comments({ ratingId, initialComments, token, currentUserId, reviewAuthorId }) {
+  const [comments, setComments] = useState(initialComments || []);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
+  const [open, setOpen] = useState(false);
+
+  const canComment = token && currentUserId !== reviewAuthorId;
+
+  const submit = async () => {
+    if (!text.trim()) return;
+    setSending(true);
+    setError("");
+    try {
+      const c = await postComment(token, ratingId, text.trim());
+      setComments((prev) => [...prev, { ...c, username: "Вы", user_id: currentUserId }]);
+      setText("");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="pt-2 border-t space-y-2" style={{ borderColor: "#1e2d45" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+      >
+        {open ? "Скрыть комментарии ▲" : `Комментарии${comments.length > 0 ? ` (${comments.length})` : ""} ▼`}
+      </button>
+
+      {open && (
+        <div className="space-y-2">
+          {comments.length === 0 && (
+            <p className="text-xs text-slate-600">Комментариев пока нет</p>
+          )}
+          {comments.map((c, i) => (
+            <div key={c.id ?? i} className="flex gap-2 text-xs">
+              <span className="text-amber-400 font-medium shrink-0">{c.username}</span>
+              <span className="text-slate-400">{c.text}</span>
+            </div>
+          ))}
+
+          {canComment && (
+            <div className="flex gap-2 pt-1">
+              <input
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
+                maxLength={500}
+                placeholder="Написать комментарий..."
+                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50"
+                style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+              />
+              <button
+                onClick={submit}
+                disabled={sending || !text.trim()}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 transition"
+              >
+                →
+              </button>
+            </div>
+          )}
+          {error && <p className="text-xs text-red-400">{error}</p>}
+          {!token && (
+            <p className="text-xs text-slate-600">Войдите чтобы оставить комментарий</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -358,6 +433,13 @@ export default function MoviePage() {
                 myReaction={r.my_reaction}
                 token={token}
                 onUpdate={handleReactionUpdate}
+              />
+              <Comments
+                ratingId={r.rating_id}
+                initialComments={r.comments || []}
+                token={token}
+                currentUserId={user?.user_id}
+                reviewAuthorId={r.user_id}
               />
             </div>
           ))}

@@ -66,6 +66,17 @@ export async function reactToReview(token, ratingId, emoji) {
   return data;
 }
 
+export async function postComment(token, ratingId, text) {
+  const res = await fetch(`${API}/ratings/${ratingId}/comments`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ text }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка комментария");
+  return data;
+}
+
 export async function getMyRating(token, tmdbId) {
   const res = await fetch(`${API}/movies/${tmdbId}/my-rating`, {
     headers: authHeader(token),

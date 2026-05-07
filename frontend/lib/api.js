@@ -19,6 +19,17 @@ export async function register(username, email, password) {
   return data;
 }
 
+export async function verifyEmail(email, code) {
+  const res = await fetch(`${API}/auth/verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка подтверждения");
+  return data;
+}
+
 export async function login(email, password) {
   const res = await fetch(`${API}/auth/login`, {
     method: "POST",

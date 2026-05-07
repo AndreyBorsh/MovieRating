@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { login } from "@/lib/api";
@@ -11,6 +11,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const justRegistered = searchParams.get("registered") === "1";
 
   const { login: authLogin } = useAuth();
   const router = useRouter();
@@ -36,6 +38,11 @@ export default function LoginPage() {
         className="w-full max-w-sm rounded-xl p-8 border"
         style={{ background: "#141d2e", borderColor: "#1e2d45" }}
       >
+        {justRegistered && (
+          <div className="text-sm text-emerald-400 bg-emerald-400/10 rounded-lg px-3 py-2 mb-5">
+            Аккаунт создан! Теперь войдите.
+          </div>
+        )}
         <h1 className="text-2xl font-bold text-slate-100 mb-1">Вход</h1>
         <p className="text-sm text-slate-500 mb-6">
           Нет аккаунта?{" "}

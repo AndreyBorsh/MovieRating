@@ -1,4 +1,8 @@
 import os
+import random
+import smtplib
+from email.mime.text import MIMEText
+from datetime import datetime, timedelta
 import requests
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header, Request
@@ -6,6 +10,9 @@ from fastapi.responses import Response
 from starlette.middleware.base import BaseHTTPMiddleware
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
+
+SMTP_EMAIL    = os.environ.get("SMTP_EMAIL", "")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
 TMDB_BASE = "https://api.themoviedb.org/3"
@@ -78,6 +85,15 @@ def ensure_tables():
             rating_id INT REFERENCES ratings(id) ON DELETE CASCADE,
             text TEXT NOT NULL,
             created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pending_registrations (
+            email TEXT PRIMARY KEY,
+            username TEXT NOT NULL,
+            password_hash TEXT NOT NULL,
+            code TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL
         )
     """)
     conn.commit()
@@ -200,6 +216,25 @@ def cache_movie(conn, tmdb_id: int):
 # AUTH
 # =========================
 
+def send_verification_email(to_email: str, code: str):
+    """Send 6-digit code via Gmail SMTP. Falls back to console log in dev."""
+    if not SMTP_EMAIL or not SMTP_PASSWORD:
+        print(f"[DEV] Verification code for {to_email}: {code}")
+        return
+    msg = MIMEText(
+        f"Привет!\n\nВаш код подтверждения для WAW: {code}\n\nКод действителен 15 минут.\n\nЕсли вы не регистрировались — просто проигнорируйте это письмо.",
+        "plain", "utf-8"
+    )
+    msg["Subject"] = f"Код подтверждения WAW: {code}"
+    msg["From"] = f"WAW Cinema <{SMTP_EMAIL}>"
+    msg["To"] = to_email
+    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.login(SMTP_EMAIL, SMTP_PASSWORD)
+        smtp.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+
+
 @app.post("/auth/register")
 def register(data: dict):
     username = (data.get("username") or "").strip()
@@ -208,6 +243,8 @@ def register(data: dict):
 
     if not all([username, email, password]):
         raise HTTPException(status_code=400, detail="Все поля обязательны")
+    if len(username) < 2 or len(username) > 30:
+        raise HTTPException(status_code=400, detail="Имя пользователя: от 2 до 30 символов")
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Пароль минимум 6 символов")
 
@@ -217,11 +254,78 @@ def register(data: dict):
     if cur.fetchone():
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
+    cur.execute("SELECT id FROM users WHERE lower(username)=lower(%s)", (username,))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Имя пользователя уже занято")
+
+    code = str(random.randint(100000, 999999))
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    password_hash = hash_password(password)
+
+    cur.execute("""
+        INSERT INTO pending_registrations (email, username, password_hash, code, expires_at)
+        VALUES (%s, %s, %s, %s, %s)
+        ON CONFLICT (email) DO UPDATE
+          SET username=EXCLUDED.username, password_hash=EXCLUDED.password_hash,
+              code=EXCLUDED.code, expires_at=EXCLUDED.expires_at
+    """, (email, username, password_hash, code, expires_at))
+    conn.commit()
+    cur.close(); conn.close()
+
+    try:
+        send_verification_email(email, code)
+    except Exception as e:
+        print(f"Email send error: {e}")
+        raise HTTPException(status_code=500, detail="Не удалось отправить письмо. Проверьте email.")
+
+    return {"pending": True, "message": "Код отправлен на почту"}
+
+
+@app.post("/auth/verify")
+def verify(data: dict):
+    email = (data.get("email") or "").strip().lower()
+    code  = (data.get("code") or "").strip()
+
+    if not email or not code:
+        raise HTTPException(status_code=400, detail="Email и код обязательны")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT username, password_hash, code, expires_at
+        FROM pending_registrations WHERE email=%s
+    """, (email,))
+    row = cur.fetchone()
+
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Заявка на регистрацию не найдена")
+
+    username, password_hash, stored_code, expires_at = row
+
+    if datetime.utcnow() > expires_at:
+        cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
+        conn.commit()
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Код устарел. Зарегистрируйтесь снова")
+
+    if code != stored_code:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Неверный код")
+
+    cur.execute("SELECT id FROM users WHERE email=%s", (email,))
+    if cur.fetchone():
+        cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
+        conn.commit()
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Email уже зарегистрирован")
 
     cur.execute(
         "INSERT INTO users (username, email, password) VALUES (%s,%s,%s)",
-        (username, email, hash_password(password)),
+        (username, email, password_hash),
     )
+    cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
     conn.commit()
     cur.close(); conn.close()
     return {"message": "Регистрация успешна"}

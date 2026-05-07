@@ -9,28 +9,33 @@ import { getMovie, getReviews, getMyRating, sendRating, reactToReview, postComme
 const POSTER_LG = (p) => p && `https://image.tmdb.org/t/p/w500${p}`;
 const POSTER_SM = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
 
-// Criteria definition
 const CRITERIA = [
-  { key: "overall",   label: "Общее впечатление", weight: "40%", main: true },
-  { key: "story",     label: "Сценарий",          weight: "15%" },
-  { key: "direction", label: "Режиссура",          weight: "15%" },
-  { key: "acting",    label: "Актёрская игра",     weight: "15%" },
-  { key: "visuals",   label: "Операторская работа",weight: "10%" },
-  { key: "music",     label: "Музыка и звук",      weight: "5%"  },
+  { key: "overall",   label: "Общее впечатление", weight: "35%", main: true,
+    tip: "Субъективное впечатление от просмотра. Насколько вам понравился фильм? Это главный и самый честный критерий." },
+  { key: "story",     label: "Сценарий",           weight: "20%",
+    tip: "История, диалоги, структура повествования. Для мюзиклов — тексты и драматургия. Для анимации — проработка персонажей." },
+  { key: "direction", label: "Режиссура",           weight: "15%",
+    tip: "Темп, монтаж, выбор ракурсов. Насколько точно режиссёр воплотил идею и собрал всё в единое целое?" },
+  { key: "acting",    label: "Актёрская игра",      weight: "15%",
+    tip: "Убедительность и глубина актёрских работ. Для анимации — качество озвучки и выразительность персонажей." },
+  { key: "visuals",   label: "Визуальный стиль",    weight: "10%",
+    tip: "Операторская работа, цветовое решение, дизайн кадра. Для анимации — качество рисовки и арт-дирекшн." },
+  { key: "music",     label: "Звук и атмосфера",    weight: "5%",
+    tip: "Саундтрек, звуковой дизайн и создаваемая атмосфера. Особенно важен для мюзиклов, хорроров и эпических фильмов." },
 ];
+
+const FORMULA_TEXT = "35%·Общее + 20%·Сценарий + 15%·Режиссура + 15%·Актёры + 10%·Визуал + 5%·Звук";
 
 function calcScore(vals) {
   const { overall, story, direction, acting, visuals, music } = vals;
-  const base =
-    overall   * 0.40 +
-    story     * 0.15 +
+  const score =
+    overall   * 0.35 +
+    story     * 0.20 +
     direction * 0.15 +
     acting    * 0.15 +
     visuals   * 0.10 +
     music     * 0.05;
-  const techAvg = (story + direction + acting + visuals + music) / 5;
-  const penalty = Math.min(Math.abs(overall - techAvg) * 0.1, 0.5);
-  return Math.max(1, Math.min(10, base - penalty)).toFixed(2);
+  return Math.max(1, Math.min(10, score)).toFixed(2);
 }
 
 function ScoreColor({ score }) {
@@ -49,14 +54,30 @@ function ScoreBadge({ score, size = "lg" }) {
   );
 }
 
-function CriteriaBar({ label, value, weight, main }) {
+function Tooltip({ tip, children }) {
+  return (
+    <div className="relative group/tip">
+      {children}
+      {tip && (
+        <div className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-slate-300 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
+             style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
+          {tip}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CriteriaBar({ label, value, weight, main, tip }) {
   const pct = ((value - 1) / 9) * 100;
   const barColor = main ? "bg-amber-400" : "bg-slate-500";
   return (
     <div className="flex items-center gap-2 text-sm">
-      <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
-        {label}
-      </div>
+      <Tooltip tip={tip}>
+        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
+          {label}
+        </div>
+      </Tooltip>
       <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
@@ -70,12 +91,12 @@ function Slider({ criterion, value, onChange }) {
   return (
     <div>
       <div className="flex justify-between items-center mb-1.5">
-        <span
-          className={`text-sm ${criterion.main ? "text-amber-400 font-semibold" : "text-slate-300"}`}
-        >
-          {criterion.label}
-          {criterion.main && <span className="ml-1 text-xs text-slate-500">(главный)</span>}
-        </span>
+        <Tooltip tip={criterion.tip}>
+          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-400 font-semibold" : "text-slate-300"}`}>
+            {criterion.label}
+            {criterion.main && <span className="ml-1 text-xs text-slate-500">(главный)</span>}
+          </span>
+        </Tooltip>
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-500">{criterion.weight}</span>
           <span
@@ -404,6 +425,7 @@ export default function MoviePage() {
                     value={r[c.key]}
                     weight={c.weight}
                     main={c.main}
+                    tip={c.tip}
                   />
                 ))}
               </div>
@@ -481,6 +503,7 @@ export default function MoviePage() {
                     value={myRating[c.key]}
                     weight={c.weight}
                     main={c.main}
+                    tip={c.tip}
                   />
                 ))}
               </div>
@@ -531,6 +554,9 @@ export default function MoviePage() {
                   {preview}
                 </span>
               </div>
+              <p className="text-[10px] text-slate-700 text-center leading-relaxed -mt-3">
+                {FORMULA_TEXT}
+              </p>
 
               {/* Review textarea */}
               <div>

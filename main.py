@@ -130,27 +130,23 @@ def require_auth(authorization: str = Header(None)) -> dict:
 # =========================
 def calculate_score(overall, story, direction, acting, visuals, music) -> float:
     """
-    Smart weighted score:
-      - Overall impression: 40% (main criterion by user intent)
-      - Story:              15%
-      - Direction:          15%
-      - Acting:             15%
-      - Visuals:            10%
-      - Music/Sound:         5%
-    Consistency penalty: if overall deviates strongly from the technical average,
-    up to 0.5 points are deducted to discourage extremely inconsistent ratings.
+    Universal weighted score — works for any genre:
+      Overall impression:  35%  (main criterion)
+      Narrative/Script:    20%  (story, lyrics for musicals, character arcs for animation)
+      Direction:           15%
+      Acting/Performance:  15%  (voice acting / animation quality)
+      Visual style:        10%
+      Sound & Atmosphere:   5%  (music, sound design, mood)
     """
-    base = (
-        overall   * 0.40 +
-        story     * 0.15 +
+    score = (
+        overall   * 0.35 +
+        story     * 0.20 +
         direction * 0.15 +
         acting    * 0.15 +
         visuals   * 0.10 +
         music     * 0.05
     )
-    tech_avg = (story + direction + acting + visuals + music) / 5
-    penalty = min(abs(overall - tech_avg) * 0.1, 0.5)
-    return round(max(1.0, min(10.0, base - penalty)), 2)
+    return round(max(1.0, min(10.0, score)), 2)
 
 
 # =========================

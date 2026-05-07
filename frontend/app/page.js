@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { getMovies, getRecent, getReviews } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -208,12 +208,45 @@ function MovieCard({ movie }) {
   );
 }
 
+function useDragScroll() {
+  const ref = useRef(null);
+  const drag = useRef({ active: false, startX: 0, scrollLeft: 0 });
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const onDown = (e) => {
+      drag.current = { active: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+      el.style.cursor = "grabbing";
+      el.style.userSelect = "none";
+    };
+    const onUp = () => { drag.current.active = false; el.style.cursor = ""; el.style.userSelect = ""; };
+    const onMove = (e) => {
+      if (!drag.current.active) return;
+      e.preventDefault();
+      const x = e.pageX - el.offsetLeft;
+      el.scrollLeft = drag.current.scrollLeft - (x - drag.current.startX);
+    };
+    el.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
+    el.addEventListener("mousemove", onMove);
+    return () => {
+      el.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
+      el.removeEventListener("mousemove", onMove);
+    };
+  }, []);
+
+  return ref;
+}
+
 export default function HomePage() {
   const { token } = useAuth();
   const [movies, setMovies] = useState([]);
   const [recent, setRecent] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalItem, setModalItem] = useState(null);
+  const sliderRef = useDragScroll();
 
   useEffect(() => {
     Promise.all([getMovies(), getRecent()])
@@ -261,7 +294,7 @@ export default function HomePage() {
           {recent.length > 0 && (
             <section>
               <h2 className="text-lg font-semibold text-slate-100 mb-4">Последние рецензии</h2>
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide">
+              <div ref={sliderRef} className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide cursor-grab">
                 {recent.slice(0, 9).map((item, i) => (
                   <div key={i} className="shrink-0 w-72 snap-start">
                     <RecentCard item={item} onClick={() => setModalItem(item)} />

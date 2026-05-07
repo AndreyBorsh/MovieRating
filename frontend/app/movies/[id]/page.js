@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { getMovie, getReviews, getMyRating, sendRating, reactToReview, postComment } from "@/lib/api";
 
-const POSTER_LG = (p) => p && `https://image.tmdb.org/t/p/w500${p}`;
-const POSTER_SM = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
+const POSTER_LG = (p) => p && `/tmdb-image/w500${p}`;
+const POSTER_SM = (p) => p && `/tmdb-image/w185${p}`;
 
 const CRITERIA = [
   { key: "overall",   label: "Общее впечатление", weight: "35%", main: true,

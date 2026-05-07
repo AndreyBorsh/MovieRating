@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
-const POSTER = (p) => p && `https://image.tmdb.org/t/p/w185${p}`;
+const POSTER = (p) => p && `/tmdb-image/w185${p}`;
 
 const CRITERIA_LABELS = {
   overall:   "Общее впечатление",

@@ -3,10 +3,18 @@ const nextConfig = {
   async rewrites() {
     return [
       {
-        source: "/backend/:path*",
-        destination: "https://movierrating-production-fe4c.up.railway.app/:path*",
+        source: "/tmdb-image/:path*",
+        destination: "https://image.tmdb.org/t/p/:path*",
       },
     ];
+  },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "image.tmdb.org",
+      },
+    ],
   },
 };
 

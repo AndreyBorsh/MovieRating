@@ -5,7 +5,7 @@ import Link from "next/link";
 import { searchMovies } from "@/lib/api";
 
 const POSTER = (path) =>
-  path ? `https://image.tmdb.org/t/p/w342${path}` : null;
+  path ? `/tmdb-image/w342${path}` : null;
 
 export default function SearchPage() {
   const [query, setQuery] = useState("");

@@ -13,6 +13,7 @@ from auth import hash_password, verify_password, create_token, decode_token
 
 BREVO_API_KEY  = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER   = os.environ.get("BREVO_SENDER", "")  # verified sender email in Brevo
+ADMIN_SECRET   = os.environ.get("ADMIN_SECRET", "")
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
 TMDB_BASE = "https://api.themoviedb.org/3"
@@ -740,3 +741,24 @@ def search_movies(query: str):
         }
         for m in data.get("results", [])
     ]
+
+
+# =========================
+# ADMIN
+# =========================
+
+@app.post("/admin/truncate")
+def admin_truncate(data: dict):
+    secret = data.get("secret", "")
+    if not ADMIN_SECRET or secret != ADMIN_SECRET:
+        raise HTTPException(status_code=403, detail="Forbidden")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        TRUNCATE TABLE comments, reactions, ratings, movies,
+                       pending_registrations, users
+        RESTART IDENTITY CASCADE
+    """)
+    conn.commit()
+    cur.close(); conn.close()
+    return {"message": "All tables truncated"}

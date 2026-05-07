@@ -68,3 +68,9 @@ input[type="range"]::-moz-range-thumb {
 /* ── Hide scrollbar for horizontal sliders ── */
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ── Subtle thin scrollbar for recent reviews slider ── */
+.scrollbar-subtle { scrollbar-width: thin; scrollbar-color: #2a3a55 transparent; }
+.scrollbar-subtle::-webkit-scrollbar { height: 3px; }
+.scrollbar-subtle::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-subtle::-webkit-scrollbar-thumb { background: #2a3a55; border-radius: 2px; }

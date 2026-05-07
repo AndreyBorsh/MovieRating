@@ -273,13 +273,18 @@ def register(data: dict):
     conn.commit()
     cur.close(); conn.close()
 
-    try:
-        send_verification_email(email, code)
-    except Exception as e:
-        print(f"Email send error: {e}")
-        raise HTTPException(status_code=500, detail="Не удалось отправить письмо. Проверьте email.")
+    dev_mode = not SMTP_EMAIL or not SMTP_PASSWORD
+    if not dev_mode:
+        try:
+            send_verification_email(email, code)
+        except Exception as e:
+            print(f"Email send error: {e}")
+            raise HTTPException(status_code=500, detail="Не удалось отправить письмо. Проверьте email.")
 
-    return {"pending": True, "message": "Код отправлен на почту"}
+    response = {"pending": True, "message": "Код отправлен на почту"}
+    if dev_mode:
+        response["dev_code"] = code
+    return response
 
 
 @app.post("/auth/verify")

@@ -8,6 +8,29 @@ import { useAuth } from "@/lib/auth";
 const POSTER = (path) =>
   path ? `https://image.tmdb.org/t/p/w342${path}` : null;
 
+const REVIEW_LIMIT = 300;
+
+function ReviewText({ text }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > REVIEW_LIMIT;
+  const displayed = isLong && !expanded ? text.slice(0, REVIEW_LIMIT).trimEnd() + "…" : text;
+  return (
+    <div className="text-sm text-slate-300 leading-relaxed">
+      {displayed.split("\n").map((line, i, arr) => (
+        <span key={i}>{line}{i < arr.length - 1 && <br />}</span>
+      ))}
+      {isLong && (
+        <button
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+          className="block mt-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          {expanded ? "Свернуть ↑" : "Читать дальше ↓"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 const CRITERIA = [
   { key: "overall",   label: "Общее",     weight: "40%", main: true },
   { key: "story",     label: "Сценарий",  weight: "15%" },
@@ -128,9 +151,9 @@ function ReviewModal({ item, onClose }) {
 
         {/* Review text */}
         {item.review && (
-          <p className="text-sm text-slate-300 leading-relaxed border-t pt-3" style={{ borderColor: "#1e2d45" }}>
-            {item.review}
-          </p>
+          <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+            <ReviewText text={item.review} />
+          </div>
         )}
 
         {/* Footer */}

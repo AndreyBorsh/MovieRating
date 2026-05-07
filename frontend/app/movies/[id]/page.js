@@ -54,6 +54,30 @@ function ScoreBadge({ score, size = "lg" }) {
   );
 }
 
+const REVIEW_LIMIT = 300;
+
+function ReviewText({ text, muted = false }) {
+  const [expanded, setExpanded] = useState(false);
+  const isLong = text.length > REVIEW_LIMIT;
+  const displayed = isLong && !expanded ? text.slice(0, REVIEW_LIMIT).trimEnd() + "…" : text;
+  const color = muted ? "text-slate-400" : "text-slate-300";
+  return (
+    <div className={`text-sm ${color} leading-relaxed`}>
+      {displayed.split("\n").map((line, i) => (
+        <span key={i}>{line}{i < displayed.split("\n").length - 1 && <br />}</span>
+      ))}
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="block mt-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
+        >
+          {expanded ? "Свернуть ↑" : "Читать дальше ↓"}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Tooltip({ tip, children }) {
   return (
     <div className="relative group/tip">
@@ -431,10 +455,9 @@ export default function MoviePage() {
               </div>
 
               {r.review && (
-                <p className="text-sm text-slate-300 leading-relaxed border-t pt-3"
-                   style={{ borderColor: "#1e2d45" }}>
-                  {r.review}
-                </p>
+                <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+                  <ReviewText text={r.review} />
+                </div>
               )}
 
               <div className="flex items-center justify-between">
@@ -508,10 +531,9 @@ export default function MoviePage() {
                 ))}
               </div>
               {myRating.review && (
-                <p className="text-sm text-slate-400 border-t pt-3"
-                   style={{ borderColor: "#1e2d45" }}>
-                  {myRating.review}
-                </p>
+                <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+                  <ReviewText text={myRating.review} muted />
+                </div>
               )}
               <div className="text-xs text-slate-600">Вы уже оценили этот фильм</div>
             </div>

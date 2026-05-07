@@ -183,11 +183,16 @@ function RecentCard({ item, onClick }) {
 }
 
 function MovieCard({ movie }) {
+  const legendary = movie.score >= 9.5;
   return (
     <Link href={`/movies/${movie.id}`}>
       <div
-        className="rounded-xl overflow-hidden border transition-all hover:scale-[1.02] hover:border-amber-400/40 cursor-pointer"
-        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+        className="rounded-xl overflow-hidden border transition-all hover:scale-[1.02] cursor-pointer"
+        style={{
+          background: legendary ? "linear-gradient(160deg, #1a1500 0%, #141d2e 60%)" : "#141d2e",
+          borderColor: legendary ? "#b8860b" : "#1e2d45",
+          boxShadow: legendary ? "0 0 14px 2px rgba(212,175,55,0.18)" : "none",
+        }}
       >
         <div className="relative h-52 bg-slate-800 overflow-hidden">
           {POSTER(movie.poster) ? (
@@ -195,9 +200,17 @@ function MovieCard({ movie }) {
           ) : (
             <div className="w-full h-full flex items-center justify-center text-slate-600 text-4xl">🎬</div>
           )}
+          {legendary && (
+            <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide"
+                 style={{ background: "rgba(0,0,0,0.7)", color: "#d4af37", border: "1px solid #b8860b" }}>
+              ★ ШЕДЕВР
+            </div>
+          )}
         </div>
         <div className="p-3">
-          <div className="text-sm font-semibold text-slate-100 line-clamp-1">{movie.title}</div>
+          <div className={`text-sm font-semibold line-clamp-1 ${legendary ? "text-amber-200" : "text-slate-100"}`}>
+            {movie.title}
+          </div>
           <div className="flex items-center justify-between mt-1.5">
             <ScoreBadge score={movie.score} />
             <span className="text-xs text-slate-500">{movie.count} оценок</span>

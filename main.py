@@ -11,8 +11,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
 
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-SMTP_EMAIL     = os.environ.get("SMTP_EMAIL", "")  # used as sender display name only
+BREVO_API_KEY  = os.environ.get("BREVO_API_KEY", "")
+BREVO_SENDER   = os.environ.get("BREVO_SENDER", "")  # verified sender email in Brevo
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
 TMDB_BASE = "https://api.themoviedb.org/3"
@@ -230,24 +230,23 @@ def validate_email_domain(email: str):
 
 
 def send_verification_email(to_email: str, code: str):
-    """Send 6-digit code via Resend HTTP API. Falls back to console log in dev."""
-    if not RESEND_API_KEY:
+    """Send 6-digit code via Brevo HTTP API. Falls back to console log in dev."""
+    if not BREVO_API_KEY or not BREVO_SENDER:
         print(f"[DEV] Verification code for {to_email}: {code}")
         return
-    from_addr = f"WAW Cinema <onboarding@resend.dev>"
     res = requests.post(
-        "https://api.resend.com/emails",
-        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
         json={
-            "from": from_addr,
-            "to": [to_email],
+            "sender": {"name": "WAW Cinema", "email": BREVO_SENDER},
+            "to": [{"email": to_email}],
             "subject": f"Код подтверждения WAW: {code}",
-            "text": f"Привет!\n\nВаш код подтверждения для WAW: {code}\n\nКод действителен 15 минут.\n\nЕсли вы не регистрировались — просто проигнорируйте это письмо.",
+            "textContent": f"Привет!\n\nВаш код подтверждения для WAW: {code}\n\nКод действителен 15 минут.\n\nЕсли вы не регистрировались — просто проигнорируйте это письмо.",
         },
         timeout=10,
     )
     if res.status_code >= 400:
-        raise Exception(f"Resend error {res.status_code}: {res.text}")
+        raise Exception(f"Brevo error {res.status_code}: {res.text}")
 
 
 @app.post("/auth/register")
@@ -289,7 +288,7 @@ def register(data: dict):
     conn.commit()
     cur.close(); conn.close()
 
-    dev_mode = not RESEND_API_KEY
+    dev_mode = not BREVO_API_KEY or not BREVO_SENDER
     if not dev_mode:
         try:
             send_verification_email(email, code)

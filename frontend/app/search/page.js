@@ -1,22 +1,39 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { searchMovies } from "@/lib/api";
 
 const POSTER = (path) =>
   path ? `/tmdb-image/w342${path}` : null;
 
-export default function SearchPage() {
-  const [query, setQuery] = useState("");
+function SearchContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialQ = searchParams.get("q") || "";
+
+  const [query, setQuery] = useState(initialQ);
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const inputRef = useRef(null);
 
+  useEffect(() => {
+    if (initialQ) {
+      setSearched(true);
+      setLoading(true);
+      searchMovies(initialQ)
+        .then((data) => setResults(Array.isArray(data) ? data : []))
+        .catch(() => setResults([]))
+        .finally(() => setLoading(false));
+    }
+  }, []);
+
   const doSearch = async () => {
     const q = query.trim();
     if (!q) return;
+    router.replace(`/search?q=${encodeURIComponent(q)}`);
     setLoading(true);
     setSearched(true);
     try {
@@ -40,7 +57,6 @@ export default function SearchPage() {
         <p className="text-sm text-slate-500">Найдите фильм и оставьте свою оценку</p>
       </div>
 
-      {/* Search bar */}
       <div className="flex gap-2">
         <input
           ref={inputRef}
@@ -61,7 +77,6 @@ export default function SearchPage() {
         </button>
       </div>
 
-      {/* Results */}
       {loading && (
         <div className="text-center text-slate-500 text-sm py-8">Поиск...</div>
       )}
@@ -114,5 +129,13 @@ export default function SearchPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense>
+      <SearchContent />
+    </Suspense>
   );
 }

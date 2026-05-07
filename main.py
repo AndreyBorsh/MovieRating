@@ -429,7 +429,11 @@ def get_movie(tmdb_id: int):
     movie = fetch_tmdb_movie(tmdb_id)
     if not movie:
         raise HTTPException(status_code=404, detail="Фильм не найден")
-    return {**movie, "id": movie["tmdb_id"], "score": 0.0, "count": 0}
+    return {
+        "id": movie["tmdb_id"], "title": movie["title"], "overview": movie["overview"],
+        "poster": movie["poster_path"], "year": movie["release_year"],
+        "score": 0.0, "count": 0,
+    }
 
 
 @app.get("/movies/{tmdb_id}/score")

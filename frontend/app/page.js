@@ -6,7 +6,7 @@ import { getMovies, getRecent, getReviews } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const POSTER = (path) =>
-  path ? `/tmdb-image/w342${path}` : null;
+  path ? `/api/tmdb-image/w342${path}` : null;
 
 const REVIEW_LIMIT = 300;
 

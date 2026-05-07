@@ -6,7 +6,7 @@ import Link from "next/link";
 import { searchMovies } from "@/lib/api";
 
 const POSTER = (path) =>
-  path ? `/tmdb-image/w342${path}` : null;
+  path ? `/api/tmdb-image/w342${path}` : null;
 
 function SearchContent() {
   const router = useRouter();

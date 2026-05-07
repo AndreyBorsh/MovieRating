@@ -1,7 +1,5 @@
 import os
 import random
-import smtplib
-from email.mime.text import MIMEText
 from datetime import datetime, timedelta
 import requests
 from contextlib import asynccontextmanager
@@ -11,8 +9,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
 
-SMTP_EMAIL    = os.environ.get("SMTP_EMAIL", "")
-SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD", "")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
+SMTP_EMAIL     = os.environ.get("SMTP_EMAIL", "")  # used as sender display name only
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
 TMDB_BASE = "https://api.themoviedb.org/3"
@@ -217,22 +215,24 @@ def cache_movie(conn, tmdb_id: int):
 # =========================
 
 def send_verification_email(to_email: str, code: str):
-    """Send 6-digit code via Gmail SMTP. Falls back to console log in dev."""
-    if not SMTP_EMAIL or not SMTP_PASSWORD:
+    """Send 6-digit code via Resend HTTP API. Falls back to console log in dev."""
+    if not RESEND_API_KEY:
         print(f"[DEV] Verification code for {to_email}: {code}")
         return
-    msg = MIMEText(
-        f"Привет!\n\nВаш код подтверждения для WAW: {code}\n\nКод действителен 15 минут.\n\nЕсли вы не регистрировались — просто проигнорируйте это письмо.",
-        "plain", "utf-8"
+    from_addr = f"WAW Cinema <onboarding@resend.dev>"
+    res = requests.post(
+        "https://api.resend.com/emails",
+        headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "from": from_addr,
+            "to": [to_email],
+            "subject": f"Код подтверждения WAW: {code}",
+            "text": f"Привет!\n\nВаш код подтверждения для WAW: {code}\n\nКод действителен 15 минут.\n\nЕсли вы не регистрировались — просто проигнорируйте это письмо.",
+        },
+        timeout=10,
     )
-    msg["Subject"] = f"Код подтверждения WAW: {code}"
-    msg["From"] = f"WAW Cinema <{SMTP_EMAIL}>"
-    msg["To"] = to_email
-    with smtplib.SMTP("smtp.gmail.com", 587) as smtp:
-        smtp.ehlo()
-        smtp.starttls()
-        smtp.login(SMTP_EMAIL, SMTP_PASSWORD)
-        smtp.sendmail(SMTP_EMAIL, to_email, msg.as_string())
+    if res.status_code >= 400:
+        raise Exception(f"Resend error {res.status_code}: {res.text}")
 
 
 @app.post("/auth/register")
@@ -273,7 +273,7 @@ def register(data: dict):
     conn.commit()
     cur.close(); conn.close()
 
-    dev_mode = not SMTP_EMAIL or not SMTP_PASSWORD
+    dev_mode = not RESEND_API_KEY
     if not dev_mode:
         try:
             send_verification_email(email, code)

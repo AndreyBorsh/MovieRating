@@ -1,6 +1,8 @@
 import os
+import re
 import random
 from datetime import datetime, timedelta
+import dns.resolver
 import requests
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header, Request
@@ -214,6 +216,19 @@ def cache_movie(conn, tmdb_id: int):
 # AUTH
 # =========================
 
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+def validate_email_domain(email: str):
+    """Check format and that the domain has MX records."""
+    if not EMAIL_RE.match(email):
+        raise HTTPException(status_code=400, detail="Некорректный формат email")
+    domain = email.split("@")[1]
+    try:
+        dns.resolver.resolve(domain, "MX", lifetime=5)
+    except Exception:
+        raise HTTPException(status_code=400, detail=f"Домен {domain} не принимает почту")
+
+
 def send_verification_email(to_email: str, code: str):
     """Send 6-digit code via Resend HTTP API. Falls back to console log in dev."""
     if not RESEND_API_KEY:
@@ -247,6 +262,7 @@ def register(data: dict):
         raise HTTPException(status_code=400, detail="Имя пользователя: от 2 до 30 символов")
     if len(password) < 6:
         raise HTTPException(status_code=400, detail="Пароль минимум 6 символов")
+    validate_email_domain(email)
 
     conn = get_db()
     cur = conn.cursor()

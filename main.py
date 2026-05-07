@@ -288,18 +288,14 @@ def register(data: dict):
     conn.commit()
     cur.close(); conn.close()
 
-    dev_mode = not BREVO_API_KEY or not BREVO_SENDER
-    if not dev_mode:
+    if BREVO_API_KEY and BREVO_SENDER:
         try:
             send_verification_email(email, code)
+            return {"pending": True, "message": "Код отправлен на почту"}
         except Exception as e:
             print(f"Email send error: {e}")
-            raise HTTPException(status_code=500, detail="Не удалось отправить письмо. Проверьте email.")
 
-    response = {"pending": True, "message": "Код отправлен на почту"}
-    if dev_mode:
-        response["dev_code"] = code
-    return response
+    return {"pending": True, "code": code}
 
 
 @app.post("/auth/verify")

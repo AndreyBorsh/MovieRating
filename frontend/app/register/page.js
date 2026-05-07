@@ -28,7 +28,7 @@ export default function RegisterPage() {
     setLoading(true);
     try {
       const res = await register(form.username, form.email, form.password);
-      if (res.dev_code) setDevCode(res.dev_code);
+      if (res.code) setDevCode(res.code);
       setStep("verify");
     } catch (err) {
       setError(err.message);
@@ -166,10 +166,10 @@ export default function RegisterPage() {
               <span className="text-amber-400">{form.email}</span>
             </p>
             {devCode && (
-              <div className="text-sm rounded-lg px-3 py-2.5 mb-2 font-mono text-center"
-                   style={{ background: "#0c1220", border: "1px solid #2a3a55", color: "#6b7d96" }}>
-                <span className="text-xs text-slate-600 block mb-0.5">Email не настроен — код для теста:</span>
-                <span className="text-amber-400 font-bold tracking-widest text-base">{devCode}</span>
+              <div className="rounded-lg px-4 py-3 mb-2 text-center"
+                   style={{ background: "#0c1220", border: "1px solid #2a3a55" }}>
+                <span className="text-xs text-slate-500 block mb-1">Ваш код подтверждения</span>
+                <span className="text-amber-400 font-bold tracking-[0.3em] text-2xl">{devCode}</span>
               </div>
             )}
 

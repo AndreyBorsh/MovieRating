@@ -111,6 +111,17 @@ export async function sendRating(token, payload) {
   return data;
 }
 
+export async function updateRating(token, payload) {
+  const res = await fetch(`${API}/ratings`, {
+    method: "PUT",
+    headers: authHeader(token),
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка обновления");
+  return data;
+}
+
 // =========================
 // RECENT & PROFILE
 // =========================

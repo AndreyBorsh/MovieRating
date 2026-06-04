@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating, reactToReview, postComment } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment } from "@/lib/api";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -280,6 +280,7 @@ export default function MoviePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     if (!movieId) return;
@@ -319,16 +320,38 @@ export default function MoviePage() {
     }));
   };
 
+  const startEditing = () => {
+    if (!myRating) return;
+    setForm({
+      overall:   myRating.overall,
+      story:     myRating.story,
+      direction: myRating.direction,
+      acting:    myRating.acting,
+      visuals:   myRating.visuals,
+      music:     myRating.music,
+    });
+    setReviewText(myRating.review || "");
+    setError("");
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setEditing(false);
+    setError("");
+  };
+
   const submit = async () => {
     setError("");
     setSubmitting(true);
     try {
-      await sendRating(token, {
-        tmdb_id: parseInt(movieId),
-        ...form,
-        review: reviewText.trim() || null,
-      });
-      setSuccess(true);
+      const payload = { tmdb_id: parseInt(movieId), ...form, review: reviewText.trim() || null };
+      if (editing) {
+        await updateRating(token, payload);
+        setEditing(false);
+      } else {
+        await sendRating(token, payload);
+        setSuccess(true);
+      }
       await loadAll();
     } catch (e) {
       setError(e.message);
@@ -507,27 +530,19 @@ export default function MoviePage() {
                 Войти
               </Link>
             </div>
-          ) : myRating ? (
+          ) : myRating && !editing ? (
             <div
               className="rounded-xl p-5 border space-y-3"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-300">
-                  Ваша оценка
-                </span>
+                <span className="text-sm font-semibold text-slate-300">Ваша оценка</span>
                 <ScoreBadge score={myRating.score} size="sm" />
               </div>
               <div className="space-y-1.5">
                 {CRITERIA.map((c) => (
-                  <CriteriaBar
-                    key={c.key}
-                    label={c.label}
-                    value={myRating[c.key]}
-                    weight={c.weight}
-                    main={c.main}
-                    tip={c.tip}
-                  />
+                  <CriteriaBar key={c.key} label={c.label} value={myRating[c.key]}
+                    weight={c.weight} main={c.main} tip={c.tip} />
                 ))}
               </div>
               {myRating.review && (
@@ -535,9 +550,14 @@ export default function MoviePage() {
                   <ReviewText text={myRating.review} muted />
                 </div>
               )}
-              <div className="text-xs text-slate-600">Вы уже оценили этот фильм</div>
+              <button
+                onClick={startEditing}
+                className="w-full py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
+              >
+                ✏️ Редактировать оценку
+              </button>
             </div>
-          ) : success ? (
+          ) : success && !editing ? (
             <div
               className="rounded-xl p-6 border text-center"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
@@ -546,13 +566,13 @@ export default function MoviePage() {
               <p className="text-sm text-slate-300 font-medium">Оценка сохранена!</p>
               <p className="text-xs text-slate-500 mt-1">Ваша рецензия добавлена</p>
             </div>
-          ) : (
+          ) : (editing || (!myRating && !success)) && (
             <div
               className="rounded-xl p-5 border space-y-5 lg:sticky lg:top-20"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <h3 className="text-base font-semibold text-slate-100">
-                Оценить фильм
+                {editing ? "Редактировать оценку" : "Оценить фильм"}
               </h3>
 
               <div className="space-y-4">
@@ -607,8 +627,16 @@ export default function MoviePage() {
                 disabled={submitting}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
               >
-                {submitting ? "Отправляем..." : "Опубликовать рецензию"}
+                {submitting ? "Сохраняем..." : editing ? "Сохранить изменения" : "Опубликовать рецензию"}
               </button>
+              {editing && (
+                <button
+                  onClick={cancelEditing}
+                  className="w-full py-2 rounded-lg text-sm text-slate-500 hover:text-slate-300 transition"
+                >
+                  Отмена
+                </button>
+              )}
             </div>
           )}
         </div>

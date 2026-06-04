@@ -498,6 +498,48 @@ def create_rating(data: dict, authorization: str = Header(None)):
     return {"score": score}
 
 
+@app.put("/ratings")
+def update_rating(data: dict, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    user_id = payload["user_id"]
+
+    tmdb_id   = data.get("tmdb_id")
+    overall   = data.get("overall")
+    story     = data.get("story")
+    direction = data.get("direction")
+    acting    = data.get("acting")
+    visuals   = data.get("visuals")
+    music     = data.get("music")
+    review    = (data.get("review") or "").strip()
+
+    if None in [tmdb_id, overall, story, direction, acting, visuals, music]:
+        raise HTTPException(status_code=400, detail="Не все критерии заполнены")
+
+    values = [overall, story, direction, acting, visuals, music]
+    if not all(isinstance(v, int) and 1 <= v <= 10 for v in values):
+        raise HTTPException(status_code=400, detail="Оценки должны быть от 1 до 10")
+
+    score = calculate_score(overall, story, direction, acting, visuals, music)
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE ratings
+        SET overall=%s, story=%s, direction=%s, acting=%s, visuals=%s, music=%s,
+            score=%s, review=%s
+        WHERE user_id=%s AND tmdb_id=%s
+    """, (overall, story, direction, acting, visuals, music, score,
+          review or None, user_id, tmdb_id))
+
+    if cur.rowcount == 0:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Оценка не найдена")
+
+    conn.commit()
+    cur.close(); conn.close()
+    return {"score": score}
+
+
 @app.get("/movies/{tmdb_id}/reviews")
 def get_reviews(tmdb_id: int, authorization: str = Header(None)):
     viewer_id = None

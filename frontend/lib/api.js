@@ -170,7 +170,7 @@ export async function getProfile(userId) {
 // =========================
 export async function searchMovies(query, type = "movie") {
   const res = await fetch(
-    `${API}/search?query=${encodeURIComponent(query)}&type=${type}`
+    `${API}/search?query=${encodeURIComponent(query)}&media_type=${type}`
   );
   return res.json();
 }

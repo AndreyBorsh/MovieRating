@@ -1133,8 +1133,8 @@ def get_profile(user_id: int):
 # =========================
 
 @app.get("/search")
-def search(query: str, type: str = "movie"):
-    if type == "tv":
+def search(query: str, media_type: str = "movie"):
+    if media_type == "tv":
         res = requests.get(
             f"{TMDB_BASE}/search/tv",
             params={"api_key": TMDB_API_KEY, "query": query, "language": "ru-RU"},

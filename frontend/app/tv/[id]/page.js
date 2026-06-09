@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
   getTv, getTvReviews, getMyTvRating,
-  sendRating, updateRating, reactToReview, postComment,
+  sendRating, updateRating, reactToReview, postComment, getSimilarTv,
 } from "@/lib/api";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
@@ -278,11 +278,17 @@ export default function TvPage() {
   const [success,  setSuccess]  = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [editing,  setEditing]  = useState(false);
+  const [similar,  setSimilar]  = useState([]);
 
   useEffect(() => {
     if (!tvId || !ready) return;
     loadAll();
   }, [tvId, token, ready]);
+
+  useEffect(() => {
+    if (!tvId) return;
+    getSimilarTv(tvId).then((data) => setSimilar(Array.isArray(data) ? data : []));
+  }, [tvId]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -645,6 +651,44 @@ export default function TvPage() {
           )}
         </div>
       </div>
+
+      {/* Similar TV Shows */}
+      {similar.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold text-slate-100 mb-4">Похожие сериалы</h2>
+          <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+            {similar.map((item) => (
+              <Link
+                key={item.id}
+                href={`/tv/${item.id}`}
+                className="shrink-0 group"
+              >
+                <div className="w-28 rounded-lg overflow-hidden border border-transparent group-hover:border-amber-400/40 transition-all">
+                  {item.poster ? (
+                    <img
+                      src={`/api/tmdb-image/w185${item.poster}`}
+                      alt={item.title}
+                      className="w-28 h-40 object-cover"
+                    />
+                  ) : (
+                    <div className="w-28 h-40 bg-slate-800 flex items-center justify-center text-3xl text-slate-600">
+                      📺
+                    </div>
+                  )}
+                  <div className="px-1.5 py-1.5" style={{ background: "#141d2e" }}>
+                    <p className="text-xs text-slate-300 leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
+                      {item.title}
+                    </p>
+                    {item.year && (
+                      <p className="text-[10px] text-slate-600 mt-0.5">{item.year}</p>
+                    )}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

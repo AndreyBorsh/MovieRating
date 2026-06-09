@@ -118,7 +118,7 @@ def ensure_tables():
         DO $$ BEGIN
             ALTER TABLE ratings ADD CONSTRAINT ratings_user_tv_unique
                 UNIQUE (user_id, tv_tmdb_id);
-        EXCEPTION WHEN duplicate_table THEN NULL;
+        EXCEPTION WHEN duplicate_object THEN NULL;
         END $$;
     """)
 
@@ -633,15 +633,34 @@ def get_tv_show(tmdb_id: int):
             "media_type": "tv",
         }
 
-    show = fetch_tmdb_tv(tmdb_id)
-    if not show:
-        raise HTTPException(status_code=404, detail="Сериал не найден")
-    return {
-        "id": show["tmdb_id"], "title": show["title"], "overview": show["overview"],
-        "poster": show["poster_path"], "year": show["release_year"],
-        "seasons": show["seasons"], "score": 0.0, "count": 0,
-        "media_type": "tv",
-    }
+    # Not cached yet — fetch from TMDB and cache
+    conn2 = get_db()
+    cache_tv(conn2, tmdb_id)
+    conn2.close()
+
+    # Try to fetch from DB again after caching
+    conn3 = get_db()
+    cur3 = conn3.cursor()
+    cur3.execute("""
+        SELECT t.tmdb_id, t.title, t.overview, t.poster_path, t.release_year, t.seasons,
+               COALESCE(AVG(r.score), 0), COUNT(r.id)
+        FROM tv_shows t
+        LEFT JOIN ratings r ON r.tv_tmdb_id = t.tmdb_id
+        WHERE t.tmdb_id = %s
+        GROUP BY t.tmdb_id, t.title, t.overview, t.poster_path, t.release_year, t.seasons
+    """, (tmdb_id,))
+    row2 = cur3.fetchone()
+    cur3.close(); conn3.close()
+
+    if row2:
+        return {
+            "id": row2[0], "title": row2[1], "overview": row2[2],
+            "poster": row2[3], "year": row2[4], "seasons": row2[5],
+            "score": round(float(row2[6]), 2), "count": row2[7],
+            "media_type": "tv",
+        }
+
+    raise HTTPException(status_code=404, detail="Сериал не найден")
 
 
 # =========================

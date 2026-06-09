@@ -204,6 +204,25 @@ app = FastAPI(title="WAW Cinema API", lifespan=lifespan)
 app.add_middleware(CORSHandler)
 
 
+@app.get("/admin/fix-schema")
+def fix_schema():
+    """One-time migration: make movie-only columns nullable for TV ratings.
+    Uses autocommit so each statement is independent and can't be rolled back."""
+    results = {}
+    conn = get_db()
+    conn.autocommit = True
+    cur = conn.cursor()
+    for col in ("direction", "music"):
+        try:
+            cur.execute(f"ALTER TABLE ratings ALTER COLUMN {col} DROP NOT NULL")
+            results[col] = "ok"
+        except Exception as e:
+            results[col] = f"error: {e}"
+    cur.close()
+    conn.close()
+    return results
+
+
 def require_auth(authorization: str = Header(None)) -> dict:
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Требуется авторизация")

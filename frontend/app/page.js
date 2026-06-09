@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMovies, getRecent, getReviews } from "@/lib/api";
+import { getMovies, getTvShows, getRecent, getReviews, getTvReviews } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 const POSTER = (path) =>
@@ -31,13 +31,24 @@ function ReviewText({ text }) {
   );
 }
 
-const CRITERIA = [
-  { key: "overall",   label: "Общее",     weight: "40%", main: true },
-  { key: "story",     label: "Сценарий",  weight: "15%" },
-  { key: "direction", label: "Режиссура", weight: "15%" },
-  { key: "acting",    label: "Актёры",    weight: "15%" },
-  { key: "visuals",   label: "Операторка",weight: "10%" },
-  { key: "music",     label: "Музыка",    weight: "5%"  },
+// Movie criteria for modal
+const MOVIE_CRITERIA = [
+  { key: "overall",   label: "Общее",      weight: "35%", main: true },
+  { key: "story",     label: "Сценарий",   weight: "20%" },
+  { key: "direction", label: "Режиссура",  weight: "15%" },
+  { key: "acting",    label: "Актёры",     weight: "15%" },
+  { key: "visuals",   label: "Визуал",     weight: "10%" },
+  { key: "music",     label: "Звук",       weight: "5%"  },
+];
+
+// TV criteria for modal
+const TV_CRITERIA = [
+  { key: "overall",    label: "Общее",      weight: "30%", main: true },
+  { key: "story",      label: "Сценарий",   weight: "20%" },
+  { key: "characters", label: "Персонажи",  weight: "20%" },
+  { key: "acting",     label: "Актёры",     weight: "15%" },
+  { key: "visuals",    label: "Визуал",     weight: "10%" },
+  { key: "pacing",     label: "Темп",       weight: "5%"  },
 ];
 
 function ScoreBadge({ score }) {
@@ -73,16 +84,20 @@ function ReviewModal({ item, onClose }) {
   const { token } = useAuth();
   const [review, setReview] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isTV = item.media_type === "tv";
+  const CRITERIA = isTV ? TV_CRITERIA : MOVIE_CRITERIA;
+  const mediaHref = isTV ? `/tv/${item.movie_id}` : `/movies/${item.movie_id}`;
 
   useEffect(() => {
-    getReviews(item.movie_id, token)
+    const fetchFn = isTV ? getTvReviews : getReviews;
+    fetchFn(item.movie_id, token)
       .then((reviews) => {
         const found = reviews.find((r) => r.user_id === item.user_id);
         setReview(found || null);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [item.movie_id, item.user_id, token]);
+  }, [item.movie_id, item.user_id, token, isTV]);
 
   return (
     <div
@@ -105,11 +120,13 @@ function ReviewModal({ item, onClose }) {
                 className="w-10 h-14 rounded-lg object-cover shrink-0"
               />
             ) : (
-              <div className="w-10 h-14 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 shrink-0">🎬</div>
+              <div className="w-10 h-14 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                {isTV ? "📺" : "🎬"}
+              </div>
             )}
             <div className="min-w-0">
               <Link
-                href={`/movies/${item.movie_id}`}
+                href={mediaHref}
                 onClick={onClose}
                 className="text-sm font-semibold text-slate-100 hover:text-amber-400 transition-colors line-clamp-1"
               >
@@ -127,6 +144,9 @@ function ReviewModal({ item, onClose }) {
                 <span className={`text-sm font-bold ${item.score >= 7.5 ? "text-emerald-400" : item.score >= 5.5 ? "text-amber-400" : "text-red-400"}`}>
                   {item.score?.toFixed(1)}
                 </span>
+                {isTV && (
+                  <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
+                )}
               </div>
             </div>
           </div>
@@ -164,11 +184,11 @@ function ReviewModal({ item, onClose }) {
             </span>
           )}
           <Link
-            href={`/movies/${item.movie_id}`}
+            href={mediaHref}
             onClick={onClose}
             className="text-xs text-amber-400 hover:text-amber-300 transition-colors ml-auto"
           >
-            Перейти к фильму →
+            Перейти {isTV ? "к сериалу" : "к фильму"} →
           </Link>
         </div>
       </div>
@@ -177,21 +197,31 @@ function ReviewModal({ item, onClose }) {
 }
 
 function RecentCard({ item, onClick }) {
+  const isTV = item.media_type === "tv";
   return (
     <div
       className="flex gap-3 rounded-xl p-3 border cursor-pointer hover:border-amber-400/40 transition-colors"
       style={{ background: "#141d2e", borderColor: "#1e2d45" }}
       onClick={onClick}
     >
-      <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-800">
+      <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-slate-800 relative">
         {POSTER(item.poster) ? (
           <img src={POSTER(item.poster)} alt={item.movie_title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-slate-600 text-xl">🎬</div>
+          <div className="w-full h-full flex items-center justify-center text-slate-600 text-xl">
+            {isTV ? "📺" : "🎬"}
+          </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-slate-100 line-clamp-1">{item.movie_title}</p>
+        <div className="flex items-start gap-1">
+          <p className="text-sm font-semibold text-slate-100 line-clamp-1 flex-1">{item.movie_title}</p>
+          {isTV && (
+            <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1 py-0.5 rounded shrink-0 mt-0.5">
+              сериал
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-amber-400 font-medium">{item.username}</span>
           <span className="text-xs text-slate-500">·</span>
@@ -205,10 +235,13 @@ function RecentCard({ item, onClick }) {
   );
 }
 
-function MovieCard({ movie }) {
-  const legendary = movie.score >= 9.5;
+function MediaCard({ item }) {
+  const isTV = item.media_type === "tv";
+  const legendary = item.score >= 9.5;
+  const href = isTV ? `/tv/${item.id}` : `/movies/${item.id}`;
+
   return (
-    <Link href={`/movies/${movie.id}`}>
+    <Link href={href}>
       <div
         className="rounded-xl overflow-hidden border transition-all hover:scale-[1.02] cursor-pointer"
         style={{
@@ -218,10 +251,12 @@ function MovieCard({ movie }) {
         }}
       >
         <div className="relative h-52 bg-slate-800 overflow-hidden">
-          {POSTER(movie.poster) ? (
-            <img src={POSTER(movie.poster)} alt={movie.title} className="w-full h-full object-cover" />
+          {POSTER(item.poster) ? (
+            <img src={POSTER(item.poster)} alt={item.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-600 text-4xl">🎬</div>
+            <div className="w-full h-full flex items-center justify-center text-slate-600 text-4xl">
+              {isTV ? "📺" : "🎬"}
+            </div>
           )}
           {legendary && (
             <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide"
@@ -229,14 +264,19 @@ function MovieCard({ movie }) {
               ★ ШЕДЕВР
             </div>
           )}
+          {isTV && !legendary && (
+            <div className="absolute top-2 right-2 bg-black/60 text-[10px] text-amber-400 px-1.5 py-0.5 rounded">
+              сериал
+            </div>
+          )}
         </div>
         <div className="p-3">
           <div className={`text-sm font-semibold line-clamp-1 ${legendary ? "text-amber-200" : "text-slate-100"}`}>
-            {movie.title}
+            {item.title}
           </div>
           <div className="flex items-center justify-between mt-1.5">
-            <ScoreBadge score={movie.score} />
-            <span className="text-xs text-slate-500">{movie.count} оценок</span>
+            <ScoreBadge score={item.score} />
+            <span className="text-xs text-slate-500">{item.count} оценок</span>
           </div>
         </div>
       </div>
@@ -246,14 +286,15 @@ function MovieCard({ movie }) {
 
 export default function HomePage() {
   const { token } = useAuth();
-  const [movies, setMovies] = useState([]);
-  const [recent, setRecent] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [movies,   setMovies]   = useState([]);
+  const [tvShows,  setTvShows]  = useState([]);
+  const [recent,   setRecent]   = useState([]);
+  const [loading,  setLoading]  = useState(true);
   const [modalItem, setModalItem] = useState(null);
 
   useEffect(() => {
-    Promise.all([getMovies(), getRecent()])
-      .then(([m, r]) => { setMovies(m); setRecent(r); })
+    Promise.all([getMovies(), getTvShows(), getRecent()])
+      .then(([m, t, r]) => { setMovies(m); setTvShows(t); setRecent(r); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -264,6 +305,8 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const hasContent = movies.length > 0 || tvShows.length > 0 || recent.length > 0;
+
   return (
     <div className="space-y-10">
       {modalItem && (
@@ -273,7 +316,7 @@ export default function HomePage() {
       {!token && (
         <div className="text-center py-12">
           <h1 className="text-4xl font-bold text-slate-100 mb-3">
-            Оценивай фильмы <span className="text-amber-400">объективно</span>
+            Оценивай фильмы и сериалы <span className="text-amber-400">объективно</span>
           </h1>
           <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">
             Шесть критериев оценки, умный алгоритм расчёта и полноценные рецензии —
@@ -284,7 +327,7 @@ export default function HomePage() {
               Начать
             </Link>
             <Link href="/search" className="px-5 py-2.5 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-slate-500 transition">
-              Поиск фильмов
+              Поиск фильмов и сериалов
             </Link>
           </div>
         </div>
@@ -309,18 +352,27 @@ export default function HomePage() {
 
           {movies.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-100 mb-4">Оцененные фильмы</h2>
+              <h2 className="text-lg font-semibold text-slate-100 mb-4">🎬 Оцененные фильмы</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {movies.map((m) => <MovieCard key={m.id} movie={m} />)}
+                {movies.map((m) => <MediaCard key={m.id} item={m} />)}
               </div>
             </section>
           )}
 
-          {movies.length === 0 && recent.length === 0 && (
+          {tvShows.length > 0 && (
+            <section>
+              <h2 className="text-lg font-semibold text-slate-100 mb-4">📺 Оцененные сериалы</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {tvShows.map((s) => <MediaCard key={s.id} item={s} />)}
+              </div>
+            </section>
+          )}
+
+          {!hasContent && (
             <div className="text-center py-16">
               <div className="text-5xl mb-4">🎬</div>
               <p className="text-slate-500 text-sm">
-                Пока нет оценённых фильмов.{" "}
+                Пока нет оценённых фильмов и сериалов.{" "}
                 <Link href="/search" className="text-amber-400 hover:underline">Найдите первый</Link>
               </p>
             </div>

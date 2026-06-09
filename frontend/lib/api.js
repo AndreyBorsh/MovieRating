@@ -66,35 +66,42 @@ export async function getReviews(id, token) {
   return res.json();
 }
 
-export async function reactToReview(token, ratingId, emoji) {
-  const res = await fetch(`${API}/ratings/${ratingId}/react`, {
-    method: "POST",
-    headers: authHeader(token),
-    body: JSON.stringify({ emoji }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Ошибка реакции");
-  return data;
-}
-
-export async function postComment(token, ratingId, text) {
-  const res = await fetch(`${API}/ratings/${ratingId}/comments`, {
-    method: "POST",
-    headers: authHeader(token),
-    body: JSON.stringify({ text }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Ошибка комментария");
-  return data;
-}
-
 export async function getMyRating(token, tmdbId) {
   const res = await fetch(`${API}/movies/${tmdbId}/my-rating`, {
     headers: authHeader(token),
   });
   if (res.status === 401) return null;
   const data = await res.json();
-  return data; // null if not rated
+  return data;
+}
+
+// =========================
+// TV SHOWS
+// =========================
+export async function getTvShows() {
+  const res = await fetch(`${API}/tv`);
+  return res.json();
+}
+
+export async function getTv(id) {
+  const res = await fetch(`${API}/tv/${id}`);
+  if (!res.ok) throw new Error("Сериал не найден");
+  return res.json();
+}
+
+export async function getTvReviews(id, token) {
+  const headers = token ? { Authorization: `Bearer ${token}` } : {};
+  const res = await fetch(`${API}/tv/${id}/reviews`, { headers });
+  return res.json();
+}
+
+export async function getMyTvRating(token, tmdbId) {
+  const res = await fetch(`${API}/tv/${tmdbId}/my-rating`, {
+    headers: authHeader(token),
+  });
+  if (res.status === 401) return null;
+  const data = await res.json();
+  return data;
 }
 
 // =========================
@@ -122,6 +129,28 @@ export async function updateRating(token, payload) {
   return data;
 }
 
+export async function reactToReview(token, ratingId, emoji) {
+  const res = await fetch(`${API}/ratings/${ratingId}/react`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ emoji }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка реакции");
+  return data;
+}
+
+export async function postComment(token, ratingId, text) {
+  const res = await fetch(`${API}/ratings/${ratingId}/comments`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ text }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Ошибка комментария");
+  return data;
+}
+
 // =========================
 // RECENT & PROFILE
 // =========================
@@ -139,9 +168,9 @@ export async function getProfile(userId) {
 // =========================
 // SEARCH
 // =========================
-export async function searchMovies(query) {
+export async function searchMovies(query, type = "movie") {
   const res = await fetch(
-    `${API}/search?query=${encodeURIComponent(query)}`
+    `${API}/search?query=${encodeURIComponent(query)}&type=${type}`
   );
   return res.json();
 }

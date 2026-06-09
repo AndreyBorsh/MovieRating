@@ -232,17 +232,17 @@ def calculate_score_tv(overall, story, characters, acting, visuals, pacing) -> f
       Overall:    30%  (slightly less — long-form needs more objective criteria)
       Script:     20%
       Characters: 20%  (key for series — you live with them for seasons)
-      Acting:     15%
+      Performance:10%
       Visuals:    10%
-      Pacing:      5%  (binge-worthiness, episode hooks)
+      Pacing:     10%  (crucial for series — bad pacing wastes tens of hours)
     """
     score = (
         overall    * 0.30 +
         story      * 0.20 +
         characters * 0.20 +
-        acting     * 0.15 +
+        acting     * 0.10 +
         visuals    * 0.10 +
-        pacing     * 0.05
+        pacing     * 0.10
     )
     return round(max(1.0, min(10.0, score)), 2)
 

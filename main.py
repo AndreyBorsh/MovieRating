@@ -690,29 +690,35 @@ def create_rating(data: dict, authorization: str = Header(None)):
         if not all(isinstance(v, int) and 1 <= v <= 10 for v in values):
             raise HTTPException(status_code=400, detail="Оценки должны быть от 1 до 10")
 
-        conn = get_db()
-        cache_tv(conn, int(tmdb_id))
-        cur = conn.cursor()
-        cur.execute(
-            "SELECT id FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s",
-            (user_id, tmdb_id),
-        )
-        if cur.fetchone():
-            cur.close(); conn.close()
-            raise HTTPException(status_code=400, detail="Вы уже оценивали этот сериал")
+        try:
+            conn = get_db()
+            cache_tv(conn, int(tmdb_id))
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s",
+                (user_id, tmdb_id),
+            )
+            if cur.fetchone():
+                cur.close(); conn.close()
+                raise HTTPException(status_code=400, detail="Вы уже оценивали этот сериал")
 
-        score = calculate_score_tv(overall, story, characters, acting, visuals, pacing)
-        cur.execute(
-            """INSERT INTO ratings
-               (user_id, tv_tmdb_id, overall, story, characters, acting, visuals, pacing,
-                score, review, media_type)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv')""",
-            (user_id, tmdb_id, overall, story, characters, acting, visuals, pacing,
-             score, review or None),
-        )
-        conn.commit()
-        cur.close(); conn.close()
-        return {"score": score}
+            score = calculate_score_tv(overall, story, characters, acting, visuals, pacing)
+            cur.execute(
+                """INSERT INTO ratings
+                   (user_id, tv_tmdb_id, overall, story, characters, acting, visuals, pacing,
+                    score, review, media_type)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv')""",
+                (user_id, tmdb_id, overall, story, characters, acting, visuals, pacing,
+                 score, review or None),
+            )
+            conn.commit()
+            cur.close(); conn.close()
+            return {"score": score}
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"ERROR creating TV rating: {e}")
+            raise HTTPException(status_code=500, detail=f"Ошибка сохранения: {str(e)}")
 
     else:  # movie
         tmdb_id   = data.get("tmdb_id")

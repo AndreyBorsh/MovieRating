@@ -268,7 +268,7 @@ const DEFAULT_FORM = { overall: 7, story: 7, direction: 7, acting: 7, visuals: 7
 
 export default function MoviePage() {
   const { id: movieId } = useParams();
-  const { token, user } = useAuth();
+  const { token, user, ready } = useAuth();
 
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -283,9 +283,9 @@ export default function MoviePage() {
   const [editing, setEditing] = useState(false);
 
   useEffect(() => {
-    if (!movieId) return;
+    if (!movieId || !ready) return;
     loadAll();
-  }, [movieId, token]);
+  }, [movieId, token, ready]);
 
   const loadAll = async () => {
     setLoading(true);

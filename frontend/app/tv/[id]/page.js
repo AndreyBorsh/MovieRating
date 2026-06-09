@@ -265,7 +265,7 @@ const DEFAULT_FORM = {
 
 export default function TvPage() {
   const { id: tvId } = useParams();
-  const { token, user } = useAuth();
+  const { token, user, ready } = useAuth();
 
   const [show,     setShow]     = useState(null);
   const [reviews,  setReviews]  = useState([]);
@@ -280,9 +280,9 @@ export default function TvPage() {
   const [editing,  setEditing]  = useState(false);
 
   useEffect(() => {
-    if (!tvId) return;
+    if (!tvId || !ready) return;
     loadAll();
-  }, [tvId, token]);
+  }, [tvId, token, ready]);
 
   const loadAll = async () => {
     setLoading(true);

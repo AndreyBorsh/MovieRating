@@ -1129,6 +1129,52 @@ def get_profile(user_id: int):
 
 
 # =========================
+# SIMILAR
+# =========================
+
+@app.get("/movies/{tmdb_id}/similar")
+def get_similar_movies(tmdb_id: int):
+    res = requests.get(
+        f"{TMDB_BASE}/movie/{tmdb_id}/similar",
+        params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
+        timeout=5,
+    )
+    if res.status_code != 200:
+        return []
+    return [
+        {
+            "id": m["id"],
+            "title": m.get("title", ""),
+            "poster": m.get("poster_path"),
+            "year": m["release_date"][:4] if m.get("release_date") else None,
+            "media_type": "movie",
+        }
+        for m in res.json().get("results", [])[:12]
+    ]
+
+
+@app.get("/tv/{tmdb_id}/similar")
+def get_similar_tv(tmdb_id: int):
+    res = requests.get(
+        f"{TMDB_BASE}/tv/{tmdb_id}/similar",
+        params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
+        timeout=5,
+    )
+    if res.status_code != 200:
+        return []
+    return [
+        {
+            "id": m["id"],
+            "title": m.get("name", ""),
+            "poster": m.get("poster_path"),
+            "year": m["first_air_date"][:4] if m.get("first_air_date") else None,
+            "media_type": "tv",
+        }
+        for m in res.json().get("results", [])[:12]
+    ]
+
+
+# =========================
 # SEARCH
 # =========================
 

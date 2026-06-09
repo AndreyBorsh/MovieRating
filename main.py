@@ -104,6 +104,13 @@ def ensure_tables():
         END $$;
     """)
 
+    # Make direction and music nullable (needed for TV ratings that don't use them)
+    cur.execute("""
+        ALTER TABLE ratings
+            ALTER COLUMN direction DROP NOT NULL,
+            ALTER COLUMN music     DROP NOT NULL;
+    """)
+
     # FK from ratings.tv_tmdb_id → tv_shows
     cur.execute("""
         DO $$ BEGIN

@@ -166,6 +166,19 @@ export async function getProfile(userId) {
 }
 
 // =========================
+// SIMILAR
+// =========================
+export async function getSimilarMovies(id) {
+  const res = await fetch(`${API}/movies/${id}/similar`);
+  return res.json();
+}
+
+export async function getSimilarTv(id) {
+  const res = await fetch(`${API}/tv/${id}/similar`);
+  return res.json();
+}
+
+// =========================
 // SEARCH
 // =========================
 export async function searchMovies(query, type = "movie") {

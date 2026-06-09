@@ -1135,7 +1135,7 @@ def get_profile(user_id: int):
 @app.get("/movies/{tmdb_id}/similar")
 def get_similar_movies(tmdb_id: int):
     res = requests.get(
-        f"{TMDB_BASE}/movie/{tmdb_id}/similar",
+        f"{TMDB_BASE}/movie/{tmdb_id}/recommendations",
         params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
         timeout=5,
     )
@@ -1156,7 +1156,7 @@ def get_similar_movies(tmdb_id: int):
 @app.get("/tv/{tmdb_id}/similar")
 def get_similar_tv(tmdb_id: int):
     res = requests.get(
-        f"{TMDB_BASE}/tv/{tmdb_id}/similar",
+        f"{TMDB_BASE}/tv/{tmdb_id}/recommendations",
         params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
         timeout=5,
     )

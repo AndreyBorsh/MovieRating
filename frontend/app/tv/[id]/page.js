@@ -562,7 +562,7 @@ export default function TvPage() {
             </div>
           ) : (editing || (!myRating && !success)) && (
             <div
-              className="rounded-xl p-5 border space-y-5 lg:sticky lg:top-20"
+              className="rounded-xl p-5 border space-y-5"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <h3 className="text-base font-semibold text-slate-100">

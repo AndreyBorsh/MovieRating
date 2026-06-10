@@ -429,7 +429,7 @@ export default function TvPage() {
         </div>
       </div>
 
-      <MediaExtras details={details} mediaType="tv" />
+      <MediaExtras details={details} mediaType="tv" variant="meta" />
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
@@ -631,6 +631,8 @@ export default function TvPage() {
           )}
         </div>
       </div>
+
+      <MediaExtras details={details} mediaType="tv" variant="media" />
 
       {/* Similar TV Shows */}
       {similar.length > 0 && (

@@ -14,8 +14,10 @@ function Chip({ children }) {
   );
 }
 
-export default function MediaExtras({ details, mediaType }) {
+export default function MediaExtras({ details, mediaType, variant = "all" }) {
   if (!details) return null;
+  const showMeta = variant === "all" || variant === "meta";
+  const showMedia = variant === "all" || variant === "media";
 
   const {
     genres = [],
@@ -48,7 +50,7 @@ export default function MediaExtras({ details, mediaType }) {
   return (
     <div className="space-y-6">
       {/* Meta block */}
-      {hasMeta && (
+      {showMeta && hasMeta && (
         <div
           className="rounded-xl p-5 border space-y-3"
           style={{ background: "#141d2e", borderColor: "#1e2d45" }}
@@ -113,7 +115,7 @@ export default function MediaExtras({ details, mediaType }) {
       )}
 
       {/* Backdrop gallery */}
-      {backdrops.length > 0 && (
+      {showMedia && backdrops.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-slate-100 mb-3">Кадры</h2>
           <div className="flex gap-3 overflow-x-auto pb-3">
@@ -131,7 +133,7 @@ export default function MediaExtras({ details, mediaType }) {
       )}
 
       {/* Cast */}
-      {cast.length > 0 && (
+      {showMedia && cast.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-slate-100 mb-3">В ролях</h2>
           <div className="flex gap-3 overflow-x-auto pb-3">

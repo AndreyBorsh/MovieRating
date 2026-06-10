@@ -419,7 +419,7 @@ export default function MoviePage() {
         </div>
       </div>
 
-      <MediaExtras details={details} mediaType="movie" />
+      <MediaExtras details={details} mediaType="movie" variant="meta" />
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
@@ -627,6 +627,8 @@ export default function MoviePage() {
           )}
         </div>
       </div>
+
+      <MediaExtras details={details} mediaType="movie" variant="media" />
 
       {/* Similar Movies */}
       {similar.length > 0 && (

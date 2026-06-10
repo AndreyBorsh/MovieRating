@@ -629,10 +629,14 @@ export default function TvPage() {
               )}
             </div>
           )}
+
+          {details && (
+            <div className="mt-6">
+              <MediaExtras details={details} mediaType="tv" variant="media" />
+            </div>
+          )}
         </div>
       </div>
-
-      <MediaExtras details={details} mediaType="tv" variant="media" />
 
       {/* Similar TV Shows */}
       {similar.length > 0 && (

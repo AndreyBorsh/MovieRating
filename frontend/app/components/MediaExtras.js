@@ -117,15 +117,15 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Backdrop gallery */}
       {showMedia && backdrops.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-slate-100 mb-3">Кадры</h2>
-          <div className="flex gap-3 overflow-x-auto pb-3">
+          <h2 className="text-base font-semibold text-slate-100 mb-2">Кадры</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {backdrops.map((b, i) => (
               <img
                 key={i}
                 src={BACKDROP(b)}
                 alt={`Кадр ${i + 1}`}
                 loading="lazy"
-                className="h-40 sm:h-48 rounded-lg object-cover shrink-0"
+                className="h-24 rounded-lg object-cover shrink-0"
               />
             ))}
           </div>
@@ -135,19 +135,19 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Cast */}
       {showMedia && cast.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold text-slate-100 mb-3">В ролях</h2>
-          <div className="flex gap-3 overflow-x-auto pb-3">
+          <h2 className="text-base font-semibold text-slate-100 mb-2">В ролях</h2>
+          <div className="flex gap-2 overflow-x-auto pb-2">
             {cast.map((c, i) => (
-              <div key={c.id ?? i} className="shrink-0 w-24 text-center">
+              <div key={c.id ?? i} className="shrink-0 w-20 text-center">
                 {c.photo ? (
                   <img
                     src={PROFILE(c.photo)}
                     alt={c.name}
                     loading="lazy"
-                    className="w-24 h-32 rounded-lg object-cover mb-1.5"
+                    className="w-20 h-28 rounded-lg object-cover mb-1"
                   />
                 ) : (
-                  <div className="w-24 h-32 rounded-lg bg-slate-800 flex items-center justify-center text-3xl text-slate-600 mb-1.5">
+                  <div className="w-20 h-28 rounded-lg bg-slate-800 flex items-center justify-center text-2xl text-slate-600 mb-1">
                     👤
                   </div>
                 )}

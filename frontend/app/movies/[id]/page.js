@@ -625,10 +625,14 @@ export default function MoviePage() {
               )}
             </div>
           )}
+
+          {details && (
+            <div className="mt-6">
+              <MediaExtras details={details} mediaType="movie" variant="media" />
+            </div>
+          )}
         </div>
       </div>
-
-      <MediaExtras details={details} mediaType="movie" variant="media" />
 
       {/* Similar Movies */}
       {similar.length > 0 && (

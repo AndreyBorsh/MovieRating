@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { stripMarkers } from "@/app/components/ReviewText";
 
 const POSTER = (p) => p && `/api/tmdb-image/w185${p}`;
 
@@ -219,7 +220,7 @@ export default function ProfilePage() {
 
                     {r.review && (
                       <p className="text-sm text-slate-400 mt-2 line-clamp-3">
-                        {r.review}
+                        {stripMarkers(r.review)}
                       </p>
                     )}
 

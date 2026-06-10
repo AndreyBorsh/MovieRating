@@ -5,6 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies } from "@/lib/api";
+import ReviewText from "@/app/components/ReviewText";
+import ReviewEditor from "@/app/components/ReviewEditor";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -51,30 +53,6 @@ function ScoreBadge({ score, size = "lg" }) {
     <span className={`font-bold ${cls} ${size === "lg" ? "text-4xl" : "text-base"}`}>
       {score > 0 ? (typeof score === "number" ? score.toFixed(1) : score) : "—"}
     </span>
-  );
-}
-
-const REVIEW_LIMIT = 300;
-
-function ReviewText({ text, muted = false }) {
-  const [expanded, setExpanded] = useState(false);
-  const isLong = text.length > REVIEW_LIMIT;
-  const displayed = isLong && !expanded ? text.slice(0, REVIEW_LIMIT).trimEnd() + "…" : text;
-  const color = muted ? "text-slate-400" : "text-slate-300";
-  return (
-    <div className={`text-sm ${color} leading-relaxed`}>
-      {displayed.split("\n").map((line, i) => (
-        <span key={i}>{line}{i < displayed.split("\n").length - 1 && <br />}</span>
-      ))}
-      {isLong && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="block mt-1.5 text-xs text-amber-400 hover:text-amber-300 transition-colors"
-        >
-          {expanded ? "Свернуть ↑" : "Читать дальше ↓"}
-        </button>
-      )}
-    </div>
   );
 }
 
@@ -606,19 +584,16 @@ export default function MoviePage() {
                 {FORMULA_TEXT}
               </p>
 
-              {/* Review textarea */}
+              {/* Review editor */}
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1.5">
                   Рецензия{" "}
                   <span className="text-slate-600">(необязательно)</span>
                 </label>
-                <textarea
+                <ReviewEditor
                   value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  rows={4}
+                  onChange={setReviewText}
                   placeholder="Напишите подробный отзыв о фильме..."
-                  className="w-full rounded-lg px-3 py-2.5 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50 resize-none transition"
-                  style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
                 />
               </div>
 

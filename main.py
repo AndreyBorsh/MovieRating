@@ -1212,6 +1212,87 @@ def get_similar_tv(tmdb_id: int):
 
 
 # =========================
+# DETAILS (cast, images, country, genres)
+# =========================
+
+def _extract_cast(credits: dict, limit: int = 14) -> list:
+    cast = credits.get("cast", []) if credits else []
+    return [
+        {
+            "id": c.get("id"),
+            "name": c.get("name", ""),
+            "character": c.get("character", ""),
+            "photo": c.get("profile_path"),
+        }
+        for c in cast[:limit]
+    ]
+
+
+@app.get("/movies/{tmdb_id}/details")
+def get_movie_details(tmdb_id: int):
+    res = requests.get(
+        f"{TMDB_BASE}/movie/{tmdb_id}",
+        params={
+            "api_key": TMDB_API_KEY,
+            "language": "ru-RU",
+            "append_to_response": "credits,images",
+            "include_image_language": "ru,en,null",
+        },
+        timeout=6,
+    )
+    if res.status_code != 200:
+        return {}
+    d = res.json()
+    credits = d.get("credits", {})
+    directors = [c["name"] for c in credits.get("crew", []) if c.get("job") == "Director"]
+    backdrops = [b["file_path"] for b in d.get("images", {}).get("backdrops", [])[:10]]
+    return {
+        "genres": [g["name"] for g in d.get("genres", [])],
+        "countries": [c["name"] for c in d.get("production_countries", [])],
+        "runtime": d.get("runtime"),
+        "tagline": d.get("tagline") or None,
+        "directors": directors,
+        "backdrops": backdrops,
+        "cast": _extract_cast(credits),
+    }
+
+
+@app.get("/tv/{tmdb_id}/details")
+def get_tv_details(tmdb_id: int):
+    res = requests.get(
+        f"{TMDB_BASE}/tv/{tmdb_id}",
+        params={
+            "api_key": TMDB_API_KEY,
+            "language": "ru-RU",
+            "append_to_response": "credits,images",
+            "include_image_language": "ru,en,null",
+        },
+        timeout=6,
+    )
+    if res.status_code != 200:
+        return {}
+    d = res.json()
+    credits = d.get("credits", {})
+    creators = [c["name"] for c in d.get("created_by", [])]
+    backdrops = [b["file_path"] for b in d.get("images", {}).get("backdrops", [])[:10]]
+    countries = [c["name"] for c in d.get("production_countries", [])]
+    if not countries:
+        countries = d.get("origin_country", [])
+    runtimes = d.get("episode_run_time", [])
+    return {
+        "genres": [g["name"] for g in d.get("genres", [])],
+        "countries": countries,
+        "episode_runtime": runtimes[0] if runtimes else None,
+        "seasons": d.get("number_of_seasons"),
+        "episodes": d.get("number_of_episodes"),
+        "tagline": d.get("tagline") or None,
+        "creators": creators,
+        "backdrops": backdrops,
+        "cast": _extract_cast(credits),
+    }
+
+
+# =========================
 # SEARCH
 # =========================
 

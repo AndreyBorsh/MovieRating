@@ -179,6 +179,19 @@ export async function getSimilarTv(id) {
 }
 
 // =========================
+// DETAILS (cast, images, country)
+// =========================
+export async function getMovieDetails(id) {
+  const res = await fetch(`${API}/movies/${id}/details`);
+  return res.json();
+}
+
+export async function getTvDetails(id) {
+  const res = await fetch(`${API}/tv/${id}/details`);
+  return res.json();
+}
+
+// =========================
 // SEARCH
 // =========================
 export async function searchMovies(query, type = "movie") {

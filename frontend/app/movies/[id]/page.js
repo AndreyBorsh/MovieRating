@@ -4,9 +4,10 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies, getMovieDetails } from "@/lib/api";
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
+import MediaExtras from "@/app/components/MediaExtras";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -260,6 +261,7 @@ export default function MoviePage() {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [similar, setSimilar] = useState([]);
+  const [details, setDetails] = useState(null);
 
   useEffect(() => {
     if (!movieId || !ready) return;
@@ -269,6 +271,7 @@ export default function MoviePage() {
   useEffect(() => {
     if (!movieId) return;
     getSimilarMovies(movieId).then((data) => setSimilar(Array.isArray(data) ? data : []));
+    getMovieDetails(movieId).then((data) => setDetails(data && typeof data === "object" ? data : null));
   }, [movieId]);
 
   const loadAll = async () => {
@@ -415,6 +418,8 @@ export default function MoviePage() {
           </div>
         </div>
       </div>
+
+      <MediaExtras details={details} mediaType="movie" />
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}

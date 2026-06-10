@@ -6,10 +6,11 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
   getTv, getTvReviews, getMyTvRating,
-  sendRating, updateRating, reactToReview, postComment, getSimilarTv,
+  sendRating, updateRating, reactToReview, postComment, getSimilarTv, getTvDetails,
 } from "@/lib/api";
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
+import MediaExtras from "@/app/components/MediaExtras";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -257,6 +258,7 @@ export default function TvPage() {
   const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [editing,  setEditing]  = useState(false);
   const [similar,  setSimilar]  = useState([]);
+  const [details,  setDetails]  = useState(null);
 
   useEffect(() => {
     if (!tvId || !ready) return;
@@ -266,6 +268,7 @@ export default function TvPage() {
   useEffect(() => {
     if (!tvId) return;
     getSimilarTv(tvId).then((data) => setSimilar(Array.isArray(data) ? data : []));
+    getTvDetails(tvId).then((data) => setDetails(data && typeof data === "object" ? data : null));
   }, [tvId]);
 
   const loadAll = async () => {
@@ -425,6 +428,8 @@ export default function TvPage() {
           </div>
         </div>
       </div>
+
+      <MediaExtras details={details} mediaType="tv" />
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}

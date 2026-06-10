@@ -244,7 +244,7 @@ const DEFAULT_FORM = {
 
 export default function TvPage() {
   const { id: tvId } = useParams();
-  const { token, user, ready } = useAuth();
+  const { token, user, ready, logout } = useAuth();
 
   const [show,     setShow]     = useState(null);
   const [reviews,  setReviews]  = useState([]);
@@ -259,6 +259,7 @@ export default function TvPage() {
   const [editing,  setEditing]  = useState(false);
   const [similar,  setSimilar]  = useState([]);
   const [details,  setDetails]  = useState(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     if (!tvId || !ready) return;
@@ -342,7 +343,12 @@ export default function TvPage() {
       }
       await loadAll();
     } catch (e) {
-      setError(e.message);
+      if (e.status === 401) {
+        setSessionExpired(true);
+        logout();
+      } else {
+        setError(e.message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -514,6 +520,11 @@ export default function TvPage() {
               className="rounded-xl p-6 border text-center"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
+              {sessionExpired && (
+                <p className="text-sm text-amber-400 mb-3">
+                  Сессия истекла. Войдите заново, чтобы оценить.
+                </p>
+              )}
               <p className="text-sm text-slate-400 mb-4">
                 Войдите, чтобы оставить оценку
               </p>

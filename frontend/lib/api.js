@@ -107,14 +107,21 @@ export async function getMyTvRating(token, tmdbId) {
 // =========================
 // RATINGS
 // =========================
+function authError(status, fallback) {
+  const msg = status === 401 ? "Сессия истекла. Войдите в аккаунт заново." : fallback;
+  const err = new Error(msg);
+  err.status = status;
+  return err;
+}
+
 export async function sendRating(token, payload) {
   const res = await fetch(`${API}/ratings`, {
     method: "POST",
     headers: authHeader(token),
     body: JSON.stringify(payload),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Ошибка отправки");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw authError(res.status, data.detail || "Ошибка отправки");
   return data;
 }
 
@@ -124,8 +131,8 @@ export async function updateRating(token, payload) {
     headers: authHeader(token),
     body: JSON.stringify(payload),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Ошибка обновления");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw authError(res.status, data.detail || "Ошибка обновления");
   return data;
 }
 

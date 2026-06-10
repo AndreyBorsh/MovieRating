@@ -247,7 +247,7 @@ const DEFAULT_FORM = { overall: 7, story: 7, direction: 7, acting: 7, visuals: 7
 
 export default function MoviePage() {
   const { id: movieId } = useParams();
-  const { token, user, ready } = useAuth();
+  const { token, user, ready, logout } = useAuth();
 
   const [movie, setMovie] = useState(null);
   const [reviews, setReviews] = useState([]);
@@ -262,6 +262,7 @@ export default function MoviePage() {
   const [editing, setEditing] = useState(false);
   const [similar, setSimilar] = useState([]);
   const [details, setDetails] = useState(null);
+  const [sessionExpired, setSessionExpired] = useState(false);
 
   useEffect(() => {
     if (!movieId || !ready) return;
@@ -341,7 +342,12 @@ export default function MoviePage() {
       }
       await loadAll();
     } catch (e) {
-      setError(e.message);
+      if (e.status === 401) {
+        setSessionExpired(true);
+        logout();
+      } else {
+        setError(e.message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -509,6 +515,11 @@ export default function MoviePage() {
               className="rounded-xl p-6 border text-center"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
+              {sessionExpired && (
+                <p className="text-sm text-amber-400 mb-3">
+                  Сессия истекла. Войдите заново, чтобы оценить.
+                </p>
+              )}
               <p className="text-sm text-slate-400 mb-4">
                 Войдите, чтобы оставить оценку
               </p>

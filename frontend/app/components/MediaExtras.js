@@ -1,12 +1,15 @@
 "use client";
 
+import { useState, useEffect, useCallback } from "react";
+
 const BACKDROP = (p) => p && `/api/tmdb-image/w780${p}`;
+const BACKDROP_LG = (p) => p && `/api/tmdb-image/w1280${p}`;
 const PROFILE = (p) => p && `/api/tmdb-image/w185${p}`;
 
 function Chip({ children }) {
   return (
     <span
-      className="text-xs px-2.5 py-1 rounded-full text-slate-300"
+      className="text-[11px] px-2 py-0.5 rounded-full text-slate-300"
       style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
     >
       {children}
@@ -14,7 +17,43 @@ function Chip({ children }) {
   );
 }
 
+const plural = (n, one, few, many) => {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+};
+
 export default function MediaExtras({ details, mediaType, variant = "all" }) {
+  const backdrops = details?.backdrops || [];
+  const [lbIndex, setLbIndex] = useState(null);
+  const open = lbIndex !== null;
+
+  const close = useCallback(() => setLbIndex(null), []);
+  const prev = useCallback(
+    () => setLbIndex((i) => (i - 1 + backdrops.length) % backdrops.length),
+    [backdrops.length]
+  );
+  const next = useCallback(
+    () => setLbIndex((i) => (i + 1) % backdrops.length),
+    [backdrops.length]
+  );
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") close();
+      else if (e.key === "ArrowLeft") prev();
+      else if (e.key === "ArrowRight") next();
+    };
+    window.addEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
+  }, [open, close, prev, next]);
+
   if (!details) return null;
   const showMeta = variant === "all" || variant === "meta";
   const showMedia = variant === "all" || variant === "media";
@@ -29,16 +68,8 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
     tagline,
     directors = [],
     creators = [],
-    backdrops = [],
     cast = [],
   } = details;
-
-  const hasMeta =
-    genres.length || countries.length || runtime || episode_runtime ||
-    seasons || directors.length || creators.length || tagline;
-
-  const hasAnything = hasMeta || backdrops.length || cast.length;
-  if (!hasAnything) return null;
 
   const fmtRuntime = (min) => {
     if (!min) return null;
@@ -47,86 +78,71 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
     return h > 0 ? `${h} ч ${m} мин` : `${m} мин`;
   };
 
+  const cleanTagline = tagline ? tagline.replace(/^[«»"'\s]+|[«»"'\s]+$/g, "") : "";
+
+  // Build compact inline meta items
+  const metaItems = [];
+  if (countries.length) metaItems.push(countries.join(", "));
+  if (mediaType === "movie" && runtime) metaItems.push(fmtRuntime(runtime));
+  if (mediaType === "tv" && seasons != null) {
+    let s = `${seasons} ${plural(seasons, "сезон", "сезона", "сезонов")}`;
+    if (episodes != null) s += `, ${episodes} ${plural(episodes, "серия", "серии", "серий")}`;
+    metaItems.push(s);
+  }
+  if (mediaType === "tv" && episode_runtime) metaItems.push(`~${episode_runtime} мин/серия`);
+  if (mediaType === "movie" && directors.length)
+    metaItems.push(`Реж.: ${directors.join(", ")}`);
+  if (mediaType === "tv" && creators.length)
+    metaItems.push(`${creators.length > 1 ? "Создатели" : "Создатель"}: ${creators.join(", ")}`);
+
+  const hasMeta = genres.length || metaItems.length || cleanTagline;
+  const hasAnything = hasMeta || backdrops.length || cast.length;
+  if (!hasAnything) return null;
+
   return (
-    <div className="space-y-6">
-      {/* Meta block */}
+    <div className="space-y-5">
+      {/* Compact meta block */}
       {showMeta && hasMeta && (
         <div
-          className="rounded-xl p-5 border space-y-3"
+          className="rounded-xl px-4 py-3 border"
           style={{ background: "#141d2e", borderColor: "#1e2d45" }}
         >
-          {tagline && (
-            <p className="text-sm italic text-slate-400">«{tagline}»</p>
+          {cleanTagline && (
+            <p className="text-xs italic text-slate-500 mb-2">«{cleanTagline}»</p>
           )}
-
-          {genres.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {genres.map((g) => (
-                <Chip key={g}>{g}</Chip>
-              ))}
-            </div>
-          )}
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-2 text-sm">
-            {countries.length > 0 && (
-              <div>
-                <div className="text-xs text-slate-600 mb-0.5">Страна</div>
-                <div className="text-slate-300">{countries.join(", ")}</div>
-              </div>
-            )}
-            {mediaType === "movie" && runtime && (
-              <div>
-                <div className="text-xs text-slate-600 mb-0.5">Длительность</div>
-                <div className="text-slate-300">{fmtRuntime(runtime)}</div>
-              </div>
-            )}
-            {mediaType === "tv" && seasons != null && (
-              <div>
-                <div className="text-xs text-slate-600 mb-0.5">Сезоны / серии</div>
-                <div className="text-slate-300">
-                  {seasons} / {episodes ?? "—"}
-                </div>
-              </div>
-            )}
-            {mediaType === "tv" && episode_runtime && (
-              <div>
-                <div className="text-xs text-slate-600 mb-0.5">Серия</div>
-                <div className="text-slate-300">~{episode_runtime} мин</div>
-              </div>
-            )}
-            {mediaType === "movie" && directors.length > 0 && (
-              <div className="col-span-2">
-                <div className="text-xs text-slate-600 mb-0.5">
-                  {directors.length > 1 ? "Режиссёры" : "Режиссёр"}
-                </div>
-                <div className="text-slate-300">{directors.join(", ")}</div>
-              </div>
-            )}
-            {mediaType === "tv" && creators.length > 0 && (
-              <div className="col-span-2">
-                <div className="text-xs text-slate-600 mb-0.5">
-                  {creators.length > 1 ? "Создатели" : "Создатель"}
-                </div>
-                <div className="text-slate-300">{creators.join(", ")}</div>
-              </div>
-            )}
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
+            {genres.map((g) => (
+              <Chip key={g}>{g}</Chip>
+            ))}
+            {metaItems.map((it, i) => (
+              <span key={i} className="flex items-center gap-2 text-slate-400">
+                {(genres.length > 0 || i > 0) && <span className="text-slate-700">·</span>}
+                <span>{it}</span>
+              </span>
+            ))}
           </div>
         </div>
       )}
 
-      {/* Backdrop gallery */}
+      {/* Backdrop gallery (clickable → lightbox) */}
       {showMedia && backdrops.length > 0 && (
         <div>
           <h2 className="text-base font-semibold text-slate-100 mb-2">Кадры</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {backdrops.map((b, i) => (
-              <img
+              <button
                 key={i}
-                src={BACKDROP(b)}
-                alt={`Кадр ${i + 1}`}
-                loading="lazy"
-                className="h-24 rounded-lg object-cover shrink-0"
-              />
+                type="button"
+                onClick={() => setLbIndex(i)}
+                className="shrink-0 rounded-lg overflow-hidden border border-transparent hover:border-amber-400/50 transition focus:outline-none"
+              >
+                <img
+                  src={BACKDROP(b)}
+                  alt={`Кадр ${i + 1}`}
+                  loading="lazy"
+                  className="h-24 object-cover"
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -151,9 +167,7 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
                     👤
                   </div>
                 )}
-                <p className="text-xs text-slate-200 leading-tight line-clamp-2">
-                  {c.name}
-                </p>
+                <p className="text-xs text-slate-200 leading-tight line-clamp-2">{c.name}</p>
                 {c.character && (
                   <p className="text-[10px] text-slate-500 leading-tight line-clamp-2 mt-0.5">
                     {c.character}
@@ -161,6 +175,56 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
                 )}
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {open && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4"
+          onClick={close}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); close(); }}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white text-xl flex items-center justify-center transition"
+            aria-label="Закрыть"
+          >
+            ✕
+          </button>
+
+          {backdrops.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); prev(); }}
+              className="absolute left-2 sm:left-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition"
+              aria-label="Предыдущий"
+            >
+              ‹
+            </button>
+          )}
+
+          <img
+            src={BACKDROP_LG(backdrops[lbIndex])}
+            alt={`Кадр ${lbIndex + 1}`}
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[85vh] max-w-[90vw] rounded-lg object-contain shadow-2xl"
+          />
+
+          {backdrops.length > 1 && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); next(); }}
+              className="absolute right-2 sm:right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition"
+              aria-label="Следующий"
+            >
+              ›
+            </button>
+          )}
+
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-sm text-white/70 bg-black/40 px-3 py-1 rounded-full">
+            {lbIndex + 1} / {backdrops.length}
           </div>
         </div>
       )}

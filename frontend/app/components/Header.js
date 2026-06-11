@@ -14,7 +14,7 @@ export default function Header() {
     return (
       <Link
         href={href}
-        className={`text-sm font-medium transition-colors px-3 py-1.5 rounded-md ${
+        className={`text-sm font-medium transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
           active
             ? "text-amber-400 bg-amber-400/10"
             : "text-slate-400 hover:text-slate-100"
@@ -35,25 +35,25 @@ export default function Header() {
       className="sticky top-0 z-50 border-b"
       style={{ background: "#0c1220", borderColor: "#1e2d45" }}
     >
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-1.5 sm:gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="text-lg font-bold tracking-tight text-amber-400 shrink-0"
+          className="text-base sm:text-lg font-bold tracking-tight text-amber-400 shrink-0"
         >
           <span className="hidden sm:inline">🎬 What's Andrew Watching</span>
           <span className="sm:hidden">🎬 WAW</span>
         </Link>
 
         {/* Nav */}
-        <nav className="flex items-center gap-0.5 sm:gap-1">
+        <nav className="flex items-center gap-0.5 sm:gap-1 min-w-0">
           {navLink("/", "Главная")}
           {navLink("/search", "Поиск")}
           {token && navLink(`/profile/${user?.user_id}`, "Профиль")}
         </nav>
 
         {/* Auth */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {token ? (
             <>
               <span className="text-xs text-slate-500 hidden sm:block">
@@ -61,7 +61,7 @@ export default function Header() {
               </span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-slate-400 hover:text-red-400 transition-colors px-3 py-1.5 rounded-md"
+                className="text-sm text-slate-400 hover:text-red-400 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Выйти
               </button>
@@ -70,13 +70,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="text-sm text-slate-400 hover:text-slate-100 transition-colors px-3 py-1.5"
+                className="text-sm text-slate-400 hover:text-slate-100 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
               >
                 Войти
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-medium text-amber-400 border border-amber-400/40 hover:bg-amber-400/10 transition-colors px-3 py-1.5 rounded-md"
+                className="text-sm font-medium text-amber-400 border border-amber-400/40 hover:bg-amber-400/10 transition-colors px-2.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Регистрация
               </Link>

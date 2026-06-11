@@ -293,7 +293,7 @@ export default function HomePage() {
 
       {!token && (
         <div className="text-center py-12">
-          <h1 className="text-4xl font-bold text-slate-100 mb-3">
+          <h1 className="text-2xl sm:text-4xl font-bold text-slate-100 mb-3">
             Оценивай фильмы и сериалы <span className="text-amber-400">объективно</span>
           </h1>
           <p className="text-slate-500 max-w-md mx-auto text-sm leading-relaxed">

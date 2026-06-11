@@ -439,7 +439,7 @@ export default function TvPage() {
 
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
-        <div className="space-y-4 order-2 lg:order-1">
+        <div className="space-y-4 order-2 lg:order-1 min-w-0">
           <h2 className="text-lg font-semibold text-slate-100">
             Рецензии ({reviews.length})
           </h2>
@@ -514,7 +514,7 @@ export default function TvPage() {
         </div>
 
         {/* ── Right: rating form ── */}
-        <div className="order-1 lg:order-2">
+        <div className="order-1 lg:order-2 min-w-0">
           {!token ? (
             <div
               className="rounded-xl p-6 border text-center"

@@ -234,3 +234,9 @@ export async function saveNote(token, mediaType, id, content) {
   if (!res.ok) throw new Error("Не удалось сохранить заметку");
   return res.json();
 }
+
+export async function getMyNotes(token) {
+  const res = await fetch(`${API}/notes`, { headers: authHeader(token) });
+  if (!res.ok) return [];
+  return res.json();
+}

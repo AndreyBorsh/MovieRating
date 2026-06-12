@@ -1117,6 +1117,14 @@ def save_note(media_type: str, media_id: int, data: dict, authorization: str = H
         conn.commit()
         cur.close(); conn.close()
         return {"content": "", "updated_at": None}
+    # Ensure the title is cached so the notes list can show it
+    try:
+        if media_type == "movie":
+            cache_movie(conn, media_id)
+        else:
+            cache_tv(conn, media_id)
+    except Exception:
+        pass
     cur.execute(
         """INSERT INTO notes (user_id, media_type, media_id, content, updated_at)
            VALUES (%s,%s,%s,%s,NOW())
@@ -1129,6 +1137,38 @@ def save_note(media_type: str, media_id: int, data: dict, authorization: str = H
     conn.commit()
     cur.close(); conn.close()
     return {"content": content, "updated_at": updated_at.isoformat() if updated_at else None}
+
+
+@app.get("/notes")
+def list_notes(authorization: str = Header(None)):
+    """All notes for the authenticated user, newest first, with title+poster."""
+    payload = require_auth(authorization)
+    user_id = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT n.media_type, n.media_id, n.content, n.updated_at,
+               COALESCE(m.title, t.title) AS title,
+               COALESCE(m.poster_path, t.poster_path) AS poster
+        FROM notes n
+        LEFT JOIN movies   m ON n.media_type = 'movie' AND m.tmdb_id = n.media_id
+        LEFT JOIN tv_shows t ON n.media_type = 'tv'    AND t.tmdb_id = n.media_id
+        WHERE n.user_id = %s
+        ORDER BY n.updated_at DESC
+    """, (user_id,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [
+        {
+            "media_type": r[0],
+            "media_id": r[1],
+            "content": r[2],
+            "updated_at": r[3].isoformat() if r[3] else None,
+            "title": r[4],
+            "poster": r[5],
+        }
+        for r in rows
+    ]
 
 
 # =========================

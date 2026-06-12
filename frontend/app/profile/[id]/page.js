@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getProfile } from "@/lib/api";
+import { getProfile, getMyNotes } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { stripMarkers } from "@/app/components/ReviewText";
 
@@ -65,9 +65,10 @@ function CriteriaBars({ rating }) {
 
 export default function ProfilePage() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notes, setNotes] = useState([]);
 
   useEffect(() => {
     if (!id) return;
@@ -76,6 +77,14 @@ export default function ProfilePage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Load own private notes only when viewing own profile
+  const viewingOwn = user && profile && user.user_id === profile.user_id;
+  useEffect(() => {
+    if (viewingOwn && token) {
+      getMyNotes(token).then((d) => setNotes(Array.isArray(d) ? d : [])).catch(() => {});
+    }
+  }, [viewingOwn, token]);
 
   if (loading) {
     return (
@@ -158,6 +167,53 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {/* My private notes (own profile only) */}
+      {isMe && notes.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+            📝 Мои заметки
+            <span className="text-xs font-normal text-slate-600">только вы их видите</span>
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-3">
+            {notes.map((n) => {
+              const href = n.media_type === "tv" ? `/tv/${n.media_id}` : `/movies/${n.media_id}`;
+              return (
+                <Link
+                  key={`${n.media_type}-${n.media_id}`}
+                  href={href}
+                  className="flex gap-3 rounded-xl p-3 border hover:border-amber-400/40 transition-colors min-w-0"
+                  style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+                >
+                  {POSTER(n.poster) ? (
+                    <img src={POSTER(n.poster)} alt={n.title || ""} className="w-12 h-16 rounded-lg object-cover shrink-0" />
+                  ) : (
+                    <div className="w-12 h-16 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                      {n.media_type === "tv" ? "📺" : "🎬"}
+                    </div>
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-sm font-semibold text-slate-100 line-clamp-1">
+                        {n.title || (n.media_type === "tv" ? "Сериал" : "Фильм")}
+                      </p>
+                      {n.media_type === "tv" && (
+                        <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1 py-0.5 rounded shrink-0">сериал</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
+                    {n.updated_at && (
+                      <p className="text-[10px] text-slate-600 mt-1">
+                        {new Date(n.updated_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Ratings list */}
       {profile.ratings.length === 0 ? (

@@ -186,12 +186,37 @@ def ensure_tables():
     conn.close()
 
 
+def ensure_notes_table():
+    """Create notes table independently (own autocommit conn) so it can't be
+    blocked by an aborted ensure_tables() transaction."""
+    conn = get_db()
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            media_type VARCHAR(10) NOT NULL,
+            media_id INT NOT NULL,
+            content TEXT NOT NULL DEFAULT '',
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, media_type, media_id)
+        )
+    """)
+    cur.close()
+    conn.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         ensure_tables()
     except Exception as e:
         print(f"WARNING: DB init skipped: {e}")
+    try:
+        ensure_notes_table()
+    except Exception as e:
+        print(f"WARNING: notes table init failed: {e}")
     yield
 
 
@@ -1108,10 +1133,11 @@ def save_note(media_type: str, media_id: int, data: dict, authorization: str = H
     if media_type not in ("movie", "tv"):
         raise HTTPException(status_code=400, detail="Неверный тип")
     content = (data.get("content") or "").strip()
-    conn = get_db()
-    cur = conn.cursor()
+
     if not content:
         # empty note → remove it
+        conn = get_db()
+        cur = conn.cursor()
         cur.execute(
             "DELETE FROM notes WHERE user_id=%s AND media_type=%s AND media_id=%s",
             (user_id, media_type, media_id),
@@ -1119,26 +1145,39 @@ def save_note(media_type: str, media_id: int, data: dict, authorization: str = H
         conn.commit()
         cur.close(); conn.close()
         return {"content": "", "updated_at": None}
-    # Ensure the title is cached so the notes list can show it
+
+    # Cache the title in a SEPARATE connection (best-effort) so a failure here
+    # can never abort the note-insert transaction.
     try:
+        c2 = get_db()
         if media_type == "movie":
-            cache_movie(conn, media_id)
+            cache_movie(c2, media_id)
         else:
-            cache_tv(conn, media_id)
+            cache_tv(c2, media_id)
+        c2.close()
     except Exception:
         pass
-    cur.execute(
-        """INSERT INTO notes (user_id, media_type, media_id, content, updated_at)
-           VALUES (%s,%s,%s,%s,NOW())
-           ON CONFLICT (user_id, media_type, media_id)
-           DO UPDATE SET content=EXCLUDED.content, updated_at=NOW()
-           RETURNING updated_at""",
-        (user_id, media_type, media_id, content),
-    )
-    updated_at = cur.fetchone()[0]
-    conn.commit()
-    cur.close(); conn.close()
-    return {"content": content, "updated_at": updated_at.isoformat() if updated_at else None}
+
+    conn = get_db()
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            """INSERT INTO notes (user_id, media_type, media_id, content, updated_at)
+               VALUES (%s,%s,%s,%s,NOW())
+               ON CONFLICT (user_id, media_type, media_id)
+               DO UPDATE SET content=EXCLUDED.content, updated_at=NOW()
+               RETURNING updated_at""",
+            (user_id, media_type, media_id, content),
+        )
+        updated_at = cur.fetchone()[0]
+        conn.commit()
+        return {"content": content, "updated_at": updated_at.isoformat() if updated_at else None}
+    except Exception as e:
+        conn.rollback()
+        print(f"ERROR saving note: {e}")
+        raise HTTPException(status_code=500, detail=f"Ошибка сохранения заметки: {str(e)}")
+    finally:
+        cur.close(); conn.close()
 
 
 @app.get("/notes")

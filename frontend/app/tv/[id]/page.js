@@ -11,6 +11,7 @@ import {
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
+import PrivateNote from "@/app/components/PrivateNote";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -638,6 +639,12 @@ export default function TvPage() {
                   Отмена
                 </button>
               )}
+            </div>
+          )}
+
+          {token && (
+            <div className="mt-3">
+              <PrivateNote mediaType="tv" mediaId={parseInt(tvId)} token={token} />
             </div>
           )}
 

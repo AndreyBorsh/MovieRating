@@ -168,6 +168,19 @@ def ensure_tables():
         )
     """)
 
+    # --- private notes (one per user per title; owner-only) ---
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS notes (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            media_type VARCHAR(10) NOT NULL,
+            media_id INT NOT NULL,
+            content TEXT NOT NULL DEFAULT '',
+            updated_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(user_id, media_type, media_id)
+        )
+    """)
+
     conn.commit()
     cur.close()
     conn.close()
@@ -1061,6 +1074,61 @@ def add_comment(rating_id: int, body: dict, authorization: str = Header(None)):
     cid, cat = cur.fetchone()
     conn.commit(); cur.close(); conn.close()
     return {"id": cid, "text": text, "created_at": cat.isoformat()}
+
+
+# =========================
+# PRIVATE NOTES (owner-only)
+# =========================
+
+@app.get("/notes/{media_type}/{media_id}")
+def get_note(media_type: str, media_id: int, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    user_id = payload["user_id"]
+    if media_type not in ("movie", "tv"):
+        raise HTTPException(status_code=400, detail="Неверный тип")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT content, updated_at FROM notes WHERE user_id=%s AND media_type=%s AND media_id=%s",
+        (user_id, media_type, media_id),
+    )
+    row = cur.fetchone()
+    cur.close(); conn.close()
+    if not row:
+        return {"content": "", "updated_at": None}
+    return {"content": row[0], "updated_at": row[1].isoformat() if row[1] else None}
+
+
+@app.put("/notes/{media_type}/{media_id}")
+def save_note(media_type: str, media_id: int, data: dict, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    user_id = payload["user_id"]
+    if media_type not in ("movie", "tv"):
+        raise HTTPException(status_code=400, detail="Неверный тип")
+    content = (data.get("content") or "").strip()
+    conn = get_db()
+    cur = conn.cursor()
+    if not content:
+        # empty note → remove it
+        cur.execute(
+            "DELETE FROM notes WHERE user_id=%s AND media_type=%s AND media_id=%s",
+            (user_id, media_type, media_id),
+        )
+        conn.commit()
+        cur.close(); conn.close()
+        return {"content": "", "updated_at": None}
+    cur.execute(
+        """INSERT INTO notes (user_id, media_type, media_id, content, updated_at)
+           VALUES (%s,%s,%s,%s,NOW())
+           ON CONFLICT (user_id, media_type, media_id)
+           DO UPDATE SET content=EXCLUDED.content, updated_at=NOW()
+           RETURNING updated_at""",
+        (user_id, media_type, media_id, content),
+    )
+    updated_at = cur.fetchone()[0]
+    conn.commit()
+    cur.close(); conn.close()
+    return {"content": content, "updated_at": updated_at.isoformat() if updated_at else None}
 
 
 # =========================

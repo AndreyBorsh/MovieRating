@@ -213,3 +213,24 @@ export async function searchMulti(query) {
   const res = await fetch(`${API}/search/multi?query=${encodeURIComponent(query)}`);
   return res.json();
 }
+
+// =========================
+// PRIVATE NOTES (owner-only)
+// =========================
+export async function getNote(token, mediaType, id) {
+  const res = await fetch(`${API}/notes/${mediaType}/${id}`, {
+    headers: authHeader(token),
+  });
+  if (!res.ok) return { content: "", updated_at: null };
+  return res.json();
+}
+
+export async function saveNote(token, mediaType, id, content) {
+  const res = await fetch(`${API}/notes/${mediaType}/${id}`, {
+    method: "PUT",
+    headers: authHeader(token),
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) throw new Error("Не удалось сохранить заметку");
+  return res.json();
+}

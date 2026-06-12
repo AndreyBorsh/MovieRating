@@ -544,6 +544,7 @@ def get_movies():
         FROM movies m
         LEFT JOIN ratings r ON r.tmdb_id = m.tmdb_id
         GROUP BY m.tmdb_id, m.title, m.overview, m.poster_path, m.release_year
+        HAVING COUNT(r.id) > 0
         ORDER BY rating_count DESC, avg_score DESC
     """)
     rows = cur.fetchall()
@@ -620,6 +621,7 @@ def get_tv_shows():
         FROM tv_shows t
         LEFT JOIN ratings r ON r.tv_tmdb_id = t.tmdb_id
         GROUP BY t.tmdb_id, t.title, t.overview, t.poster_path, t.release_year, t.seasons
+        HAVING COUNT(r.id) > 0
         ORDER BY rating_count DESC, avg_score DESC
     """)
     rows = cur.fetchall()

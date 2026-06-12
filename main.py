@@ -1296,6 +1296,44 @@ def get_tv_details(tmdb_id: int):
 # SEARCH
 # =========================
 
+@app.get("/search/multi")
+def search_multi(query: str):
+    """Combined movie + TV search via TMDB /search/multi, ordered by relevance."""
+    q = (query or "").strip()
+    if not q:
+        return []
+    res = requests.get(
+        f"{TMDB_BASE}/search/multi",
+        params={"api_key": TMDB_API_KEY, "query": q, "language": "ru-RU"},
+        timeout=5,
+    )
+    if res.status_code != 200:
+        return []
+    out = []
+    for m in res.json().get("results", []):
+        mt = m.get("media_type")
+        if mt == "movie":
+            out.append({
+                "id": m["id"],
+                "title": m.get("title", ""),
+                "overview": m.get("overview", ""),
+                "poster": m.get("poster_path"),
+                "year": m["release_date"][:4] if m.get("release_date") else None,
+                "media_type": "movie",
+            })
+        elif mt == "tv":
+            out.append({
+                "id": m["id"],
+                "title": m.get("name", ""),
+                "overview": m.get("overview", ""),
+                "poster": m.get("poster_path"),
+                "year": m["first_air_date"][:4] if m.get("first_air_date") else None,
+                "media_type": "tv",
+            })
+        # ignore "person" results
+    return out
+
+
 @app.get("/search")
 def search(query: str, media_type: str = "movie"):
     if media_type == "tv":

@@ -207,3 +207,9 @@ export async function searchMovies(query, type = "movie") {
   );
   return res.json();
 }
+
+// Combined movie + TV search
+export async function searchMulti(query) {
+  const res = await fetch(`${API}/search/multi?query=${encodeURIComponent(query)}`);
+  return res.json();
+}

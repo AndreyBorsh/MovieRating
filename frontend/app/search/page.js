@@ -1,119 +1,116 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { searchMovies } from "@/lib/api";
+import { searchMulti } from "@/lib/api";
 
 const POSTER = (path) =>
   path ? `/api/tmdb-image/w342${path}` : null;
 
+const FILTERS = [
+  { key: "all",   label: "Все" },
+  { key: "movie", label: "🎬 Фильмы" },
+  { key: "tv",    label: "📺 Сериалы" },
+];
+
 function SearchContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
-  const initialQ    = searchParams.get("q") || "";
-  const initialType = searchParams.get("type") || "movie";
+  const initialQ = searchParams.get("q") || "";
 
-  const [query,    setQuery]    = useState(initialQ);
-  const [type,     setType]     = useState(initialType);
-  const [results,  setResults]  = useState([]);
-  const [loading,  setLoading]  = useState(false);
+  const [query,   setQuery]   = useState(initialQ);
+  const [filter,  setFilter]  = useState("all");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
-  const inputRef = useRef(null);
+  const reqId = useRef(0);
 
-  // Auto-search when arriving from another page with ?q=...
+  // Live search with debounce
   useEffect(() => {
-    if (initialQ) {
-      setSearched(true);
-      setLoading(true);
-      searchMovies(initialQ, initialType)
-        .then((data) => setResults(Array.isArray(data) ? data : []))
-        .catch(() => setResults([]))
-        .finally(() => setLoading(false));
-    }
-  }, []);
-
-  const doSearch = async (overrideType) => {
     const q = query.trim();
-    if (!q) return;
-    const t = overrideType ?? type;
-    router.replace(`/search?q=${encodeURIComponent(q)}&type=${t}`);
-    setLoading(true);
-    setSearched(true);
-    try {
-      const data = await searchMovies(q, t);
-      setResults(Array.isArray(data) ? data : []);
-    } catch {
+    if (q.length < 2) {
       setResults([]);
-    } finally {
+      setSearched(false);
       setLoading(false);
+      return;
     }
-  };
 
-  const switchType = (newType) => {
-    setType(newType);
-    setResults([]);
-    setSearched(false);
-    if (query.trim()) {
-      doSearch(newType);
-    }
-  };
+    setLoading(true);
+    const myId = ++reqId.current;
+    const t = setTimeout(async () => {
+      try {
+        const data = await searchMulti(q);
+        if (myId !== reqId.current) return; // stale response, ignore
+        setResults(Array.isArray(data) ? data : []);
+        setSearched(true);
+      } catch {
+        if (myId === reqId.current) setResults([]);
+      } finally {
+        if (myId === reqId.current) setLoading(false);
+      }
+    }, 350);
 
-  const onKey = (e) => {
-    if (e.key === "Enter") doSearch();
-  };
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const shown = results.filter((r) => filter === "all" || r.media_type === filter);
+  const movieCount = results.filter((r) => r.media_type === "movie").length;
+  const tvCount = results.filter((r) => r.media_type === "tv").length;
+
+  const countFor = (key) =>
+    key === "all" ? results.length : key === "movie" ? movieCount : tvCount;
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-100 mb-1">Поиск</h1>
-        <p className="text-sm text-slate-500">Найдите фильм или сериал и оставьте свою оценку</p>
-      </div>
-
-      {/* Type toggle */}
-      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
-        <button
-          onClick={() => switchType("movie")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-            type === "movie"
-              ? "bg-amber-400 text-slate-900"
-              : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          🎬 Фильмы
-        </button>
-        <button
-          onClick={() => switchType("tv")}
-          className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
-            type === "tv"
-              ? "bg-amber-400 text-slate-900"
-              : "text-slate-400 hover:text-slate-200"
-          }`}
-        >
-          📺 Сериалы
-        </button>
+        <p className="text-sm text-slate-500">
+          Начните вводить название — фильмы и сериалы появятся сразу
+        </p>
       </div>
 
       {/* Search input */}
-      <div className="flex gap-2">
+      <div className="relative">
         <input
-          ref={inputRef}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={onKey}
-          placeholder={type === "tv" ? "Название сериала..." : "Название фильма..."}
-          className="flex-1 rounded-lg px-4 py-2.5 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50 transition"
+          placeholder="Название фильма или сериала..."
+          className="w-full rounded-lg px-4 py-2.5 pr-10 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50 transition"
           style={{ background: "#141d2e", border: "1px solid #1e2d45" }}
           autoFocus
         />
-        <button
-          onClick={() => doSearch()}
-          disabled={loading}
-          className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition shrink-0"
-        >
-          {loading ? "..." : "Найти"}
-        </button>
+        {query && (
+          <button
+            onClick={() => setQuery("")}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-200 transition"
+            aria-label="Очистить"
+          >
+            ✕
+          </button>
+        )}
       </div>
+
+      {/* Filter chips (only when there are results) */}
+      {results.length > 0 && (
+        <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              onClick={() => setFilter(f.key)}
+              className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                filter === f.key
+                  ? "bg-amber-400 text-slate-900"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              {f.label}
+              <span className={`ml-1.5 text-xs ${filter === f.key ? "text-slate-700" : "text-slate-600"}`}>
+                {countFor(f.key)}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading && (
         <div className="text-center text-slate-500 text-sm py-8">Поиск...</div>
@@ -121,19 +118,19 @@ function SearchContent() {
 
       {!loading && searched && results.length === 0 && (
         <div className="text-center text-slate-500 text-sm py-8">
-          Ничего не найдено по запросу «{query}»
+          Ничего не найдено по запросу «{query.trim()}»
         </div>
       )}
 
-      {results.length > 0 && (
+      {shown.length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {results.map((item) => {
+          {shown.map((item) => {
             const href = item.media_type === "tv"
               ? `/tv/${item.id}`
               : `/movies/${item.id}`;
             return (
               <Link
-                key={item.id}
+                key={`${item.media_type}-${item.id}`}
                 href={href}
                 className="group rounded-xl overflow-hidden border transition-all hover:border-amber-400/40"
                 style={{ background: "#141d2e", borderColor: "#1e2d45" }}
@@ -155,11 +152,9 @@ function SearchContent() {
                       {item.year}
                     </div>
                   )}
-                  {item.media_type === "tv" && (
-                    <div className="absolute top-2 right-2 bg-black/60 text-xs text-amber-400 px-1.5 py-0.5 rounded font-medium">
-                      сериал
-                    </div>
-                  )}
+                  <div className={`absolute top-2 right-2 bg-black/60 text-xs px-1.5 py-0.5 rounded font-medium ${item.media_type === "tv" ? "text-amber-400" : "text-sky-300"}`}>
+                    {item.media_type === "tv" ? "сериал" : "фильм"}
+                  </div>
                 </div>
                 <div className="p-3">
                   <div className="text-sm font-semibold text-slate-100 line-clamp-2 group-hover:text-amber-400 transition-colors">

@@ -269,6 +269,8 @@ export default function HomePage() {
   const [recent,   setRecent]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [modalItem, setModalItem] = useState(null);
+  const [filter,   setFilter]   = useState("all");   // all | movie | tv
+  const [sort,     setSort]     = useState("count");  // count | score | title | year
 
   useEffect(() => {
     Promise.all([getMovies(), getTvShows(), getRecent()])
@@ -284,6 +286,21 @@ export default function HomePage() {
   }, []);
 
   const hasContent = movies.length > 0 || tvShows.length > 0 || recent.length > 0;
+
+  const allItems = [...movies, ...tvShows];
+  const filtered = allItems.filter((i) => filter === "all" || i.media_type === filter);
+  const catalog = [...filtered].sort((a, b) => {
+    if (sort === "title") return (a.title || "").localeCompare(b.title || "", "ru");
+    if (sort === "year") return (b.year || 0) - (a.year || 0);
+    if (sort === "score") return b.score - a.score || b.count - a.count;
+    return b.count - a.count || b.score - a.score; // "count" (default)
+  });
+
+  const FILTER_TABS = [
+    { key: "all",   label: "Все",      n: allItems.length },
+    { key: "movie", label: "🎬 Фильмы", n: movies.length },
+    { key: "tv",    label: "📺 Сериалы", n: tvShows.length },
+  ];
 
   return (
     <div className="space-y-10">
@@ -328,21 +345,57 @@ export default function HomePage() {
             </section>
           )}
 
-          {movies.length > 0 && (
+          {allItems.length > 0 && (
             <section>
-              <h2 className="text-lg font-semibold text-slate-100 mb-4">🎬 Оцененные фильмы</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {movies.map((m) => <MediaCard key={m.id} item={m} />)}
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-slate-100">Каталог оценённого</h2>
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-500 hidden sm:inline">Сортировка:</label>
+                  <select
+                    value={sort}
+                    onChange={(e) => setSort(e.target.value)}
+                    className="text-sm text-slate-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-400/50"
+                    style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+                  >
+                    <option value="count">По популярности</option>
+                    <option value="score">По оценке</option>
+                    <option value="year">Сначала новые</option>
+                    <option value="title">По названию</option>
+                  </select>
+                </div>
               </div>
-            </section>
-          )}
 
-          {tvShows.length > 0 && (
-            <section>
-              <h2 className="text-lg font-semibold text-slate-100 mb-4">📺 Оцененные сериалы</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                {tvShows.map((s) => <MediaCard key={s.id} item={s} />)}
+              {/* Filter tabs */}
+              <div className="flex gap-1 p-1 rounded-lg w-fit mb-4" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
+                {FILTER_TABS.map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setFilter(f.key)}
+                    className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                      filter === f.key
+                        ? "bg-amber-400 text-slate-900"
+                        : "text-slate-400 hover:text-slate-200"
+                    }`}
+                  >
+                    {f.label}
+                    <span className={`ml-1.5 text-xs ${filter === f.key ? "text-slate-700" : "text-slate-600"}`}>
+                      {f.n}
+                    </span>
+                  </button>
+                ))}
               </div>
+
+              {catalog.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {catalog.map((item) => (
+                    <MediaCard key={`${item.media_type}-${item.id}`} item={item} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-slate-500 text-sm py-8">
+                  {filter === "tv" ? "Пока нет оценённых сериалов." : "Пока нет оценённых фильмов."}
+                </div>
+              )}
             </section>
           )}
 

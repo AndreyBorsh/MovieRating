@@ -10,6 +10,29 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
   const [status, setStatus] = useState(""); // "", "saving", "saved"
   const taRef = useRef(null);
   const savedRef = useRef("");
+  const contentRef = useRef("");      // latest content for unmount flush
+  const inflightRef = useRef(false);
+
+  // Keep a live ref of the current content
+  useEffect(() => { contentRef.current = content; }, [content]);
+
+  // Immediate save (used by debounce, blur, unmount)
+  const flush = async () => {
+    const c = contentRef.current;
+    if (!loaded || c === savedRef.current || inflightRef.current) return;
+    inflightRef.current = true;
+    setStatus("saving");
+    try {
+      await saveNote(token, mediaType, mediaId, c);
+      savedRef.current = c;
+      setStatus("saved");
+      setTimeout(() => setStatus((s) => (s === "saved" ? "" : s)), 1500);
+    } catch {
+      setStatus("");
+    } finally {
+      inflightRef.current = false;
+    }
+  };
 
   // Load existing note
   useEffect(() => {
@@ -20,6 +43,7 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
       const c = d?.content || "";
       setContent(c);
       savedRef.current = c;
+      contentRef.current = c;
       setLoaded(true);
     });
     return () => { alive = false; };
@@ -29,18 +53,16 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
   useEffect(() => {
     if (!loaded || content === savedRef.current) return;
     setStatus("saving");
-    const t = setTimeout(async () => {
-      try {
-        await saveNote(token, mediaType, mediaId, content);
-        savedRef.current = content;
-        setStatus("saved");
-        setTimeout(() => setStatus((s) => (s === "saved" ? "" : s)), 1500);
-      } catch {
-        setStatus("");
-      }
-    }, 700);
+    const t = setTimeout(flush, 700);
     return () => clearTimeout(t);
-  }, [content, loaded, token, mediaType, mediaId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [content, loaded]);
+
+  // Flush any pending change on unmount (e.g. navigating away)
+  useEffect(() => {
+    return () => { flush(); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-grow
   useEffect(() => {
@@ -76,6 +98,7 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
             ref={taRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
+            onBlur={flush}
             placeholder="Мысли по ходу просмотра, что не забыть, на чём остановились…"
             className="w-full rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-amber-400/40 resize-y leading-relaxed"
             style={{ background: "#0c1220", border: "1px solid #1e2d45", minHeight: 90 }}

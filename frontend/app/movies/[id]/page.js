@@ -9,6 +9,7 @@ import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
 import PrivateNote from "@/app/components/PrivateNote";
+import WatchProviders from "@/app/components/WatchProviders";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -510,7 +511,9 @@ export default function MoviePage() {
         </div>
 
         {/* ── Right: rating form ── */}
-        <div className="order-1 lg:order-2 min-w-0">
+        <div className="order-1 lg:order-2 min-w-0 space-y-3">
+          <WatchProviders mediaType="movie" mediaId={parseInt(movieId)} />
+
           {!token ? (
             <div
               className="rounded-xl p-6 border text-center"
@@ -639,15 +642,11 @@ export default function MoviePage() {
           )}
 
           {token && (
-            <div className="mt-3">
-              <PrivateNote mediaType="movie" mediaId={parseInt(movieId)} token={token} />
-            </div>
+            <PrivateNote mediaType="movie" mediaId={parseInt(movieId)} token={token} />
           )}
 
           {details && (
-            <div className="mt-6">
-              <MediaExtras details={details} mediaType="movie" variant="media" />
-            </div>
+            <MediaExtras details={details} mediaType="movie" variant="media" />
           )}
         </div>
       </div>

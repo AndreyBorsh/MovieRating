@@ -198,6 +198,13 @@ export async function getTvDetails(id) {
   return res.json();
 }
 
+// Watch providers (legal, via TMDB/JustWatch)
+export async function getWatch(mediaType, id) {
+  const res = await fetch(`${API}/${mediaType === "tv" ? "tv" : "movies"}/${id}/watch`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
 // =========================
 // SEARCH
 // =========================

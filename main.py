@@ -1448,19 +1448,18 @@ def get_tv_details(tmdb_id: int):
 def _providers(region: dict) -> dict:
     """Group a region block into free / subscription / paid, dedup by name."""
     def fmt(lst):
-        return [
+        items = [
             {"name": p.get("provider_name", ""), "logo": p.get("logo_path")}
             for p in sorted(lst or [], key=lambda x: x.get("display_priority", 99))
         ]
-    free = fmt((region.get("free") or []) + (region.get("ads") or []))
-    # dedup free by name (free + ads can overlap)
-    seen, free_unique = set(), []
-    for p in free:
-        if p["name"] not in seen:
-            seen.add(p["name"]); free_unique.append(p)
+        seen, unique = set(), []
+        for p in items:
+            if p["name"] not in seen:
+                seen.add(p["name"]); unique.append(p)
+        return unique
     return {
         "link": region.get("link"),
-        "free": free_unique,
+        "free": fmt((region.get("free") or []) + (region.get("ads") or [])),
         "subscription": fmt(region.get("flatrate")),
         "paid": fmt((region.get("rent") or []) + (region.get("buy") or [])),
     }

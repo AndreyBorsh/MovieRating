@@ -29,9 +29,11 @@ const TV_CRITERIA = [
   { key: "pacing",     label: "Темп",       weight: "5%"  },
 ];
 
+const scoreColor = (n) =>
+  n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
+
 function ScoreBadge({ score }) {
-  const color =
-    score >= 7.5 ? "text-emerald-400" : score >= 5.5 ? "text-amber-400" : "text-red-400";
+  const color = scoreColor(score);
   return (
     <span className={`text-lg font-bold ${color}`}>
       {score > 0 ? score.toFixed(1) : "—"}
@@ -119,7 +121,7 @@ function ReviewModal({ item, onClose }) {
                   {item.username}
                 </Link>
                 <span className="text-xs text-slate-500">·</span>
-                <span className={`text-sm font-bold ${item.score >= 7.5 ? "text-emerald-400" : item.score >= 5.5 ? "text-amber-400" : "text-red-400"}`}>
+                <span className={`text-sm font-bold ${scoreColor(item.score)}`}>
                   {item.score?.toFixed(1)}
                 </span>
                 {isTV && (
@@ -203,7 +205,7 @@ function RecentCard({ item, onClick }) {
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-amber-400 font-medium">{item.username}</span>
           <span className="text-xs text-slate-500">·</span>
-          <span className="text-xs font-bold text-emerald-400">{item.score?.toFixed(1)}</span>
+          <span className={`text-xs font-bold ${scoreColor(item.score)}`}>{item.score?.toFixed(1)}</span>
         </div>
         {item.review && (
           <p className="text-xs text-slate-500 mt-1 line-clamp-2">{stripMarkers(item.review)}</p>

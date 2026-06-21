@@ -1442,58 +1442,6 @@ def get_tv_details(tmdb_id: int):
 
 
 # =========================
-# WATCH PROVIDERS (legal — JustWatch via TMDB)
-# =========================
-
-def _providers(region: dict) -> dict:
-    """Group a region block into free / subscription / paid, dedup by name."""
-    def fmt(lst):
-        items = [
-            {"name": p.get("provider_name", ""), "logo": p.get("logo_path")}
-            for p in sorted(lst or [], key=lambda x: x.get("display_priority", 99))
-        ]
-        seen, unique = set(), []
-        for p in items:
-            if p["name"] not in seen:
-                seen.add(p["name"]); unique.append(p)
-        return unique
-    return {
-        "link": region.get("link"),
-        "free": fmt((region.get("free") or []) + (region.get("ads") or [])),
-        "subscription": fmt(region.get("flatrate")),
-        "paid": fmt((region.get("rent") or []) + (region.get("buy") or [])),
-    }
-
-
-def _watch(kind: str, tmdb_id: int) -> dict:
-    res = requests.get(
-        f"{TMDB_BASE}/{kind}/{tmdb_id}/watch/providers",
-        params={"api_key": TMDB_API_KEY},
-        timeout=6,
-    )
-    if res.status_code != 200:
-        return {"link": None, "free": [], "subscription": [], "paid": [], "region": None}
-    results = res.json().get("results", {})
-    # Prefer Russia, then US, then any available region
-    region_code = "RU" if "RU" in results else ("US" if "US" in results else (next(iter(results), None)))
-    if not region_code:
-        return {"link": None, "free": [], "subscription": [], "paid": [], "region": None}
-    out = _providers(results[region_code])
-    out["region"] = region_code
-    return out
-
-
-@app.get("/movies/{tmdb_id}/watch")
-def get_movie_watch(tmdb_id: int):
-    return _watch("movie", tmdb_id)
-
-
-@app.get("/tv/{tmdb_id}/watch")
-def get_tv_watch(tmdb_id: int):
-    return _watch("tv", tmdb_id)
-
-
-# =========================
 # SEARCH
 # =========================
 

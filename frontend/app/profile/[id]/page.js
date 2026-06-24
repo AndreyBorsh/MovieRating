@@ -58,7 +58,7 @@ function ProfileStats({ ratings, onOpen }) {
   if (!ratings.length) return null;
 
   const scores = ratings.map((r) => r.score);
-  const top = [...ratings].sort((a, b) => b.score - a.score).slice(0, 5);
+  const top = [...ratings].sort((a, b) => b.score - a.score).slice(0, 10);
   const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
   const max = Math.max(...scores);
   const min = Math.min(...scores);
@@ -97,6 +97,33 @@ function ProfileStats({ ratings, onOpen }) {
           <div className="flex-1 flex items-end justify-center">
             <Podium top={top} onOpen={onOpen} />
           </div>
+
+          {top.length > 3 && (
+            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 py-3 mt-2 border-t" style={{ borderColor: "#1e2d45" }}>
+              {top.slice(3).map((r, i) => (
+                <button
+                  key={i}
+                  onClick={() => onOpen(r)}
+                  className="flex items-center gap-2 group max-w-[200px]"
+                  title={r.movie_title}
+                >
+                  <span className="text-xs text-slate-500 font-semibold w-4 text-right shrink-0">{i + 4}</span>
+                  {POSTER(r.poster) ? (
+                    <img src={POSTER(r.poster)} alt={r.movie_title}
+                      className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
+                  ) : (
+                    <div className="w-7 h-10 rounded bg-slate-800 flex items-center justify-center text-xs shrink-0">
+                      {r.media_type === "tv" ? "📺" : "🎬"}
+                    </div>
+                  )}
+                  <span className="text-sm text-slate-300 truncate group-hover:text-amber-400 transition-colors">
+                    {r.movie_title}
+                  </span>
+                  <span className={`text-xs font-bold shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -219,6 +219,10 @@
 
   <div class="progress" id="bar"></div>
   <button class="replay" onclick="play()">⟲ Заново</button>
+  <button id="soundbtn" onclick="toggleSound()" aria-label="Звук" style="position:absolute;top:4.5cqh;right:3cqw;z-index:11;background:rgba(255,255,255,.08);color:#cfd8e8;border:1px solid var(--border);border-radius:1cqw;padding:.9cqh 1.6cqw;font-size:1.8cqw;cursor:pointer">🔊</button>
+  <div id="startover" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,8,15,.55);z-index:12">
+    <button onclick="begin()" style="font-size:2.4cqw;padding:1.8cqh 4cqw;background:var(--amber);color:#0c1220;border:none;border-radius:1.2cqw;font-weight:800;cursor:pointer">▶ Запустить с музыкой</button>
+  </div>
 </div>
 
 <script>
@@ -271,7 +275,21 @@
     }
     timers.push(setTimeout(play, total));
   }
-  play();
+
+  let actx=null, master=null, noise=null, mt=null, step=0, nextTime=0, muted=false;
+  const BPM=96, spb=60/BPM, eighth=spb/2;
+  const CH=[[220,261.63,329.63],[174.61,220,261.63],[261.63,329.63,392.00],[196.00,246.94,293.66]];
+  const BASS=[110.00,87.31,130.81,98.00];
+  const ARP=[0,1,2,1,0,2,1,2];
+  function tone(f,t,d,type,peak){const o=actx.createOscillator(),g=actx.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(master);g.gain.setValueAtTime(.0001,t);g.gain.linearRampToValueAtTime(peak,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.start(t);o.stop(t+d+.05);}
+  function kick(t){const o=actx.createOscillator(),g=actx.createGain();o.type='sine';o.frequency.setValueAtTime(120,t);o.frequency.exponentialRampToValueAtTime(45,t+.12);g.gain.setValueAtTime(.5,t);g.gain.exponentialRampToValueAtTime(.0001,t+.18);o.connect(g);g.connect(master);o.start(t);o.stop(t+.2);}
+  function hat(t){const s=actx.createBufferSource();s.buffer=noise;const hp=actx.createBiquadFilter();hp.type='highpass';hp.frequency.value=7000;const g=actx.createGain();g.gain.setValueAtTime(.10,t);g.gain.exponentialRampToValueAtTime(.0001,t+.05);s.connect(hp);hp.connect(g);g.connect(master);s.start(t);s.stop(t+.06);}
+  function sched(){while(nextTime<actx.currentTime+.12){const bar=Math.floor(step/8)%4,ib=step%8,ch=CH[bar];if(ib===0)ch.forEach(f=>tone(f,nextTime,spb*4*.95,'sine',.07));if(ib===0||ib===4){tone(BASS[bar],nextTime,spb*.9,'triangle',.16);kick(nextTime);}tone(ch[ARP[ib]]*2,nextTime,eighth*.9,'triangle',.045);hat(nextTime+eighth/2);step++;nextTime+=eighth;}}
+  function startMusic(){if(!actx){actx=new (window.AudioContext||window.webkitAudioContext)();master=actx.createGain();master.gain.value=.26;master.connect(actx.destination);noise=actx.createBuffer(1,Math.floor(actx.sampleRate*.2),actx.sampleRate);const d=noise.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}actx.resume();step=0;nextTime=actx.currentTime+.08;if(mt)clearInterval(mt);mt=setInterval(sched,25);}
+  function toggleSound(){if(!master)return;muted=!muted;master.gain.value=muted?0:.26;document.getElementById('soundbtn').textContent=muted?'🔇':'🔊';}
+  function begin(){document.getElementById('startover').style.display='none';startMusic();play();}
+
+  show(0);
 </script>
 </body>
 </html>

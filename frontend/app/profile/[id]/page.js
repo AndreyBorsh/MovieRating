@@ -90,40 +90,45 @@ function ProfileStats({ ratings, onOpen }) {
 
         {/* Top by score — larger podium taking the rest */}
         <div
-          className="rounded-xl px-4 pt-3 pb-0 border md:flex-1 flex flex-col"
+          className="rounded-xl px-4 py-3 border md:flex-1 flex flex-col"
           style={{ background: "#0c1220", borderColor: "#1e2d45" }}
         >
           <div className="text-xs text-slate-400 mb-3 text-center">🏆 Топ по оценке</div>
-          <div className="flex-1 flex items-end justify-center">
-            <Podium top={top} onOpen={onOpen} />
-          </div>
-
-          {top.length > 3 && (
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 py-3 mt-2 border-t" style={{ borderColor: "#1e2d45" }}>
-              {top.slice(3).map((r, i) => (
-                <button
-                  key={i}
-                  onClick={() => onOpen(r)}
-                  className="flex items-center gap-2 group max-w-[200px]"
-                  title={r.movie_title}
-                >
-                  <span className="text-xs text-slate-500 font-semibold w-4 text-right shrink-0">{i + 4}</span>
-                  {POSTER(r.poster) ? (
-                    <img src={POSTER(r.poster)} alt={r.movie_title}
-                      className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
-                  ) : (
-                    <div className="w-7 h-10 rounded bg-slate-800 flex items-center justify-center text-xs shrink-0">
-                      {r.media_type === "tv" ? "📺" : "🎬"}
-                    </div>
-                  )}
-                  <span className="text-sm text-slate-300 truncate group-hover:text-amber-400 transition-colors">
-                    {r.movie_title}
-                  </span>
-                  <span className={`text-xs font-bold shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
-                </button>
-              ))}
+          <div className="flex-1 flex gap-3 sm:gap-5">
+            <div className="flex items-end justify-center shrink-0">
+              <Podium top={top} onOpen={onOpen} />
             </div>
-          )}
+
+            {top.length > 3 && (
+              <div
+                className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 border-l pl-3 sm:pl-5"
+                style={{ borderColor: "#1e2d45" }}
+              >
+                {top.slice(3).map((r, i) => (
+                  <button
+                    key={i}
+                    onClick={() => onOpen(r)}
+                    className="flex items-center gap-2 group w-full text-left"
+                    title={r.movie_title}
+                  >
+                    <span className="text-xs text-slate-500 font-semibold w-4 text-right shrink-0">{i + 4}</span>
+                    {POSTER(r.poster) ? (
+                      <img src={POSTER(r.poster)} alt={r.movie_title}
+                        className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
+                    ) : (
+                      <div className="w-7 h-10 rounded bg-slate-800 flex items-center justify-center text-xs shrink-0">
+                        {r.media_type === "tv" ? "📺" : "🎬"}
+                      </div>
+                    )}
+                    <span className="flex-1 min-w-0 text-sm text-slate-300 truncate group-hover:text-amber-400 transition-colors">
+                      {r.movie_title}
+                    </span>
+                    <span className={`text-xs font-bold shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

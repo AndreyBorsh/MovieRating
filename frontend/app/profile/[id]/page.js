@@ -73,9 +73,9 @@ function ProfileStats({ ratings, onOpen }) {
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-slate-100">Статистика</h2>
 
-      <div className="flex flex-col md:flex-row gap-3 md:items-start">
-        {/* Indicators */}
-        <div className="grid grid-cols-2 gap-2 content-start md:flex-1">
+      <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
+        {/* Indicators — fixed, compact width */}
+        <div className="grid grid-cols-2 gap-2 content-start shrink-0 md:w-[320px]">
           <Stat icon="⭐" value={avg.toFixed(1)} label="средняя" color={scoreColor(avg)} />
           <Stat icon="🔺" value={max.toFixed(1)} label="максимум" color={scoreColor(max)} />
           <Stat icon="🔻" value={min.toFixed(1)} label="минимум" color={scoreColor(min)} />
@@ -88,13 +88,15 @@ function ProfileStats({ ratings, onOpen }) {
           )}
         </div>
 
-        {/* Top by score — compact podium on the right */}
+        {/* Top by score — larger podium taking the rest */}
         <div
-          className="rounded-xl px-3 pt-2 pb-0 border shrink-0 md:w-auto"
+          className="rounded-xl px-4 pt-3 pb-0 border md:flex-1 flex flex-col"
           style={{ background: "#0c1220", borderColor: "#1e2d45" }}
         >
-          <div className="text-[11px] text-slate-500 mb-2 text-center">🏆 Топ по оценке</div>
-          <Podium top={top} onOpen={onOpen} />
+          <div className="text-xs text-slate-400 mb-3 text-center">🏆 Топ по оценке</div>
+          <div className="flex-1 flex items-end justify-center">
+            <Podium top={top} onOpen={onOpen} />
+          </div>
         </div>
       </div>
     </div>
@@ -104,38 +106,38 @@ function ProfileStats({ ratings, onOpen }) {
 function Podium({ top, onOpen }) {
   const MEDAL = ["🥇", "🥈", "🥉"];
   const ACCENT = ["#f5c518", "#cbd5e1", "#c2855a"];
-  const BASE_H = ["h-6", "h-4", "h-2.5"];
-  const POSTER_CLS = ["w-12 h-[4.5rem]", "w-10 h-[3.75rem]", "w-10 h-[3.75rem]"];
+  const BASE_H = ["h-12", "h-8", "h-5"];
+  const POSTER_CLS = ["w-24 h-36", "w-20 h-28", "w-20 h-28"];
 
   // visual left→right order: 2nd, 1st, 3rd
   const order = [1, 0, 2];
 
   const Spot = ({ rank }) => {
     const r = top[rank];
-    if (!r) return <div className="w-12" />;
+    if (!r) return <div className="w-20" />;
     return (
-      <div className="w-12 flex flex-col items-center justify-end">
-        <div className="text-base mb-0.5">{MEDAL[rank]}</div>
+      <div className="w-20 sm:w-24 flex flex-col items-center justify-end">
+        <div className="text-2xl mb-1">{MEDAL[rank]}</div>
         <button onClick={() => onOpen(r)} className="group" title={`${r.movie_title} · ${r.score.toFixed(1)}`}>
           {POSTER(r.poster) ? (
             <img
               src={POSTER(r.poster)}
               alt={r.movie_title}
-              className={`${POSTER_CLS[rank]} rounded-md object-cover group-hover:brightness-110 transition`}
+              className={`${POSTER_CLS[rank]} rounded-lg object-cover group-hover:brightness-110 transition`}
               style={{ border: `2px solid ${ACCENT[rank]}` }}
             />
           ) : (
             <div
-              className={`${POSTER_CLS[rank]} rounded-md bg-slate-800 flex items-center justify-center text-lg`}
+              className={`${POSTER_CLS[rank]} rounded-lg bg-slate-800 flex items-center justify-center text-2xl`}
               style={{ border: `2px solid ${ACCENT[rank]}` }}
             >
               {r.media_type === "tv" ? "📺" : "🎬"}
             </div>
           )}
         </button>
-        <div className={`text-xs font-bold mt-0.5 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
+        <div className={`text-sm font-bold mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
         <div
-          className={`${BASE_H[rank]} w-full rounded-t-md mt-0.5`}
+          className={`${BASE_H[rank]} w-full rounded-t-md mt-1`}
           style={{ background: `linear-gradient(180deg, ${ACCENT[rank]}40, ${ACCENT[rank]}10)`, borderTop: `2px solid ${ACCENT[rank]}` }}
         />
       </div>
@@ -143,7 +145,7 @@ function Podium({ top, onOpen }) {
   };
 
   return (
-    <div className="flex items-end justify-center gap-1.5">
+    <div className="flex items-end justify-center gap-2 sm:gap-3">
       {order.map((rank) => <Spot key={rank} rank={rank} />)}
     </div>
   );

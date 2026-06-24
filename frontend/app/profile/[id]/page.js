@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { getProfile, getMyNotes } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { stripMarkers } from "@/app/components/ReviewText";
+import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
 
 const POSTER = (p) => p && `/api/tmdb-image/w185${p}`;
 
@@ -42,22 +42,26 @@ function ScoreBadge({ score }) {
   );
 }
 
-function StatTile({ label, value, color = "text-slate-100" }) {
+function Stat({ icon, value, label, color = "text-slate-100" }) {
   return (
     <div
-      className="rounded-xl px-4 py-3 border text-center"
+      className="flex items-center gap-2.5 rounded-lg px-3 py-2 border"
       style={{ background: "#0c1220", borderColor: "#1e2d45" }}
     >
-      <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
+      <span className="text-lg leading-none">{icon}</span>
+      <div className="leading-tight">
+        <div className={`text-base font-bold ${color}`}>{value}</div>
+        <div className="text-[10px] text-slate-500">{label}</div>
+      </div>
     </div>
   );
 }
 
-function ProfileStats({ ratings }) {
+function ProfileStats({ ratings, onOpen }) {
   if (!ratings.length) return null;
 
   const scores = ratings.map((r) => r.score);
+  const top = [...ratings].sort((a, b) => b.score - a.score).slice(0, 5);
   const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
   const max = Math.max(...scores);
   const min = Math.min(...scores);
@@ -77,36 +81,36 @@ function ProfileStats({ ratings }) {
   const maxBucket = Math.max(...buckets, 1);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <h2 className="text-lg font-semibold text-slate-100">Статистика</h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatTile label="Средняя оценка" value={avg.toFixed(1)} color={scoreColor(avg)} />
-        <StatTile label="Самая высокая" value={max.toFixed(1)} color={scoreColor(max)} />
-        <StatTile label="Самая низкая" value={min.toFixed(1)} color={scoreColor(min)} />
-        <StatTile label="Всего оценок" value={ratings.length} />
+      <div className="flex flex-wrap gap-2">
+        <Stat icon="⭐" value={avg.toFixed(1)} label="средняя" color={scoreColor(avg)} />
+        <Stat icon="🔺" value={max.toFixed(1)} label="максимум" color={scoreColor(max)} />
+        <Stat icon="🔻" value={min.toFixed(1)} label="минимум" color={scoreColor(min)} />
+        <Stat icon="🎞️" value={ratings.length} label="всего" />
         {movieAvg != null && (
-          <StatTile label="Средняя · фильмы" value={movieAvg.toFixed(1)} color={scoreColor(movieAvg)} />
+          <Stat icon="🎬" value={movieAvg.toFixed(1)} label="фильмы" color={scoreColor(movieAvg)} />
         )}
         {tvAvg != null && (
-          <StatTile label="Средняя · сериалы" value={tvAvg.toFixed(1)} color={scoreColor(tvAvg)} />
+          <Stat icon="📺" value={tvAvg.toFixed(1)} label="сериалы" color={scoreColor(tvAvg)} />
         )}
       </div>
 
       {/* Score distribution */}
       <div
-        className="rounded-xl p-4 border"
+        className="rounded-xl px-4 py-3 border"
         style={{ background: "#141d2e", borderColor: "#1e2d45" }}
       >
-        <div className="text-xs text-slate-500 mb-3">Распределение оценок</div>
-        <div className="flex items-end gap-1.5 h-28">
+        <div className="text-[11px] text-slate-500 mb-2">Распределение оценок</div>
+        <div className="flex items-end gap-2 h-16">
           {buckets.map((count, i) => {
             const n = i + 1;
-            const h = count > 0 ? Math.max(4, (count / maxBucket) * 100) : 2;
+            const h = count > 0 ? Math.max(6, (count / maxBucket) * 100) : 3;
             return (
-              <div key={n} className="flex-1 h-full flex items-end">
+              <div key={n} className="flex-1 h-full flex justify-center items-end">
                 <div
-                  className={`w-full rounded-t ${count > 0 ? barColor(n) : "bg-slate-800"}`}
+                  className={`w-2.5 sm:w-3.5 rounded-t ${count > 0 ? barColor(n) : "bg-slate-800"}`}
                   style={{ height: `${h}%` }}
                   title={`Оценка ${n}: ${count}`}
                 />
@@ -114,11 +118,41 @@ function ProfileStats({ ratings }) {
             );
           })}
         </div>
-        <div className="flex gap-1.5 mt-1">
+        <div className="flex gap-2 mt-1">
           {buckets.map((count, i) => (
             <span key={i} className="flex-1 text-center text-[10px] text-slate-600">
               {i + 1}
             </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Top by score */}
+      <div>
+        <div className="text-[11px] text-slate-500 mb-2">Топ по оценке</div>
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {top.map((r, i) => (
+            <button
+              key={i}
+              onClick={() => onOpen(r)}
+              className="shrink-0 w-14 text-center group"
+              title={r.movie_title}
+            >
+              {POSTER(r.poster) ? (
+                <img
+                  src={POSTER(r.poster)}
+                  alt={r.movie_title}
+                  className="w-14 h-20 rounded-lg object-cover border border-transparent group-hover:border-amber-400/50 transition"
+                />
+              ) : (
+                <div className="w-14 h-20 rounded-lg bg-slate-800 flex items-center justify-center text-xl">
+                  {r.media_type === "tv" ? "📺" : "🎬"}
+                </div>
+              )}
+              <div className={`text-xs font-bold mt-0.5 ${scoreColor(r.score)}`}>
+                {r.score.toFixed(1)}
+              </div>
+            </button>
           ))}
         </div>
       </div>
@@ -151,9 +185,72 @@ function CriteriaBars({ rating }) {
   );
 }
 
+function ReviewModal({ rating, onClose }) {
+  if (!rating) return null;
+  const isTV = rating.media_type === "tv";
+  const href = isTV ? `/tv/${rating.movie_id}` : `/movies/${rating.movie_id}`;
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(0,0,0,0.75)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
+        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex gap-3 min-w-0">
+            {POSTER(rating.poster) ? (
+              <img src={POSTER(rating.poster)} alt={rating.movie_title} className="w-14 h-20 rounded-lg object-cover shrink-0" />
+            ) : (
+              <div className="w-14 h-20 rounded-lg bg-slate-800 flex items-center justify-center text-2xl shrink-0">
+                {isTV ? "📺" : "🎬"}
+              </div>
+            )}
+            <div className="min-w-0">
+              <div className="text-base font-semibold text-slate-100 leading-tight">{rating.movie_title}</div>
+              {isTV && (
+                <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded mt-1 inline-block">сериал</span>
+              )}
+              <div className="mt-1"><ScoreBadge score={rating.score} /></div>
+            </div>
+          </div>
+          <button onClick={onClose} className="text-slate-500 hover:text-slate-200 transition text-lg leading-none shrink-0">✕</button>
+        </div>
+
+        <CriteriaBars rating={rating} />
+
+        {rating.review ? (
+          <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+            <ReviewText text={rating.review} />
+          </div>
+        ) : (
+          <div className="border-t pt-3 text-sm text-slate-600 italic" style={{ borderColor: "#1e2d45" }}>
+            Без текстовой рецензии
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+          <span className="text-xs text-slate-600">
+            {rating.created_at
+              ? new Date(rating.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
+              : ""}
+          </span>
+          <Link href={href} className="text-xs text-amber-400 hover:text-amber-300 transition shrink-0">
+            Открыть страницу {isTV ? "сериала" : "фильма"} →
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { id } = useParams();
   const { user, token } = useAuth();
+  const [openReview, setOpenReview] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState([]);
@@ -173,6 +270,12 @@ export default function ProfilePage() {
       getMyNotes(token).then((d) => setNotes(Array.isArray(d) ? d : [])).catch(() => {});
     }
   }, [viewingOwn, token]);
+
+  useEffect(() => {
+    const onKey = (e) => e.key === "Escape" && setOpenReview(null);
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   if (loading) {
     return (
@@ -211,6 +314,8 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
+      {openReview && <ReviewModal rating={openReview} onClose={() => setOpenReview(null)} />}
+
       {/* Profile header */}
       <div
         className="rounded-xl p-6 border flex items-center gap-6"
@@ -257,7 +362,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Statistics */}
-      <ProfileStats ratings={profile.ratings} />
+      <ProfileStats ratings={profile.ratings} onOpen={setOpenReview} />
 
       {/* My private notes (own profile only) */}
       {isMe && notes.length > 0 && (
@@ -381,12 +486,12 @@ export default function ProfilePage() {
                             })
                           : ""}
                       </span>
-                      <Link
-                        href={`${href}#review-${profile.user_id}`}
+                      <button
+                        onClick={() => setOpenReview(r)}
                         className="text-xs text-amber-400 hover:text-amber-300 transition-colors shrink-0"
                       >
-                        К рецензии →
-                      </Link>
+                        Открыть рецензию →
+                      </button>
                     </div>
                   </div>
                 </div>

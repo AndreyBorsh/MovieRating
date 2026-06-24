@@ -30,6 +30,21 @@ const TV_CRITERIA_LABELS = {
 const scoreColor = (n) =>
   n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
 
+// Competition-style ranks: equal scores (by displayed value) share a place ("5-6")
+function rankLabels(sorted) {
+  const key = (r) => r.score.toFixed(1);
+  const labels = [];
+  let i = 0;
+  while (i < sorted.length) {
+    let j = i;
+    while (j + 1 < sorted.length && key(sorted[j + 1]) === key(sorted[i])) j++;
+    const label = i === j ? `${i + 1}` : `${i + 1}-${j + 1}`;
+    for (let k = i; k <= j; k++) labels[k] = label;
+    i = j + 1;
+  }
+  return labels;
+}
+
 function ScoreBadge({ score }) {
   const n = parseFloat(score);
   return (
@@ -58,7 +73,10 @@ function ProfileStats({ ratings, onOpen }) {
   if (!ratings.length) return null;
 
   const scores = ratings.map((r) => r.score);
-  const top = [...ratings].sort((a, b) => b.score - a.score).slice(0, 10);
+  const sorted = [...ratings].sort((a, b) => b.score - a.score);
+  const allLabels = rankLabels(sorted);
+  const top = sorted.slice(0, 10);
+  const topLabels = allLabels.slice(0, 10);
   const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
   const max = Math.max(...scores);
   const min = Math.min(...scores);
@@ -96,7 +114,7 @@ function ProfileStats({ ratings, onOpen }) {
           <div className="text-xs text-slate-400 mb-3 text-center">🏆 Топ по оценке</div>
           <div className="flex-1 flex gap-3 sm:gap-5">
             <div className="flex items-end justify-center shrink-0">
-              <Podium top={top} onOpen={onOpen} />
+              <Podium top={top} labels={topLabels} onOpen={onOpen} />
             </div>
 
             {top.length > 3 && (
@@ -111,7 +129,7 @@ function ProfileStats({ ratings, onOpen }) {
                     className="flex items-center gap-2 group w-full text-left"
                     title={r.movie_title}
                   >
-                    <span className="text-xs text-slate-500 font-semibold w-4 text-right shrink-0">{i + 4}</span>
+                    <span className="text-xs text-slate-500 font-semibold w-8 text-right shrink-0">{topLabels[i + 3]}</span>
                     {POSTER(r.poster) ? (
                       <img src={POSTER(r.poster)} alt={r.movie_title}
                         className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
@@ -135,7 +153,7 @@ function ProfileStats({ ratings, onOpen }) {
   );
 }
 
-function Podium({ top, onOpen }) {
+function Podium({ top, labels, onOpen }) {
   const MEDAL = ["🥇", "🥈", "🥉"];
   const ACCENT = ["#f5c518", "#cbd5e1", "#c2855a"];
   const BASE_H = ["h-12", "h-8", "h-5"];
@@ -169,9 +187,13 @@ function Podium({ top, onOpen }) {
         </button>
         <div className={`text-sm font-bold mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
         <div
-          className={`${BASE_H[rank]} w-full rounded-t-md mt-1`}
+          className={`${BASE_H[rank]} w-full rounded-t-md mt-1 flex items-start justify-center`}
           style={{ background: `linear-gradient(180deg, ${ACCENT[rank]}40, ${ACCENT[rank]}10)`, borderTop: `2px solid ${ACCENT[rank]}` }}
-        />
+        >
+          <span className="text-[10px] font-bold mt-0.5 whitespace-nowrap" style={{ color: ACCENT[rank] }}>
+            {labels[rank]}
+          </span>
+        </div>
       </div>
     );
   };

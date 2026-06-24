@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WAW — промо 16:9</title>
+<style>
+  :root{
+    --bg:#0c1220; --card:#141d2e; --border:#1e2d45; --soft:#0f1830;
+    --amber:#f5a623; --gold:#f5c518; --emerald:#34d399; --red:#f87171;
+    --text:#e8edf5; --muted:#7e8ca6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#05080f; color:var(--text);
+    font-family:'Inter','Segoe UI',system-ui,sans-serif;
+    display:flex;align-items:center;justify-content:center;overflow:hidden;
+  }
+  .stage{
+    position:relative; overflow:hidden; container-type:size;
+    width:min(100vw, calc(100vh * 16 / 9));
+    height:min(100vh, calc(100vw * 9 / 16));
+    background:radial-gradient(120% 120% at 50% 0%, #16213b 0%, #0c1220 55%, #080d18 100%);
+  }
+  .scene{position:absolute;inset:0;display:flex;flex-direction:column;
+    justify-content:center;padding:0 9cqw;opacity:0;transform:translateY(2cqh) scale(.99);
+    transition:opacity .6s ease, transform .6s ease;pointer-events:none}
+  .scene.active{opacity:1;transform:none}
+  .eyebrow{color:var(--amber);font-weight:600;letter-spacing:.18em;text-transform:uppercase;
+    font-size:1.7cqw;margin-bottom:1.6cqh}
+  .title{font-size:5cqw;font-weight:800;line-height:1.08;letter-spacing:-.01em}
+  .sub{font-size:2.3cqw;color:var(--muted);margin-top:1.8cqh;max-width:62cqw;line-height:1.5}
+  .accent{color:var(--amber)}
+  .em{color:var(--emerald)}
+
+  /* watermark */
+  .mark{position:absolute;top:4.5cqh;left:9cqw;display:flex;align-items:center;gap:.8cqw;
+    font-weight:800;font-size:2cqw;color:var(--amber);opacity:0;transition:opacity .6s}
+  .stage.show-mark .mark{opacity:.9}
+  .mark small{color:var(--muted);font-weight:500;font-size:1.2cqw}
+
+  .card{background:var(--card);border:1px solid var(--border);border-radius:1.4cqw}
+  .glow{box-shadow:0 2cqh 6cqh rgba(0,0,0,.45)}
+
+  /* S1 logo */
+  .brand{font-size:11cqw;font-weight:900;letter-spacing:-.02em;
+    background:linear-gradient(90deg,#f5c518,#f5a623);-webkit-background-clip:text;background-clip:text;color:transparent;
+    filter:drop-shadow(0 0 4cqh rgba(245,166,35,.35))}
+  .s1{align-items:center;text-align:center}
+  .s1 .pop{transform:scale(.8);opacity:0;transition:all .7s cubic-bezier(.2,.8,.2,1)}
+  .s1.active .pop{transform:scale(1);opacity:1}
+  .s1 .pop.d1{transition-delay:.15s}
+  .s1 .pop.d2{transition-delay:.45s}
+
+  /* S2 search */
+  .searchbar{display:flex;align-items:center;gap:1.5cqw;background:var(--card);
+    border:1px solid var(--border);border-radius:1.2cqw;padding:1.8cqh 2.4cqw;width:64cqw;font-size:2.4cqw}
+  .searchbar .ic{color:var(--amber)}
+  .caret{display:inline-block;width:.18cqw;height:2.6cqw;background:var(--amber);margin-left:.2cqw;
+    vertical-align:middle;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .results{display:flex;gap:2cqw;margin-top:3cqh}
+  .rcard{width:15cqw;opacity:0;transform:translateY(2cqh)}
+  .scene.active .rcard{animation:rise .5s ease forwards}
+  .scene.active .rcard:nth-child(2){animation-delay:.5s}
+  .scene.active .rcard:nth-child(3){animation-delay:.8s}
+  .scene.active .rcard:nth-child(4){animation-delay:1.1s}
+  @keyframes rise{to{opacity:1;transform:none}}
+  .poster{height:20cqh;border-radius:1cqw;display:flex;align-items:flex-end;padding:.8cqw;
+    font-size:1.4cqw;font-weight:700;color:#fff;position:relative;overflow:hidden}
+  .badge{position:absolute;top:.6cqw;right:.6cqw;background:rgba(0,0,0,.55);color:var(--amber);
+    font-size:1cqw;padding:.3cqh .6cqw;border-radius:.5cqw;font-weight:600}
+  .rmeta{font-size:1.2cqw;color:var(--muted);margin-top:.8cqh}
+
+  /* S3 rating */
+  .rate{display:flex;gap:4cqw;align-items:center}
+  .crit{flex:1}
+  .row{display:flex;align-items:center;gap:1.4cqw;margin:1.5cqh 0}
+  .row .lbl{width:16cqw;font-size:1.7cqw;color:var(--muted)}
+  .track{flex:1;height:1.1cqh;background:#0b1426;border-radius:1cqw;overflow:hidden}
+  .fill{height:100%;width:0;border-radius:1cqw;transition:width 1.1s cubic-bezier(.2,.8,.2,1)}
+  .scene.active .fill{width:var(--w)}
+  .row .val{width:3cqw;text-align:right;font-size:1.7cqw;font-weight:700}
+  .scorebox{width:26cqw;text-align:center}
+  .bigscore{font-size:11cqw;font-weight:900;line-height:1;color:var(--emerald)}
+  .scorecap{font-size:1.7cqw;color:var(--muted);margin-top:1cqh}
+
+  /* S4 review + cast */
+  .panel{display:flex;gap:3cqw}
+  .review{flex:1.3}
+  .rhead{display:flex;align-items:center;gap:1.2cqw;margin-bottom:1.6cqh}
+  .ava{width:4.4cqw;height:4.4cqw;border-radius:50%;background:rgba(245,166,35,.12);
+    border:1px solid rgba(245,166,35,.4);color:var(--amber);display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:2cqw}
+  .rtext{font-size:1.9cqw;line-height:1.6;color:#cdd6e6}
+  .b{font-weight:800;color:#fff}
+  .spoiler{background:#2a3550;color:transparent;border-radius:.4cqw;padding:0 .4cqw;user-select:none}
+  .castcol{flex:1}
+  .h4{font-size:1.7cqw;color:var(--muted);margin-bottom:1.4cqh;font-weight:600}
+  .cast{display:flex;gap:1.2cqw}
+  .person{text-align:center;width:7cqw}
+  .pface{width:7cqw;height:9cqh;border-radius:1cqw;margin-bottom:.7cqh}
+  .pn{font-size:1.1cqw;color:#cdd6e6;line-height:1.2}
+  .stills{display:flex;gap:1.2cqw;margin-top:2.4cqh}
+  .still{flex:1;height:11cqh;border-radius:1cqw}
+
+  /* S5 profile podium + CTA */
+  .s5 .title{font-size:4cqw}
+  .podium{display:flex;align-items:flex-end;justify-content:center;gap:2cqw;margin:3cqh 0}
+  .spot{display:flex;flex-direction:column;align-items:center}
+  .medal{font-size:3cqw;margin-bottom:.6cqh}
+  .pcard{border-radius:1cqw}
+  .step{width:11cqw;border-top-left-radius:1cqw;border-top-right-radius:1cqw;height:0;
+    transition:height .9s cubic-bezier(.2,.8,.2,1);display:flex;align-items:flex-start;justify-content:center}
+  .scene.active .step{height:var(--h)}
+  .pscore{font-weight:800;font-size:2cqw;margin:.8cqh 0}
+  .chips{display:flex;gap:1.4cqw;justify-content:center;margin-top:1cqh}
+  .chip{background:var(--card);border:1px solid var(--border);border-radius:1cqw;padding:1.2cqh 1.8cqw;
+    display:flex;gap:.9cqw;align-items:center;font-size:1.8cqw}
+  .chip b{font-weight:800}
+  .cta{align-items:center;text-align:center}
+  .url{margin-top:2.4cqh;font-size:2cqw;color:var(--amber);font-weight:600;letter-spacing:.04em}
+
+  .progress{position:absolute;left:0;bottom:0;height:.6cqh;background:var(--amber);width:0}
+  .replay{position:absolute;bottom:2.2cqh;right:3cqw;background:rgba(255,255,255,.08);color:#cfd8e8;
+    border:1px solid var(--border);border-radius:1cqw;padding:1cqh 2cqw;font-size:1.5cqw;cursor:pointer;opacity:.0;transition:opacity .4s}
+  .stage:hover .replay{opacity:.85}
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+  <div class="mark">🎬 WAW <small>· what's andrew watching</small></div>
+
+  <section class="scene s1">
+    <div class="brand pop">WAW</div>
+    <div class="sub pop d1" style="font-size:2.8cqw;color:#cdd6e6;margin-top:2.4cqh">What's&nbsp;Andrew&nbsp;Watching</div>
+    <div class="eyebrow pop d2" style="margin-top:3cqh">Оценивай кино по-настоящему</div>
+  </section>
+
+  <section class="scene s2">
+    <div class="eyebrow">Поиск</div>
+    <div class="title">Нашёл — <span class="accent">оценил</span></div>
+    <div class="searchbar" style="margin-top:3cqh">
+      <span class="ic">🔍</span><span id="typed"></span><span class="caret"></span>
+    </div>
+    <div class="results">
+      <div class="rcard"><div class="poster" style="background:linear-gradient(160deg,#3a2a1a,#7c4a2a)"><span class="badge">фильм</span>Дюна</div><div class="rmeta">2021 · фильм</div></div>
+      <div class="rcard"><div class="poster" style="background:linear-gradient(160deg,#1a2a3a,#2a4a6a)"><span class="badge">сериал</span>Острые козырьки</div><div class="rmeta">2013 · сериал</div></div>
+      <div class="rcard"><div class="poster" style="background:linear-gradient(160deg,#2a1a3a,#5a2a6a)"><span class="badge">фильм</span>Интерстеллар</div><div class="rmeta">2014 · фильм</div></div>
+      <div class="rcard"><div class="poster" style="background:linear-gradient(160deg,#1a3a2a,#2a6a4a)"><span class="badge">сериал</span>Теория<br>большого взрыва</div><div class="rmeta">2007 · сериал</div></div>
+    </div>
+  </section>
+
+  <section class="scene s3">
+    <div class="eyebrow">Оценка</div>
+    <div class="title" style="margin-bottom:3cqh">Не одна звезда — <span class="em">6 критериев</span></div>
+    <div class="rate">
+      <div class="crit">
+        <div class="row"><span class="lbl">Общее впечатление</span><span class="track"><span class="fill" style="--w:90%;background:var(--amber)"></span></span><span class="val" style="color:var(--amber)">9</span></div>
+        <div class="row"><span class="lbl">Сценарий</span><span class="track"><span class="fill" style="--w:85%;background:#7c8aa6"></span></span><span class="val">8.5</span></div>
+        <div class="row"><span class="lbl">Режиссура</span><span class="track"><span class="fill" style="--w:90%;background:#7c8aa6"></span></span><span class="val">9</span></div>
+        <div class="row"><span class="lbl">Актёрская игра</span><span class="track"><span class="fill" style="--w:80%;background:#7c8aa6"></span></span><span class="val">8</span></div>
+        <div class="row"><span class="lbl">Визуал</span><span class="track"><span class="fill" style="--w:95%;background:#7c8aa6"></span></span><span class="val">9.5</span></div>
+        <div class="row"><span class="lbl">Звук</span><span class="track"><span class="fill" style="--w:80%;background:#7c8aa6"></span></span><span class="val">8</span></div>
+      </div>
+      <div class="scorebox card glow" style="padding:4cqh 0">
+        <div class="bigscore" id="bigscore">8.7</div>
+        <div class="scorecap">итоговый балл</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene s4">
+    <div class="eyebrow">Рецензии и детали</div>
+    <div class="title" style="margin-bottom:3cqh;font-size:4cqw">Пиши, форматируй, разбирайся</div>
+    <div class="panel">
+      <div class="review card glow" style="padding:3cqh 2.4cqw">
+        <div class="rhead"><div class="ava">A</div><div><div style="font-weight:700;font-size:1.9cqw">Andrey</div><div style="color:var(--emerald);font-weight:700;font-size:1.6cqw">9.1</div></div></div>
+        <div class="rtext">Один из <span class="b">лучших</span> сезонов: держит в напряжении до финала. <span class="spoiler">В конце герой выживает</span> — но это надо смотреть.</div>
+      </div>
+      <div class="castcol">
+        <div class="h4">В ролях</div>
+        <div class="cast">
+          <div class="person"><div class="pface" style="background:linear-gradient(160deg,#42506a,#222c44)"></div><div class="pn">Киллиан Мёрфи</div></div>
+          <div class="person"><div class="pface" style="background:linear-gradient(160deg,#5a4a3a,#332820)"></div><div class="pn">Пол Андерсон</div></div>
+          <div class="person"><div class="pface" style="background:linear-gradient(160deg,#3a4a5a,#202c38)"></div><div class="pn">Хелен Маккрори</div></div>
+        </div>
+        <div class="stills">
+          <div class="still" style="background:linear-gradient(160deg,#2a3550,#141d2e)"></div>
+          <div class="still" style="background:linear-gradient(160deg,#3a2a40,#141d2e)"></div>
+          <div class="still" style="background:linear-gradient(160deg,#243a32,#141d2e)"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="scene s5">
+    <div class="eyebrow">Твой профиль</div>
+    <div class="title">Личная статистика и топы</div>
+    <div class="podium">
+      <div class="spot"><div class="medal">🥈</div><div class="pcard" style="width:8cqw;height:11cqh;background:linear-gradient(160deg,#2a3550,#141d2e)"></div><div class="pscore" style="color:var(--emerald)">8.7</div><div class="step" style="--h:9cqh;background:linear-gradient(180deg,#cbd5e133,#cbd5e111);border-top:.3cqh solid #cbd5e1"></div></div>
+      <div class="spot"><div class="medal">🥇</div><div class="pcard" style="width:9.5cqw;height:14cqh;background:linear-gradient(160deg,#3a3320,#141d2e)"></div><div class="pscore" style="color:var(--emerald)">9.1</div><div class="step" style="--h:13cqh;background:linear-gradient(180deg,#f5c51840,#f5c51810);border-top:.3cqh solid var(--gold)"></div></div>
+      <div class="spot"><div class="medal">🥉</div><div class="pcard" style="width:8cqw;height:11cqh;background:linear-gradient(160deg,#3a2a24,#141d2e)"></div><div class="pscore" style="color:var(--amber)">7.5</div><div class="step" style="--h:6cqh;background:linear-gradient(180deg,#c2855a40,#c2855a10);border-top:.3cqh solid #c2855a"></div></div>
+    </div>
+    <div class="chips">
+      <div class="chip">⭐ <b class="em">6.8</b> средняя</div>
+      <div class="chip">🎞️ <b>9</b> оценок</div>
+      <div class="chip">📝 заметки</div>
+      <div class="chip">📊 топ-10</div>
+    </div>
+  </section>
+
+  <section class="scene cta s5">
+    <div class="brand" style="font-size:8cqw">WAW</div>
+    <div class="sub" style="font-size:2.6cqw;color:#cdd6e6;margin-top:1.6cqh">Оценивай. Сравнивай. Запоминай.</div>
+    <div class="url">movie-rating-lyart.vercel.app</div>
+  </section>
+
+  <div class="progress" id="bar"></div>
+  <button class="replay" onclick="play()">⟲ Заново</button>
+</div>
+
+<script>
+  const stage = document.getElementById('stage');
+  const scenes = [...stage.querySelectorAll('.scene')];
+  const durs = [4500, 6000, 6500, 6000, 4000, 3000];
+  const total = durs.reduce((a,b)=>a+b,0);
+  const bar = document.getElementById('bar');
+  const typed = document.getElementById('typed');
+  const bigscore = document.getElementById('bigscore');
+  let timers = [];
+
+  function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+  function typeText(el, text, speed){
+    el.textContent='';
+    text.split('').forEach((ch,k)=> timers.push(setTimeout(()=> el.textContent += ch, k*speed)));
+  }
+  function countUp(el, to, ms){
+    const start=performance.now();
+    function step(t){
+      const p=Math.min(1,(t-start)/ms);
+      el.textContent=(to*p).toFixed(1);
+      if(p<1) requestAnimationFrame(step); else el.textContent=to.toFixed(1);
+    }
+    requestAnimationFrame(step);
+  }
+
+  function runScene(idx){
+    if(idx===1) typeText(typed,'Острые козырьки', 130);
+    if(idx===2 && bigscore) countUp(bigscore, 8.7, 1300);
+  }
+
+  function show(idx){
+    stage.classList.toggle('show-mark', idx!==0 && idx!==scenes.length-1);
+    scenes.forEach((s,k)=> s.classList.toggle('active', k===idx));
+    runScene(idx);
+  }
+
+  function play(){
+    clearTimers();
+    bar.style.transition='none'; bar.style.width='0';
+    void bar.offsetWidth;
+    bar.style.transition='width '+total+'ms linear'; bar.style.width='100%';
+    let acc=0;
+    show(0);
+    for(let i=1;i<scenes.length;i++){
+      acc+=durs[i-1];
+      timers.push(setTimeout(()=>show(i), acc));
+    }
+    timers.push(setTimeout(play, total));
+  }
+  play();
+</script>
+</body>
+</html>

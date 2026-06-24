@@ -30,9 +30,6 @@ const TV_CRITERIA_LABELS = {
 const scoreColor = (n) =>
   n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
 
-const barColor = (n) =>
-  n >= 7.5 ? "bg-emerald-400" : n >= 5.5 ? "bg-amber-400" : "bg-red-400";
-
 function ScoreBadge({ score }) {
   const n = parseFloat(score);
   return (
@@ -72,14 +69,6 @@ function ProfileStats({ ratings, onOpen }) {
   const movieAvg = avgOf(movieScores);
   const tvAvg = avgOf(tvScores);
 
-  // Histogram: round score into buckets 1..10
-  const buckets = Array(10).fill(0);
-  scores.forEach((s) => {
-    const b = Math.min(10, Math.max(1, Math.round(s)));
-    buckets[b - 1]++;
-  });
-  const maxBucket = Math.max(...buckets, 1);
-
   return (
     <div className="space-y-3">
       <h2 className="text-lg font-semibold text-slate-100">Статистика</h2>
@@ -95,36 +84,6 @@ function ProfileStats({ ratings, onOpen }) {
         {tvAvg != null && (
           <Stat icon="📺" value={tvAvg.toFixed(1)} label="сериалы" color={scoreColor(tvAvg)} />
         )}
-      </div>
-
-      {/* Score distribution */}
-      <div
-        className="rounded-xl px-4 py-3 border"
-        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
-      >
-        <div className="text-[11px] text-slate-500 mb-2">Распределение оценок</div>
-        <div className="flex items-end gap-2 h-16">
-          {buckets.map((count, i) => {
-            const n = i + 1;
-            const h = count > 0 ? Math.max(6, (count / maxBucket) * 100) : 3;
-            return (
-              <div key={n} className="flex-1 h-full flex justify-center items-end">
-                <div
-                  className={`w-2.5 sm:w-3.5 rounded-t ${count > 0 ? barColor(n) : "bg-slate-800"}`}
-                  style={{ height: `${h}%` }}
-                  title={`Оценка ${n}: ${count}`}
-                />
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex gap-2 mt-1">
-          {buckets.map((count, i) => (
-            <span key={i} className="flex-1 text-center text-[10px] text-slate-600">
-              {i + 1}
-            </span>
-          ))}
-        </div>
       </div>
 
       {/* Top by score */}
@@ -301,14 +260,6 @@ export default function ProfilePage() {
       })
     : null;
 
-  const avgScore =
-    profile.ratings.length > 0
-      ? (
-          profile.ratings.reduce((s, r) => s + r.score, 0) /
-          profile.ratings.length
-        ).toFixed(1)
-      : null;
-
   const movieCount = profile.ratings.filter((r) => r.media_type !== "tv").length;
   const tvCount    = profile.ratings.filter((r) => r.media_type === "tv").length;
 
@@ -349,12 +300,6 @@ export default function ProfilePage() {
               <span>
                 <span className="text-slate-100 font-semibold">{tvCount}</span>{" "}
                 {tvCount === 1 ? "сериал" : tvCount < 5 ? "сериала" : "сериалов"}
-              </span>
-            )}
-            {avgScore && (
-              <span>
-                средняя{" "}
-                <span className="text-amber-400 font-semibold">{avgScore}</span>
               </span>
             )}
           </div>

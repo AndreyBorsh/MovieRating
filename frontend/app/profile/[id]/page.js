@@ -86,35 +86,88 @@ function ProfileStats({ ratings, onOpen }) {
         )}
       </div>
 
-      {/* Top by score */}
-      <div>
-        <div className="text-[11px] text-slate-500 mb-2">Топ по оценке</div>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {top.map((r, i) => (
-            <button
-              key={i}
-              onClick={() => onOpen(r)}
-              className="shrink-0 w-14 text-center group"
-              title={r.movie_title}
+      {/* Top by score — podium */}
+      <div
+        className="rounded-xl px-4 pt-3 pb-0 border"
+        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+      >
+        <div className="text-[11px] text-slate-500 mb-3">🏆 Топ по оценке</div>
+        <Podium top={top} onOpen={onOpen} />
+        {top.length > 3 && (
+          <div className="flex justify-center flex-wrap gap-3 py-3 mt-1 border-t" style={{ borderColor: "#1e2d45" }}>
+            {top.slice(3).map((r, i) => (
+              <button
+                key={i}
+                onClick={() => onOpen(r)}
+                className="flex items-center gap-2 group"
+                title={r.movie_title}
+              >
+                <span className="text-xs text-slate-600 font-medium">{i + 4}</span>
+                {POSTER(r.poster) ? (
+                  <img src={POSTER(r.poster)} alt={r.movie_title}
+                    className="w-7 h-10 rounded object-cover group-hover:brightness-110 transition" />
+                ) : (
+                  <div className="w-7 h-10 rounded bg-slate-800 flex items-center justify-center text-xs">
+                    {r.media_type === "tv" ? "📺" : "🎬"}
+                  </div>
+                )}
+                <span className={`text-xs font-bold ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Podium({ top, onOpen }) {
+  const MEDAL = ["🥇", "🥈", "🥉"];
+  const ACCENT = ["#f5c518", "#cbd5e1", "#c2855a"];
+  const BASE_H = ["h-12", "h-8", "h-5"];
+  const POSTER_CLS = ["w-20 h-28 sm:w-24 sm:h-36", "w-16 h-24 sm:w-20 sm:h-28", "w-16 h-24 sm:w-20 sm:h-28"];
+
+  // visual left→right order: 2nd, 1st, 3rd
+  const order = [1, 0, 2];
+
+  const Spot = ({ rank }) => {
+    const r = top[rank];
+    if (!r) return <div className="flex-1 max-w-[8rem]" />;
+    return (
+      <div className="flex-1 max-w-[8rem] flex flex-col items-center justify-end">
+        <div className="text-xl mb-1">{MEDAL[rank]}</div>
+        <button onClick={() => onOpen(r)} className="group" title={r.movie_title}>
+          {POSTER(r.poster) ? (
+            <img
+              src={POSTER(r.poster)}
+              alt={r.movie_title}
+              className={`${POSTER_CLS[rank]} rounded-lg object-cover group-hover:brightness-110 transition`}
+              style={{ border: `2px solid ${ACCENT[rank]}` }}
+            />
+          ) : (
+            <div
+              className={`${POSTER_CLS[rank]} rounded-lg bg-slate-800 flex items-center justify-center text-2xl`}
+              style={{ border: `2px solid ${ACCENT[rank]}` }}
             >
-              {POSTER(r.poster) ? (
-                <img
-                  src={POSTER(r.poster)}
-                  alt={r.movie_title}
-                  className="w-14 h-20 rounded-lg object-cover border border-transparent group-hover:border-amber-400/50 transition"
-                />
-              ) : (
-                <div className="w-14 h-20 rounded-lg bg-slate-800 flex items-center justify-center text-xl">
-                  {r.media_type === "tv" ? "📺" : "🎬"}
-                </div>
-              )}
-              <div className={`text-xs font-bold mt-0.5 ${scoreColor(r.score)}`}>
-                {r.score.toFixed(1)}
-              </div>
-            </button>
-          ))}
+              {r.media_type === "tv" ? "📺" : "🎬"}
+            </div>
+          )}
+        </button>
+        <div className={`text-sm font-bold mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
+        <div className="text-[10px] text-slate-400 text-center line-clamp-1 w-full px-1">{r.movie_title}</div>
+        <div
+          className={`${BASE_H[rank]} w-full rounded-t-md mt-1 flex items-start justify-center`}
+          style={{ background: `linear-gradient(180deg, ${ACCENT[rank]}33, ${ACCENT[rank]}11)`, borderTop: `2px solid ${ACCENT[rank]}` }}
+        >
+          <span className="text-xs font-bold mt-1" style={{ color: ACCENT[rank] }}>{rank + 1}</span>
         </div>
       </div>
+    );
+  };
+
+  return (
+    <div className="flex items-end justify-center gap-2 sm:gap-3">
+      {order.map((rank) => <Spot key={rank} rank={rank} />)}
     </div>
   );
 }

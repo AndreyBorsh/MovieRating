@@ -27,14 +27,102 @@ const TV_CRITERIA_LABELS = {
   pacing:     "Темп",
 };
 
+const scoreColor = (n) =>
+  n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
+
+const barColor = (n) =>
+  n >= 7.5 ? "bg-emerald-400" : n >= 5.5 ? "bg-amber-400" : "bg-red-400";
+
 function ScoreBadge({ score }) {
   const n = parseFloat(score);
-  const color =
-    n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
   return (
-    <span className={`text-xl font-bold ${color}`}>
+    <span className={`text-xl font-bold ${scoreColor(n)}`}>
       {n > 0 ? n.toFixed(1) : "—"}
     </span>
+  );
+}
+
+function StatTile({ label, value, color = "text-slate-100" }) {
+  return (
+    <div
+      className="rounded-xl px-4 py-3 border text-center"
+      style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+    >
+      <div className={`text-2xl font-bold ${color}`}>{value}</div>
+      <div className="text-[11px] text-slate-500 mt-0.5">{label}</div>
+    </div>
+  );
+}
+
+function ProfileStats({ ratings }) {
+  if (!ratings.length) return null;
+
+  const scores = ratings.map((r) => r.score);
+  const avg = scores.reduce((s, v) => s + v, 0) / scores.length;
+  const max = Math.max(...scores);
+  const min = Math.min(...scores);
+
+  const movieScores = ratings.filter((r) => r.media_type !== "tv").map((r) => r.score);
+  const tvScores = ratings.filter((r) => r.media_type === "tv").map((r) => r.score);
+  const avgOf = (arr) => (arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : null);
+  const movieAvg = avgOf(movieScores);
+  const tvAvg = avgOf(tvScores);
+
+  // Histogram: round score into buckets 1..10
+  const buckets = Array(10).fill(0);
+  scores.forEach((s) => {
+    const b = Math.min(10, Math.max(1, Math.round(s)));
+    buckets[b - 1]++;
+  });
+  const maxBucket = Math.max(...buckets, 1);
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-lg font-semibold text-slate-100">Статистика</h2>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatTile label="Средняя оценка" value={avg.toFixed(1)} color={scoreColor(avg)} />
+        <StatTile label="Самая высокая" value={max.toFixed(1)} color={scoreColor(max)} />
+        <StatTile label="Самая низкая" value={min.toFixed(1)} color={scoreColor(min)} />
+        <StatTile label="Всего оценок" value={ratings.length} />
+        {movieAvg != null && (
+          <StatTile label="Средняя · фильмы" value={movieAvg.toFixed(1)} color={scoreColor(movieAvg)} />
+        )}
+        {tvAvg != null && (
+          <StatTile label="Средняя · сериалы" value={tvAvg.toFixed(1)} color={scoreColor(tvAvg)} />
+        )}
+      </div>
+
+      {/* Score distribution */}
+      <div
+        className="rounded-xl p-4 border"
+        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+      >
+        <div className="text-xs text-slate-500 mb-3">Распределение оценок</div>
+        <div className="flex items-end gap-1.5 h-28">
+          {buckets.map((count, i) => {
+            const n = i + 1;
+            const h = count > 0 ? Math.max(4, (count / maxBucket) * 100) : 2;
+            return (
+              <div key={n} className="flex-1 h-full flex items-end">
+                <div
+                  className={`w-full rounded-t ${count > 0 ? barColor(n) : "bg-slate-800"}`}
+                  style={{ height: `${h}%` }}
+                  title={`Оценка ${n}: ${count}`}
+                />
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-1.5 mt-1">
+          {buckets.map((count, i) => (
+            <span key={i} className="flex-1 text-center text-[10px] text-slate-600">
+              {i + 1}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -168,6 +256,9 @@ export default function ProfilePage() {
         </div>
       </div>
 
+      {/* Statistics */}
+      <ProfileStats ratings={profile.ratings} />
+
       {/* My private notes (own profile only) */}
       {isMe && notes.length > 0 && (
         <div className="space-y-3">
@@ -280,14 +371,22 @@ export default function ProfilePage() {
                       </p>
                     )}
 
-                    <div className="text-xs text-slate-600 mt-2">
-                      {r.created_at
-                        ? new Date(r.created_at).toLocaleDateString("ru-RU", {
-                            day: "numeric",
-                            month: "long",
-                            year: "numeric",
-                          })
-                        : ""}
+                    <div className="flex items-center justify-between gap-2 mt-2">
+                      <span className="text-xs text-slate-600">
+                        {r.created_at
+                          ? new Date(r.created_at).toLocaleDateString("ru-RU", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                            })
+                          : ""}
+                      </span>
+                      <Link
+                        href={`${href}#review-${profile.user_id}`}
+                        className="text-xs text-amber-400 hover:text-amber-300 transition-colors shrink-0"
+                      >
+                        К рецензии →
+                      </Link>
                     </div>
                   </div>
                 </div>

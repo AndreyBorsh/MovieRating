@@ -261,6 +261,7 @@ export default function TvPage() {
   const [similar,  setSimilar]  = useState([]);
   const [details,  setDetails]  = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [highlightUser, setHighlightUser] = useState(null);
 
   useEffect(() => {
     if (!tvId || !ready) return;
@@ -272,6 +273,20 @@ export default function TvPage() {
     getSimilarTv(tvId).then((data) => setSimilar(Array.isArray(data) ? data : []));
     getTvDetails(tvId).then((data) => setDetails(data && typeof data === "object" ? data : null));
   }, [tvId]);
+
+  // Deep-link to a specific review (#review-<userId>): scroll + highlight
+  useEffect(() => {
+    if (!reviews.length) return;
+    const m = window.location.hash.match(/^#review-(\d+)$/);
+    if (!m) return;
+    const uid = parseInt(m[1]);
+    const el = document.getElementById(`review-${uid}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlightUser(uid);
+    const t = setTimeout(() => setHighlightUser(null), 2800);
+    return () => clearTimeout(t);
+  }, [reviews]);
 
   const loadAll = async () => {
     setLoading(true);
@@ -457,7 +472,10 @@ export default function TvPage() {
           {reviews.map((r, idx) => (
             <div
               key={idx}
-              className="rounded-xl p-4 border space-y-3"
+              id={`review-${r.user_id}`}
+              className={`rounded-xl p-4 border space-y-3 scroll-mt-20 transition-all ${
+                highlightUser === r.user_id ? "ring-2 ring-amber-400" : ""
+              }`}
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <div className="flex items-center justify-between">

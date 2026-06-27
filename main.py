@@ -207,6 +207,17 @@ def ensure_notes_table():
     conn.close()
 
 
+def ensure_season_columns():
+    """Add season-scope columns to ratings (autocommit, idempotent)."""
+    conn = get_db()
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_from INT")
+    cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_to INT")
+    cur.close()
+    conn.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -217,6 +228,10 @@ async def lifespan(app: FastAPI):
         ensure_notes_table()
     except Exception as e:
         print(f"WARNING: notes table init failed: {e}")
+    try:
+        ensure_season_columns()
+    except Exception as e:
+        print(f"WARNING: season columns init failed: {e}")
     yield
 
 
@@ -719,6 +734,21 @@ def get_tv_show(tmdb_id: int):
 # RATINGS
 # =========================
 
+def parse_seasons(data: dict):
+    """Return (season_from, season_to). None,None means all seasons."""
+    sf = data.get("season_from")
+    st = data.get("season_to")
+    if sf is None and st is None:
+        return None, None
+    if sf is None:
+        sf = 1
+    if st is None:
+        st = sf
+    if not (isinstance(sf, int) and isinstance(st, int) and 1 <= sf <= st):
+        raise HTTPException(status_code=400, detail="Неверный диапазон сезонов")
+    return sf, st
+
+
 @app.post("/ratings")
 def create_rating(data: dict, authorization: str = Header(None)):
     payload = require_auth(authorization)
@@ -735,6 +765,7 @@ def create_rating(data: dict, authorization: str = Header(None)):
         tmdb_id    = data.get("tmdb_id")
         characters = data.get("characters")
         pacing     = data.get("pacing")
+        season_from, season_to = parse_seasons(data)
 
         if None in [tmdb_id, overall, story, characters, acting, visuals, pacing]:
             raise HTTPException(status_code=400, detail="Не все критерии заполнены")
@@ -758,10 +789,10 @@ def create_rating(data: dict, authorization: str = Header(None)):
             cur.execute(
                 """INSERT INTO ratings
                    (user_id, tv_tmdb_id, overall, story, characters, acting, visuals, pacing,
-                    score, review, media_type)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv')""",
+                    score, review, media_type, season_from, season_to)
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv',%s,%s)""",
                 (user_id, tmdb_id, overall, story, characters, acting, visuals, pacing,
-                 score, review or None),
+                 score, review or None, season_from, season_to),
             )
             conn.commit()
             cur.close(); conn.close()
@@ -824,6 +855,7 @@ def update_rating(data: dict, authorization: str = Header(None)):
         tmdb_id    = data.get("tmdb_id")
         characters = data.get("characters")
         pacing     = data.get("pacing")
+        season_from, season_to = parse_seasons(data)
 
         if None in [tmdb_id, overall, story, characters, acting, visuals, pacing]:
             raise HTTPException(status_code=400, detail="Не все критерии заполнены")
@@ -837,10 +869,10 @@ def update_rating(data: dict, authorization: str = Header(None)):
         cur.execute("""
             UPDATE ratings
             SET overall=%s, story=%s, characters=%s, acting=%s, visuals=%s, pacing=%s,
-                score=%s, review=%s
+                score=%s, review=%s, season_from=%s, season_to=%s
             WHERE user_id=%s AND tv_tmdb_id=%s
         """, (overall, story, characters, acting, visuals, pacing,
-              score, review or None, user_id, tmdb_id))
+              score, review or None, season_from, season_to, user_id, tmdb_id))
         if cur.rowcount == 0:
             cur.close(); conn.close()
             raise HTTPException(status_code=404, detail="Оценка не найдена")
@@ -994,7 +1026,7 @@ def get_tv_reviews(tmdb_id: int, authorization: str = Header(None)):
     cur = conn.cursor()
     cur.execute("""
         SELECT r.id, r.score, r.overall, r.story, r.characters, r.acting, r.visuals, r.pacing,
-               r.review, u.username, u.id, r.created_at
+               r.review, u.username, u.id, r.created_at, r.season_from, r.season_to
         FROM ratings r
         JOIN users u ON u.id = r.user_id
         WHERE r.tv_tmdb_id = %s
@@ -1010,6 +1042,7 @@ def get_tv_reviews(tmdb_id: int, authorization: str = Header(None)):
             "characters": r[4], "acting": r[5], "visuals": r[6], "pacing": r[7],
             "review": r[8], "username": r[9], "user_id": r[10],
             "created_at": r[11].isoformat() if r[11] else None,
+            "season_from": r[12], "season_to": r[13],
             "reactions": reactions_map.get(r[0], {}),
             "my_reaction": my_reactions.get(r[0]),
             "comments": comments_map.get(r[0], []),
@@ -1025,7 +1058,8 @@ def get_my_tv_rating(tmdb_id: int, authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT score, overall, story, characters, acting, visuals, pacing, review
+        SELECT score, overall, story, characters, acting, visuals, pacing, review,
+               season_from, season_to
         FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s
     """, (payload["user_id"], tmdb_id))
     row = cur.fetchone()
@@ -1035,7 +1069,8 @@ def get_my_tv_rating(tmdb_id: int, authorization: str = Header(None)):
     return {
         "score": row[0], "overall": row[1], "story": row[2],
         "characters": row[3], "acting": row[4], "visuals": row[5],
-        "pacing": row[6], "review": row[7], "media_type": "tv",
+        "pacing": row[6], "review": row[7],
+        "season_from": row[8], "season_to": row[9], "media_type": "tv",
     }
 
 

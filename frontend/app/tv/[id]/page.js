@@ -243,6 +243,12 @@ const DEFAULT_FORM = {
   overall: 7, story: 7, characters: 7, acting: 7, visuals: 7, pacing: 7,
 };
 
+function seasonLabel(from, to) {
+  if (from == null) return "Все сезоны";
+  if (from === to) return `${from}-й сезон`;
+  return `Сезоны ${from}–${to}`;
+}
+
 export default function TvPage() {
   const { id: tvId } = useParams();
   const { token, user, ready, logout } = useAuth();
@@ -262,6 +268,9 @@ export default function TvPage() {
   const [details,  setDetails]  = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [highlightUser, setHighlightUser] = useState(null);
+  const [seasonMode, setSeasonMode] = useState("all"); // "all" | "range"
+  const [seasonFrom, setSeasonFrom] = useState(1);
+  const [seasonTo, setSeasonTo] = useState(1);
 
   useEffect(() => {
     if (!tvId || !ready) return;
@@ -331,6 +340,13 @@ export default function TvPage() {
       pacing:     myRating.pacing,
     });
     setReviewText(myRating.review || "");
+    if (myRating.season_from == null) {
+      setSeasonMode("all");
+    } else {
+      setSeasonMode("range");
+      setSeasonFrom(myRating.season_from);
+      setSeasonTo(myRating.season_to);
+    }
     setError("");
     setEditing(true);
   };
@@ -349,6 +365,8 @@ export default function TvPage() {
         media_type: "tv",
         ...form,
         review: reviewText.trim() || null,
+        season_from: seasonMode === "range" ? seasonFrom : null,
+        season_to: seasonMode === "range" ? seasonTo : null,
       };
       if (editing) {
         await updateRating(token, payload);
@@ -488,6 +506,10 @@ export default function TvPage() {
                 <ScoreBadge score={r.score} size="sm" />
               </div>
 
+              <span className="inline-block text-xs text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded">
+                📺 {seasonLabel(r.season_from, r.season_to)}
+              </span>
+
               <div className="space-y-1.5">
                 {TV_CRITERIA.map((c) => (
                   <CriteriaBar
@@ -563,6 +585,9 @@ export default function TvPage() {
                 <span className="text-sm font-semibold text-slate-300">Ваша оценка</span>
                 <ScoreBadge score={myRating.score} size="sm" />
               </div>
+              <span className="inline-block text-xs text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded">
+                📺 {seasonLabel(myRating.season_from, myRating.season_to)}
+              </span>
               <div className="space-y-1.5">
                 {TV_CRITERIA.map((c) => (
                   <CriteriaBar key={c.key} label={c.label} value={myRating[c.key]}
@@ -598,6 +623,41 @@ export default function TvPage() {
               <h3 className="text-base font-semibold text-slate-100">
                 {editing ? "Редактировать оценку" : "Оценить сериал"}
               </h3>
+
+              {show?.seasons > 1 && (
+                <div className="rounded-lg p-3 border" style={{ background: "#0c1220", borderColor: "#1e2d45" }}>
+                  <div className="text-xs font-medium text-slate-400 mb-2">Что оцениваешь</div>
+                  <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                    <button type="button" onClick={() => setSeasonMode("all")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"}`}>
+                      Все сезоны
+                    </button>
+                    <button type="button" onClick={() => setSeasonMode("range")}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "range" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"}`}>
+                      Выбрать
+                    </button>
+                  </div>
+                  {seasonMode === "range" && (
+                    <div className="flex items-center gap-2 text-sm text-slate-300 mt-2">
+                      <span className="text-slate-500">с</span>
+                      <select value={seasonFrom}
+                        onChange={(e) => { const v = +e.target.value; setSeasonFrom(v); if (v > seasonTo) setSeasonTo(v); }}
+                        className="rounded-md px-2 py-1 text-slate-100 outline-none"
+                        style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      <span className="text-slate-500">по</span>
+                      <select value={seasonTo}
+                        onChange={(e) => { const v = +e.target.value; setSeasonTo(v); if (v < seasonFrom) setSeasonFrom(v); }}
+                        className="rounded-md px-2 py-1 text-slate-100 outline-none"
+                        style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      <span className="text-xs text-amber-400 ml-auto">{seasonLabel(seasonFrom, seasonTo)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-4">
                 {TV_CRITERIA.map((c) => (

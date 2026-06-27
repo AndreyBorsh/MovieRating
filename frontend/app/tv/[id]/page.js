@@ -700,7 +700,7 @@ export default function TvPage() {
                     </button>
                   </div>
                   {seasonMode === "range" && (
-                    <div className="flex items-center gap-2 text-sm text-slate-300 mt-2">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300 mt-2">
                       <span className="text-slate-500">с</span>
                       <select value={seasonFrom}
                         onChange={(e) => { const v = +e.target.value; setSeasonFrom(v); if (v > seasonTo) setSeasonTo(v); }}

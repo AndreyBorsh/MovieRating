@@ -118,14 +118,14 @@ function ProfileStats({ ratings, onOpen }) {
           style={{ background: "#0c1220", borderColor: "#1e2d45" }}
         >
           <div className="text-xs text-slate-400 mb-3 text-center">🏆 Топ по оценке</div>
-          <div className="flex-1 flex gap-3 sm:gap-5">
+          <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-5">
             <div className="flex items-end justify-center shrink-0">
               <Podium top={top} labels={topLabels} onOpen={onOpen} />
             </div>
 
             {top.length > 3 && (
               <div
-                className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 border-l pl-3 sm:pl-5"
+                className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5"
                 style={{ borderColor: "#1e2d45" }}
               >
                 {top.slice(3).map((r, i) => (

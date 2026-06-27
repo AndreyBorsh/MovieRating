@@ -5,8 +5,8 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
-  getTv, getTvReviews, getMyTvRating,
-  sendRating, updateRating, reactToReview, postComment, getSimilarTv, getTvDetails,
+  getTv, getTvReviews, getMyTvRatings,
+  sendRating, updateRating, deleteRating, reactToReview, postComment, getSimilarTv, getTvDetails,
 } from "@/lib/api";
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
@@ -255,15 +255,15 @@ export default function TvPage() {
 
   const [show,     setShow]     = useState(null);
   const [reviews,  setReviews]  = useState([]);
-  const [myRating, setMyRating] = useState(null);
+  const [myRatings, setMyRatings] = useState([]);
   const [form,     setForm]     = useState(DEFAULT_FORM);
   const [reviewText, setReviewText] = useState("");
   const [loading,  setLoading]  = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error,    setError]    = useState("");
-  const [success,  setSuccess]  = useState(false);
   const [overviewExpanded, setOverviewExpanded] = useState(false);
-  const [editing,  setEditing]  = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null); // rating_id when editing, null when new
   const [similar,  setSimilar]  = useState([]);
   const [details,  setDetails]  = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
@@ -307,8 +307,10 @@ export default function TvPage() {
       setShow(showData);
       setReviews(Array.isArray(reviewsData) ? reviewsData : []);
       if (token) {
-        const mine = await getMyTvRating(token, tvId);
-        setMyRating(mine);
+        const mine = await getMyTvRatings(token, tvId);
+        setMyRatings(Array.isArray(mine) ? mine : []);
+      } else {
+        setMyRatings([]);
       }
     } catch (e) {
       console.error(e);
@@ -329,31 +331,49 @@ export default function TvPage() {
     }));
   };
 
-  const startEditing = () => {
-    if (!myRating) return;
+  const openNew = () => {
+    setForm(DEFAULT_FORM);
+    setReviewText("");
+    setSeasonMode("all");
+    setSeasonFrom(1);
+    setSeasonTo(1);
+    setEditingId(null);
+    setError("");
+    setFormOpen(true);
+  };
+
+  const openEdit = (r) => {
     setForm({
-      overall:    myRating.overall,
-      story:      myRating.story,
-      characters: myRating.characters,
-      acting:     myRating.acting,
-      visuals:    myRating.visuals,
-      pacing:     myRating.pacing,
+      overall: r.overall, story: r.story, characters: r.characters,
+      acting: r.acting, visuals: r.visuals, pacing: r.pacing,
     });
-    setReviewText(myRating.review || "");
-    if (myRating.season_from == null) {
+    setReviewText(r.review || "");
+    if (r.season_from == null) {
       setSeasonMode("all");
     } else {
       setSeasonMode("range");
-      setSeasonFrom(myRating.season_from);
-      setSeasonTo(myRating.season_to);
+      setSeasonFrom(r.season_from);
+      setSeasonTo(r.season_to);
     }
+    setEditingId(r.rating_id);
     setError("");
-    setEditing(true);
+    setFormOpen(true);
   };
 
-  const cancelEditing = () => {
-    setEditing(false);
+  const cancelForm = () => {
+    setFormOpen(false);
+    setEditingId(null);
     setError("");
+  };
+
+  const removeRating = async (ratingId) => {
+    if (!window.confirm("Удалить эту оценку?")) return;
+    try {
+      await deleteRating(token, ratingId);
+      await loadAll();
+    } catch (e) {
+      setError(e.message);
+    }
   };
 
   const submit = async () => {
@@ -368,13 +388,14 @@ export default function TvPage() {
         season_from: seasonMode === "range" ? seasonFrom : null,
         season_to: seasonMode === "range" ? seasonTo : null,
       };
-      if (editing) {
+      if (editingId != null) {
+        payload.rating_id = editingId;
         await updateRating(token, payload);
-        setEditing(false);
       } else {
         await sendRating(token, payload);
-        setSuccess(true);
       }
+      setFormOpen(false);
+      setEditingId(null);
       await loadAll();
     } catch (e) {
       if (e.status === 401) {
@@ -404,6 +425,20 @@ export default function TvPage() {
 
   const communityScore = show.score || 0;
   const ratingCount = show.count || 0;
+
+  // Per-season-scope breakdown of the community score (from all reviews)
+  const seasonGroups = {};
+  reviews.forEach((r) => {
+    const label = seasonLabel(r.season_from, r.season_to);
+    const key = r.season_from == null ? "0" : `${r.season_from}-${r.season_to}`;
+    if (!seasonGroups[key]) seasonGroups[key] = { label, sum: 0, n: 0, sortKey: r.season_from ?? 0 };
+    seasonGroups[key].sum += r.score;
+    seasonGroups[key].n += 1;
+  });
+  const breakdown = Object.values(seasonGroups)
+    .map((g) => ({ label: g.label, avg: g.sum / g.n, n: g.n, sortKey: g.sortKey }))
+    .sort((a, b) => a.sortKey - b.sortKey);
+  const showBreakdown = breakdown.length > 1;
 
   return (
     <div className="space-y-8">
@@ -466,6 +501,22 @@ export default function TvPage() {
               {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
             </span>
           </div>
+
+          {showBreakdown && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {breakdown.map((b) => (
+                <span
+                  key={b.label}
+                  className="inline-flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1"
+                  style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+                >
+                  <span className="text-slate-400">{b.label}</span>
+                  <span className={`font-bold ${ScoreColor({ score: b.avg })}`}>{b.avg.toFixed(1)}</span>
+                  <span className="text-slate-600">· {b.n}</span>
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -576,52 +627,63 @@ export default function TvPage() {
                 Войти
               </Link>
             </div>
-          ) : myRating && !editing ? (
-            <div
-              className="rounded-xl p-5 border space-y-3"
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-slate-300">Ваша оценка</span>
-                <ScoreBadge score={myRating.score} size="sm" />
-              </div>
-              <span className="inline-block text-xs text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded">
-                📺 {seasonLabel(myRating.season_from, myRating.season_to)}
-              </span>
-              <div className="space-y-1.5">
-                {TV_CRITERIA.map((c) => (
-                  <CriteriaBar key={c.key} label={c.label} value={myRating[c.key]}
-                    weight={c.weight} main={c.main} tip={c.tip} />
-                ))}
-              </div>
-              {myRating.review && (
-                <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
-                  <ReviewText text={myRating.review} muted />
+          ) : (
+            <>
+              {myRatings.map((r) => (
+                <div
+                  key={r.rating_id}
+                  className="rounded-xl p-5 border space-y-3"
+                  style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="inline-block text-xs text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded">
+                      📺 {seasonLabel(r.season_from, r.season_to)}
+                    </span>
+                    <ScoreBadge score={r.score} size="sm" />
+                  </div>
+                  <div className="space-y-1.5">
+                    {TV_CRITERIA.map((c) => (
+                      <CriteriaBar key={c.key} label={c.label} value={r[c.key]}
+                        weight={c.weight} main={c.main} tip={c.tip} />
+                    ))}
+                  </div>
+                  {r.review && (
+                    <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+                      <ReviewText text={r.review} muted />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEdit(r)}
+                      className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
+                    >
+                      ✏️ Изменить
+                    </button>
+                    <button
+                      onClick={() => removeRating(r.rating_id)}
+                      className="px-3 py-2 rounded-lg text-sm text-slate-500 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition"
+                      aria-label="Удалить оценку"
+                    >
+                      🗑
+                    </button>
+                  </div>
                 </div>
-              )}
-              <button
-                onClick={startEditing}
-                className="w-full py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
-              >
-                ✏️ Редактировать оценку
-              </button>
-            </div>
-          ) : success && !editing ? (
-            <div
-              className="rounded-xl p-6 border text-center"
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
-            >
-              <div className="text-3xl mb-2">✅</div>
-              <p className="text-sm text-slate-300 font-medium">Оценка сохранена!</p>
-              <p className="text-xs text-slate-500 mt-1">Ваша рецензия добавлена</p>
-            </div>
-          ) : (editing || (!myRating && !success)) && (
+              ))}
+
+              {!formOpen ? (
+                <button
+                  onClick={openNew}
+                  className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
+                >
+                  ＋ {myRatings.length ? "Оценить ещё сезоны" : "Оценить сериал"}
+                </button>
+              ) : (
             <div
               className="rounded-xl p-5 border space-y-5"
               style={{ background: "#141d2e", borderColor: "#1e2d45" }}
             >
               <h3 className="text-base font-semibold text-slate-100">
-                {editing ? "Редактировать оценку" : "Оценить сериал"}
+                {editingId != null ? "Редактировать оценку" : "Новая оценка"}
               </h3>
 
               {show?.seasons > 1 && (
@@ -707,17 +769,17 @@ export default function TvPage() {
                 disabled={submitting}
                 className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
               >
-                {submitting ? "Сохраняем..." : editing ? "Сохранить изменения" : "Опубликовать рецензию"}
+                {submitting ? "Сохраняем..." : editingId != null ? "Сохранить изменения" : "Опубликовать оценку"}
               </button>
-              {editing && (
-                <button
-                  onClick={cancelEditing}
-                  className="w-full py-2 rounded-lg text-sm text-slate-500 hover:text-slate-300 transition"
-                >
-                  Отмена
-                </button>
-              )}
+              <button
+                onClick={cancelForm}
+                className="w-full py-2 rounded-lg text-sm text-slate-500 hover:text-slate-300 transition"
+              >
+                Отмена
+              </button>
             </div>
+              )}
+            </>
           )}
 
           {token && (

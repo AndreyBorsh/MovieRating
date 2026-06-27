@@ -30,6 +30,12 @@ const TV_CRITERIA_LABELS = {
 const scoreColor = (n) =>
   n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
 
+function seasonLabel(from, to) {
+  if (from == null) return null;
+  if (from === to) return `${from}-й сезон`;
+  return `Сезоны ${from}–${to}`;
+}
+
 // Competition-style ranks: equal scores (by displayed value) share a place ("5-6")
 function rankLabels(sorted) {
   const key = (r) => r.score.toFixed(1);
@@ -256,9 +262,14 @@ function ReviewModal({ rating, onClose }) {
             )}
             <div className="min-w-0">
               <div className="text-base font-semibold text-slate-100 leading-tight">{rating.movie_title}</div>
-              {isTV && (
-                <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded mt-1 inline-block">сериал</span>
-              )}
+              <div className="flex flex-wrap gap-1 mt-1">
+                {isTV && (
+                  <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
+                )}
+                {isTV && seasonLabel(rating.season_from, rating.season_to) && (
+                  <span className="text-xs text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded">📺 {seasonLabel(rating.season_from, rating.season_to)}</span>
+                )}
+              </div>
               <div className="mt-1"><ScoreBadge score={rating.score} /></div>
             </div>
           </div>
@@ -490,11 +501,18 @@ export default function ProfilePage() {
                         >
                           {r.movie_title}
                         </Link>
-                        {isTV && (
-                          <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded ml-0 mt-0.5 inline-block">
-                            сериал
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-1 mt-0.5">
+                          {isTV && (
+                            <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                              сериал
+                            </span>
+                          )}
+                          {isTV && seasonLabel(r.season_from, r.season_to) && (
+                            <span className="text-xs text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                              📺 {seasonLabel(r.season_from, r.season_to)}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <ScoreBadge score={r.score} />
                     </div>

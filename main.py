@@ -208,12 +208,19 @@ def ensure_notes_table():
 
 
 def ensure_season_columns():
-    """Add season-scope columns to ratings (autocommit, idempotent)."""
+    """Add season-scope columns + per-scope uniqueness for TV (autocommit)."""
     conn = get_db()
     conn.autocommit = True
     cur = conn.cursor()
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_from INT")
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_to INT")
+    # one TV rating per (user, show, season-scope) — NULLs normalized to 0
+    cur.execute("ALTER TABLE ratings DROP CONSTRAINT IF EXISTS ratings_user_tv_unique")
+    cur.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ratings_user_tv_season_uniq
+        ON ratings (user_id, tv_tmdb_id, COALESCE(season_from,0), COALESCE(season_to,0))
+        WHERE tv_tmdb_id IS NOT NULL
+    """)
     cur.close()
     conn.close()
 
@@ -778,12 +785,14 @@ def create_rating(data: dict, authorization: str = Header(None)):
             cache_tv(conn, int(tmdb_id))
             cur = conn.cursor()
             cur.execute(
-                "SELECT id FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s",
-                (user_id, tmdb_id),
+                """SELECT id FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s
+                   AND COALESCE(season_from,0)=COALESCE(%s,0)
+                   AND COALESCE(season_to,0)=COALESCE(%s,0)""",
+                (user_id, tmdb_id, season_from, season_to),
             )
             if cur.fetchone():
                 cur.close(); conn.close()
-                raise HTTPException(status_code=400, detail="Вы уже оценивали этот сериал")
+                raise HTTPException(status_code=400, detail="Вы уже оценили этот охват сезонов")
 
             score = calculate_score_tv(overall, story, characters, acting, visuals, pacing)
             cur.execute(
@@ -852,12 +861,14 @@ def update_rating(data: dict, authorization: str = Header(None)):
     review  = (data.get("review") or "").strip()
 
     if media_type == "tv":
-        tmdb_id    = data.get("tmdb_id")
+        rating_id  = data.get("rating_id")
         characters = data.get("characters")
         pacing     = data.get("pacing")
         season_from, season_to = parse_seasons(data)
 
-        if None in [tmdb_id, overall, story, characters, acting, visuals, pacing]:
+        if rating_id is None:
+            raise HTTPException(status_code=400, detail="Не указана оценка")
+        if None in [overall, story, characters, acting, visuals, pacing]:
             raise HTTPException(status_code=400, detail="Не все критерии заполнены")
         values = [overall, story, characters, acting, visuals, pacing]
         if not all(isinstance(v, int) and 1 <= v <= 10 for v in values):
@@ -870,9 +881,9 @@ def update_rating(data: dict, authorization: str = Header(None)):
             UPDATE ratings
             SET overall=%s, story=%s, characters=%s, acting=%s, visuals=%s, pacing=%s,
                 score=%s, review=%s, season_from=%s, season_to=%s
-            WHERE user_id=%s AND tv_tmdb_id=%s
+            WHERE id=%s AND user_id=%s
         """, (overall, story, characters, acting, visuals, pacing,
-              score, review or None, season_from, season_to, user_id, tmdb_id))
+              score, review or None, season_from, season_to, rating_id, user_id))
         if cur.rowcount == 0:
             cur.close(); conn.close()
             raise HTTPException(status_code=404, detail="Оценка не найдена")
@@ -907,6 +918,21 @@ def update_rating(data: dict, authorization: str = Header(None)):
         conn.commit()
         cur.close(); conn.close()
         return {"score": score}
+
+
+@app.delete("/ratings/{rating_id}")
+def delete_rating(rating_id: int, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ratings WHERE id=%s AND user_id=%s",
+                (rating_id, payload["user_id"]))
+    deleted = cur.rowcount
+    conn.commit()
+    cur.close(); conn.close()
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Оценка не найдена")
+    return {"ok": True}
 
 
 # =========================
@@ -1052,26 +1078,29 @@ def get_tv_reviews(tmdb_id: int, authorization: str = Header(None)):
     ]
 
 
-@app.get("/tv/{tmdb_id}/my-rating")
-def get_my_tv_rating(tmdb_id: int, authorization: str = Header(None)):
+@app.get("/tv/{tmdb_id}/my-ratings")
+def get_my_tv_ratings(tmdb_id: int, authorization: str = Header(None)):
     payload = require_auth(authorization)
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT score, overall, story, characters, acting, visuals, pacing, review,
-               season_from, season_to
+        SELECT id, score, overall, story, characters, acting, visuals, pacing, review,
+               season_from, season_to, created_at
         FROM ratings WHERE user_id=%s AND tv_tmdb_id=%s
+        ORDER BY COALESCE(season_from, 0), created_at
     """, (payload["user_id"], tmdb_id))
-    row = cur.fetchone()
+    rows = cur.fetchall()
     cur.close(); conn.close()
-    if not row:
-        return None
-    return {
-        "score": row[0], "overall": row[1], "story": row[2],
-        "characters": row[3], "acting": row[4], "visuals": row[5],
-        "pacing": row[6], "review": row[7],
-        "season_from": row[8], "season_to": row[9], "media_type": "tv",
-    }
+    return [
+        {
+            "rating_id": r[0], "score": r[1], "overall": r[2], "story": r[3],
+            "characters": r[4], "acting": r[5], "visuals": r[6], "pacing": r[7],
+            "review": r[8], "season_from": r[9], "season_to": r[10],
+            "created_at": r[11].isoformat() if r[11] else None,
+            "media_type": "tv",
+        }
+        for r in rows
+    ]
 
 
 # =========================
@@ -1309,18 +1338,20 @@ def get_profile(user_id: int):
     cur.execute("""
         SELECT score, review, movie_id, title, poster, created_at,
                overall, story, direction, acting, visuals, music,
-               characters, pacing, media_type
+               characters, pacing, media_type, rating_id, season_from, season_to
         FROM (
             SELECT r.score, r.review, m.tmdb_id AS movie_id, m.title, m.poster_path AS poster,
                    r.created_at, r.overall, r.story, r.direction, r.acting, r.visuals, r.music,
-                   r.characters, r.pacing, 'movie' AS media_type
+                   r.characters, r.pacing, 'movie' AS media_type, r.id AS rating_id,
+                   r.season_from, r.season_to
             FROM ratings r
             JOIN movies m ON m.tmdb_id = r.tmdb_id
             WHERE r.user_id = %s AND r.tmdb_id IS NOT NULL
             UNION ALL
             SELECT r.score, r.review, t.tmdb_id AS movie_id, t.title, t.poster_path AS poster,
                    r.created_at, r.overall, r.story, r.direction, r.acting, r.visuals, r.music,
-                   r.characters, r.pacing, 'tv' AS media_type
+                   r.characters, r.pacing, 'tv' AS media_type, r.id AS rating_id,
+                   r.season_from, r.season_to
             FROM ratings r
             JOIN tv_shows t ON t.tmdb_id = r.tv_tmdb_id
             WHERE r.user_id = %s AND r.tv_tmdb_id IS NOT NULL
@@ -1342,7 +1373,8 @@ def get_profile(user_id: int):
                 "overall": r[6], "story": r[7], "direction": r[8],
                 "acting": r[9], "visuals": r[10], "music": r[11],
                 "characters": r[12], "pacing": r[13],
-                "media_type": r[14],
+                "media_type": r[14], "rating_id": r[15],
+                "season_from": r[16], "season_to": r[17],
             }
             for r in ratings
         ],

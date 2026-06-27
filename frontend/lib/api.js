@@ -95,13 +95,13 @@ export async function getTvReviews(id, token) {
   return res.json();
 }
 
-export async function getMyTvRating(token, tmdbId) {
-  const res = await fetch(`${API}/tv/${tmdbId}/my-rating`, {
+export async function getMyTvRatings(token, tmdbId) {
+  const res = await fetch(`${API}/tv/${tmdbId}/my-ratings`, {
     headers: authHeader(token),
   });
-  if (res.status === 401) return null;
+  if (!res.ok) return [];
   const data = await res.json();
-  return data;
+  return Array.isArray(data) ? data : [];
 }
 
 // =========================
@@ -133,6 +133,16 @@ export async function updateRating(token, payload) {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw authError(res.status, data.detail || "Ошибка обновления");
+  return data;
+}
+
+export async function deleteRating(token, ratingId) {
+  const res = await fetch(`${API}/ratings/${ratingId}`, {
+    method: "DELETE",
+    headers: authHeader(token),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw authError(res.status, data.detail || "Ошибка удаления");
   return data;
 }
 

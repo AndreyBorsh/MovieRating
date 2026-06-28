@@ -73,7 +73,7 @@ export default function ReviewText({ text, muted = false }) {
   const displayed = isLong && !expanded ? text.slice(0, REVIEW_LIMIT).trimEnd() + "…" : text;
   const color = muted ? "text-slate-400" : "text-slate-300";
   return (
-    <div className={`text-sm ${color} leading-relaxed`}>
+    <div className={`text-sm ${color} leading-relaxed text-justify hyphens-auto`}>
       {renderFormatted(displayed)}
       {isLong && (
         <button

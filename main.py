@@ -1495,12 +1495,18 @@ def get_tv_details(tmdb_id: int):
     if not countries:
         countries = d.get("origin_country", [])
     runtimes = d.get("episode_run_time", [])
+    import datetime as _dt
+    today = _dt.date.today().isoformat()
+    aired = [s.get("air_date") for s in d.get("seasons", [])
+             if (s.get("season_number") or 0) >= 1 and s.get("air_date") and s.get("air_date") <= today]
+    latest_season_air = max(aired) if aired else d.get("last_air_date")
     return {
         "genres": [g["name"] for g in d.get("genres", [])],
         "countries": countries,
         "episode_runtime": runtimes[0] if runtimes else None,
         "seasons": d.get("number_of_seasons"),
         "episodes": d.get("number_of_episodes"),
+        "latest_season_air": latest_season_air,
         "tagline": d.get("tagline") or None,
         "creators": creators,
         "backdrops": backdrops,

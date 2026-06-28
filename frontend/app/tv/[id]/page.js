@@ -334,9 +334,17 @@ export default function TvPage() {
   const openNew = () => {
     setForm(DEFAULT_FORM);
     setReviewText("");
-    setSeasonMode("all");
-    setSeasonFrom(1);
-    setSeasonTo(1);
+    const total = show?.seasons || 1;
+    if (myRatings.length > 0 && total > 1) {
+      // a follow-up rating: default to the latest season
+      setSeasonMode("range");
+      setSeasonFrom(total);
+      setSeasonTo(total);
+    } else {
+      setSeasonMode("all");
+      setSeasonFrom(1);
+      setSeasonTo(1);
+    }
     setEditingId(null);
     setError("");
     setFormOpen(true);
@@ -439,6 +447,25 @@ export default function TvPage() {
     .map((g) => ({ label: g.label, avg: g.sum / g.n, n: g.n, sortKey: g.sortKey }))
     .sort((a, b) => a.sortKey - b.sortKey);
   const showBreakdown = breakdown.length > 1;
+
+  // Whether to offer rating more: uncovered seasons OR a new season aired since last review
+  const totalSeasons = show.seasons || 1;
+  const covered = new Set();
+  let hasAll = false;
+  myRatings.forEach((r) => {
+    if (r.season_from == null) hasAll = true;
+    else for (let s = r.season_from; s <= (r.season_to || r.season_from); s++) covered.add(s);
+  });
+  const allCovered = hasAll ||
+    Array.from({ length: totalSeasons }, (_, i) => i + 1).every((s) => covered.has(s));
+  const latestReviewTs = myRatings.length
+    ? Math.max(...myRatings.map((r) => new Date(r.created_at || 0).getTime())) : 0;
+  const newSeasonOut = details?.latest_season_air
+    ? new Date(details.latest_season_air).getTime() > latestReviewTs : false;
+  const canRateMore = myRatings.length === 0 || !allCovered || newSeasonOut;
+  const addLabel = myRatings.length === 0
+    ? "Оценить сериал"
+    : (allCovered && newSeasonOut ? "Оценить новый сезон" : "Оценить ещё сезоны");
 
   return (
     <div className="space-y-8">
@@ -671,12 +698,18 @@ export default function TvPage() {
               ))}
 
               {!formOpen ? (
-                <button
-                  onClick={openNew}
-                  className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
-                >
-                  ＋ {myRatings.length ? "Оценить ещё сезоны" : "Оценить сериал"}
-                </button>
+                canRateMore ? (
+                  <button
+                    onClick={openNew}
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
+                  >
+                    ＋ {addLabel}
+                  </button>
+                ) : (
+                  <p className="text-xs text-slate-600 text-center">
+                    Вы оценили все вышедшие сезоны
+                  </p>
+                )
               ) : (
             <div
               className="rounded-xl p-5 border space-y-5"

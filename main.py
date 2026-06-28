@@ -225,6 +225,45 @@ def ensure_season_columns():
     conn.close()
 
 
+def ensure_notifications_table():
+    """Create notifications table (autocommit, idempotent)."""
+    conn = get_db()
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            actor_id INT,
+            actor_name TEXT,
+            type VARCHAR(12) NOT NULL,
+            rating_id INT,
+            media_type VARCHAR(10),
+            media_id INT,
+            detail TEXT,
+            is_read BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.close()
+    conn.close()
+
+
+def add_notification(cur, recipient_id, actor_id, ntype, rating_id, media_type, media_id, detail):
+    """Insert a notification (skip self-actions / missing target)."""
+    if not recipient_id or not media_id or recipient_id == actor_id:
+        return
+    cur.execute("SELECT username FROM users WHERE id=%s", (actor_id,))
+    row = cur.fetchone()
+    actor_name = row[0] if row else "Кто-то"
+    cur.execute(
+        """INSERT INTO notifications
+           (user_id, actor_id, actor_name, type, rating_id, media_type, media_id, detail)
+           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)""",
+        (recipient_id, actor_id, actor_name, ntype, rating_id, media_type, media_id, detail),
+    )
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
@@ -239,6 +278,10 @@ async def lifespan(app: FastAPI):
         ensure_season_columns()
     except Exception as e:
         print(f"WARNING: season columns init failed: {e}")
+    try:
+        ensure_notifications_table()
+    except Exception as e:
+        print(f"WARNING: notifications table init failed: {e}")
     yield
 
 
@@ -1118,8 +1161,9 @@ def react_to_review(rating_id: int, body: dict, authorization: str = Header(None
 
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT id FROM ratings WHERE id = %s", (rating_id,))
-    if not cur.fetchone():
+    cur.execute("SELECT user_id, media_type, tmdb_id, tv_tmdb_id FROM ratings WHERE id = %s", (rating_id,))
+    owner = cur.fetchone()
+    if not owner:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Rating not found")
 
@@ -1140,6 +1184,11 @@ def react_to_review(rating_id: int, body: dict, authorization: str = Header(None
                     (payload["user_id"], rating_id, emoji))
         result = emoji
 
+    if result is not None:
+        owner_id, mtype, tmdb_id, tv_tmdb_id = owner
+        media_id = tv_tmdb_id if mtype == "tv" else tmdb_id
+        add_notification(cur, owner_id, payload["user_id"], "reaction", rating_id, mtype, media_id, emoji)
+
     conn.commit()
     cur.close(); conn.close()
     return {"my_reaction": result}
@@ -1153,7 +1202,7 @@ def add_comment(rating_id: int, body: dict, authorization: str = Header(None)):
         raise HTTPException(status_code=400, detail="Комментарий должен быть от 1 до 500 символов")
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT user_id FROM ratings WHERE id = %s", (rating_id,))
+    cur.execute("SELECT user_id, media_type, tmdb_id, tv_tmdb_id FROM ratings WHERE id = %s", (rating_id,))
     row = cur.fetchone()
     if not row:
         cur.close(); conn.close()
@@ -1163,8 +1212,63 @@ def add_comment(rating_id: int, body: dict, authorization: str = Header(None)):
         RETURNING id, created_at
     """, (payload["user_id"], rating_id, text))
     cid, cat = cur.fetchone()
+    owner_id, mtype, tmdb_id, tv_tmdb_id = row
+    media_id = tv_tmdb_id if mtype == "tv" else tmdb_id
+    snippet = text[:80] + ("…" if len(text) > 80 else "")
+    add_notification(cur, owner_id, payload["user_id"], "comment", rating_id, mtype, media_id, snippet)
     conn.commit(); cur.close(); conn.close()
     return {"id": cid, "text": text, "created_at": cat.isoformat()}
+
+
+# =========================
+# NOTIFICATIONS
+# =========================
+
+@app.get("/notifications")
+def list_notifications(authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT n.id, n.actor_name, n.type, n.detail, n.media_type, n.media_id,
+               n.is_read, n.created_at, COALESCE(m.title, t.title)
+        FROM notifications n
+        LEFT JOIN movies   m ON n.media_type = 'movie' AND m.tmdb_id = n.media_id
+        LEFT JOIN tv_shows t ON n.media_type = 'tv'    AND t.tmdb_id = n.media_id
+        WHERE n.user_id = %s
+        ORDER BY n.created_at DESC
+        LIMIT 50
+    """, (uid,))
+    rows = cur.fetchall()
+    cur.execute("SELECT COUNT(*) FROM notifications WHERE user_id=%s AND is_read=FALSE", (uid,))
+    unread = cur.fetchone()[0]
+    cur.close(); conn.close()
+    return {
+        "unread": unread,
+        "recipient_id": uid,
+        "items": [
+            {
+                "id": r[0], "actor_name": r[1], "type": r[2], "detail": r[3],
+                "media_type": r[4], "media_id": r[5], "is_read": r[6],
+                "created_at": r[7].isoformat() if r[7] else None,
+                "title": r[8],
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.post("/notifications/read")
+def mark_notifications_read(authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE notifications SET is_read=TRUE WHERE user_id=%s AND is_read=FALSE",
+                (payload["user_id"],))
+    conn.commit()
+    cur.close(); conn.close()
+    return {"ok": True}
 
 
 # =========================

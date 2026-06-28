@@ -250,3 +250,20 @@ export async function getMyNotes(token) {
   if (!res.ok) return [];
   return res.json();
 }
+
+// =========================
+// NOTIFICATIONS
+// =========================
+export async function getNotifications(token) {
+  const res = await fetch(`${API}/notifications`, { headers: authHeader(token) });
+  if (!res.ok) return { unread: 0, items: [], recipient_id: null };
+  return res.json();
+}
+
+export async function markNotificationsRead(token) {
+  const res = await fetch(`${API}/notifications/read`, {
+    method: "POST",
+    headers: authHeader(token),
+  });
+  return res.ok;
+}

@@ -1,8 +1,105 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { getNotifications, markNotificationsRead } from "@/lib/api";
+
+function NotificationBell() {
+  const { token } = useAuth();
+  const router = useRouter();
+  const [data, setData] = useState({ unread: 0, items: [], recipient_id: null });
+  const [open, setOpen] = useState(false);
+
+  const load = () => {
+    if (!token) return;
+    getNotifications(token).then((d) => setData(d || { unread: 0, items: [] })).catch(() => {});
+  };
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 45000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  if (!token) return null;
+
+  const toggle = async () => {
+    const willOpen = !open;
+    setOpen(willOpen);
+    if (willOpen && data.unread > 0) {
+      markNotificationsRead(token).catch(() => {});
+      setData((d) => ({ ...d, unread: 0, items: d.items.map((i) => ({ ...i, is_read: true })) }));
+    }
+  };
+
+  const go = (it) => {
+    setOpen(false);
+    const base = it.media_type === "tv" ? `/tv/${it.media_id}` : `/movies/${it.media_id}`;
+    router.push(`${base}#review-${data.recipient_id}`);
+  };
+
+  const itemText = (it) => {
+    const where = it.title ? ` к «${it.title}»` : "";
+    if (it.type === "reaction") return `${it.actor_name} отреагировал(а) ${it.detail || ""} на вашу рецензию${where}`;
+    return `${it.actor_name} прокомментировал(а) вашу рецензию${where}: ${it.detail || ""}`;
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={toggle}
+        aria-label="Уведомления"
+        className="relative px-2 py-1.5 rounded-md text-slate-400 hover:text-slate-100 transition-colors text-lg leading-none"
+      >
+        🔔
+        {data.unread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">
+            {data.unread > 9 ? "9+" : data.unread}
+          </span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div
+            className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-xl border shadow-2xl z-50"
+            style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+          >
+            <div className="px-4 py-2.5 border-b text-sm font-semibold text-slate-200" style={{ borderColor: "#1e2d45" }}>
+              Уведомления
+            </div>
+            {data.items.length === 0 ? (
+              <div className="px-4 py-6 text-center text-sm text-slate-500">Пока пусто</div>
+            ) : (
+              data.items.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => go(it)}
+                  className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
+                  style={{ borderColor: "#1e2d45" }}
+                >
+                  <span className="text-base shrink-0">{it.type === "reaction" ? "❤️" : "💬"}</span>
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-300 leading-snug">{itemText(it)}</p>
+                    {it.created_at && (
+                      <p className="text-[11px] text-slate-600 mt-0.5">
+                        {new Date(it.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                      </p>
+                    )}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function Header() {
   const { token, user, logout } = useAuth();
@@ -56,6 +153,7 @@ export default function Header() {
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {token ? (
             <>
+              <NotificationBell />
               <span className="text-xs text-slate-500 hidden sm:block">
                 {user?.username}
               </span>

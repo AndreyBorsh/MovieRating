@@ -403,7 +403,6 @@ def giveaway_tickets(cur, user_id, since):
         return 0
     cur.execute("SELECT id, review, created_at FROM ratings WHERE review IS NOT NULL")
     corpus = cur.fetchall()
-    tickets = 0
     for rid, rv, ca in candidates:
         toks = set(_words(rv))
         original = True
@@ -417,8 +416,8 @@ def giveaway_tickets(cur, user_id, since):
                 original = False
                 break
         if original:
-            tickets += 1
-    return tickets
+            return 1  # one ticket per user per giveaway
+    return 0
 
 
 # =========================
@@ -1169,7 +1168,7 @@ def get_my_movie_rating(tmdb_id: int, authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT score, overall, story, direction, acting, visuals, music, review
+        SELECT score, overall, story, direction, acting, visuals, music, review, id
         FROM ratings WHERE user_id=%s AND tmdb_id=%s
     """, (payload["user_id"], tmdb_id))
     row = cur.fetchone()
@@ -1179,7 +1178,7 @@ def get_my_movie_rating(tmdb_id: int, authorization: str = Header(None)):
     return {
         "score": row[0], "overall": row[1], "story": row[2],
         "direction": row[3], "acting": row[4], "visuals": row[5],
-        "music": row[6], "review": row[7], "media_type": "movie",
+        "music": row[6], "review": row[7], "rating_id": row[8], "media_type": "movie",
     }
 
 

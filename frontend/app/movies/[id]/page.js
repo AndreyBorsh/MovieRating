@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies, getMovieDetails } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies, getMovieDetails, deleteRating } from "@/lib/api";
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
@@ -344,6 +344,22 @@ export default function MoviePage() {
     setError("");
   };
 
+  const removeRating = async () => {
+    if (!myRating?.rating_id) return;
+    if (!confirm("Удалить вашу рецензию на этот фильм?")) return;
+    try {
+      await deleteRating(token, myRating.rating_id);
+      setMyRating(null);
+      setEditing(false);
+      setSuccess(false);
+      setForm(DEFAULT_FORM);
+      setReviewText("");
+      await loadAll();
+    } catch (e) {
+      setError(e.message || "Не удалось удалить");
+    }
+  };
+
   const submit = async () => {
     setError("");
     setSubmitting(true);
@@ -569,12 +585,21 @@ export default function MoviePage() {
                   <ReviewText text={myRating.review} muted />
                 </div>
               )}
-              <button
-                onClick={startEditing}
-                className="w-full py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
-              >
-                ✏️ Редактировать оценку
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={startEditing}
+                  className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
+                >
+                  ✏️ Редактировать
+                </button>
+                <button
+                  onClick={removeRating}
+                  className="px-3 py-2 rounded-lg text-sm text-slate-500 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition"
+                  aria-label="Удалить оценку"
+                >
+                  🗑
+                </button>
+              </div>
             </div>
           ) : success && !editing ? (
             <div

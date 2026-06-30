@@ -24,7 +24,8 @@ DATABASE_URL = os.environ.get(
 
 # Admin user ids (manage giveaways). Override via ADMIN_USER_IDS="1,5".
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
-GIVEAWAY_MIN_WORDS = 30
+GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
+GIVEAWAY_COMMENT_MIN_WORDS = 6   # min words for a comment to count
 
 
 def get_db():
@@ -363,17 +364,44 @@ def require_admin(authorization: str = Header(None)) -> dict:
     return payload
 
 
-def giveaway_tickets(cur, user_id):
-    """Weighted chances by activity. Returns (tickets, quality_reviews, comments).
-    tickets == 0 means not eligible (no review of >= GIVEAWAY_MIN_WORDS words)."""
-    cur.execute("SELECT review FROM ratings WHERE user_id=%s AND review IS NOT NULL", (user_id,))
-    quality = sum(1 for (r,) in cur.fetchall() if r and len(r.split()) >= GIVEAWAY_MIN_WORDS)
-    cur.execute("SELECT COUNT(*) FROM comments WHERE user_id=%s", (user_id,))
-    comments = cur.fetchone()[0]
-    if quality < 1:
-        return 0, quality, comments
-    tickets = 1 + min(quality, 5) + min(comments // 3, 5)
-    return tickets, quality, comments
+def _words(t):
+    return re.findall(r"[\w']+", (t or "").lower(), flags=re.UNICODE)
+
+
+def is_quality_review(text):
+    """Heuristic anti-spam check: enough words, varied vocabulary, real sentences."""
+    words = _words(text)
+    n = len(words)
+    if n < GIVEAWAY_MIN_WORDS:
+        return False
+    if len(set(words)) / n < 0.4:                      # too repetitive
+        return False
+    sentences = [s for s in re.split(r"[.!?]+", text or "") if len(_words(s)) >= 3]
+    return len(sentences) >= 2
+
+
+def is_quality_comment(text):
+    words = _words(text)
+    n = len(words)
+    if n < GIVEAWAY_COMMENT_MIN_WORDS:
+        return False
+    return len(set(words)) / n >= 0.5
+
+
+def giveaway_tickets(cur, user_id, since):
+    """Tickets earned from quality reviews + comments written AFTER `since`.
+    Starts at 0; reviews are worth more than comments."""
+    cur.execute(
+        "SELECT review FROM ratings WHERE user_id=%s AND review IS NOT NULL AND created_at > %s",
+        (user_id, since),
+    )
+    quality_reviews = sum(1 for (r,) in cur.fetchall() if is_quality_review(r))
+    cur.execute(
+        "SELECT text FROM comments WHERE user_id=%s AND created_at > %s",
+        (user_id, since),
+    )
+    quality_comments = sum(1 for (t,) in cur.fetchall() if is_quality_comment(t))
+    return quality_reviews + quality_comments // 3
 
 
 # =========================
@@ -1354,36 +1382,33 @@ def list_giveaways(authorization: str = Header(None)):
         FROM giveaways ORDER BY (status='open') DESC, created_at DESC
     """)
     rows = cur.fetchall()
-    cur.execute("SELECT giveaway_id, COUNT(*), COALESCE(SUM(tickets),0) FROM giveaway_entries GROUP BY giveaway_id")
-    counts = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+    cur.execute("SELECT giveaway_id, COUNT(*) FROM giveaway_entries GROUP BY giveaway_id")
+    counts = {r[0]: r[1] for r in cur.fetchall()}
 
-    my_entries = {}
-    my_tickets = 0
-    eligible = False
+    entered = set()
     if viewer_id:
-        cur.execute("SELECT giveaway_id, tickets FROM giveaway_entries WHERE user_id=%s", (viewer_id,))
-        my_entries = {r[0]: r[1] for r in cur.fetchall()}
-        my_tickets, _, _ = giveaway_tickets(cur, viewer_id)
-        eligible = my_tickets > 0
+        cur.execute("SELECT giveaway_id FROM giveaway_entries WHERE user_id=%s", (viewer_id,))
+        entered = {r[0] for r in cur.fetchall()}
+
+    items = []
+    for r in rows:
+        gid, created = r[0], r[6]
+        my_tickets = giveaway_tickets(cur, viewer_id, created) if viewer_id else None
+        items.append({
+            "id": gid, "title": r[1], "description": r[2],
+            "deadline": r[3].isoformat() if r[3] else None,
+            "status": r[4], "winner_name": r[5],
+            "created_at": created.isoformat() if created else None,
+            "entries": counts.get(gid, 0),
+            "entered": gid in entered,
+            "my_tickets": my_tickets,
+        })
     cur.close(); conn.close()
 
     return {
         "is_admin": is_admin,
-        "eligible": eligible,
-        "my_potential_tickets": my_tickets,
         "min_words": GIVEAWAY_MIN_WORDS,
-        "items": [
-            {
-                "id": r[0], "title": r[1], "description": r[2],
-                "deadline": r[3].isoformat() if r[3] else None,
-                "status": r[4], "winner_name": r[5],
-                "created_at": r[6].isoformat() if r[6] else None,
-                "entries": counts.get(r[0], (0, 0))[0],
-                "tickets_total": counts.get(r[0], (0, 0))[1],
-                "my_tickets": my_entries.get(r[0]),
-            }
-            for r in rows
-        ],
+        "items": items,
     }
 
 
@@ -1408,17 +1433,12 @@ def enter_giveaway(gid: int, authorization: str = Header(None)):
     if cur.fetchone():
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Вы уже участвуете")
-    tickets, quality, comments = giveaway_tickets(cur, uid)
-    if tickets <= 0:
-        cur.close(); conn.close()
-        raise HTTPException(status_code=400,
-            detail=f"Чтобы участвовать, напишите хотя бы одну рецензию от {GIVEAWAY_MIN_WORDS} слов")
     cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
     uname = cur.fetchone()[0]
-    cur.execute("INSERT INTO giveaway_entries (giveaway_id, user_id, username, tickets) VALUES (%s,%s,%s,%s)",
-                (gid, uid, uname, tickets))
+    cur.execute("INSERT INTO giveaway_entries (giveaway_id, user_id, username, tickets) VALUES (%s,%s,%s,0)",
+                (gid, uid, uname))
     conn.commit(); cur.close(); conn.close()
-    return {"tickets": tickets}
+    return {"ok": True}
 
 
 @app.post("/admin/giveaways")
@@ -1448,7 +1468,7 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT status FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT status, created_at FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
@@ -1456,13 +1476,21 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     if g[0] != "open":
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Розыгрыш уже проведён")
-    cur.execute("SELECT user_id, username, tickets FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
+    since = g[1]
+    cur.execute("SELECT user_id, username FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
     entries = cur.fetchall()
-    if not entries:
+    # live tickets per entrant (activity since giveaway start); only those with >0 can win
+    pool, weights = [], []
+    for uid, uname in entries:
+        t = giveaway_tickets(cur, uid, since)
+        if t > 0:
+            pool.append((uid, uname, t))
+            weights.append(t)
+    if not pool:
         cur.close(); conn.close()
-        raise HTTPException(status_code=400, detail="Нет участников")
-    weights = [max(1, e[2]) for e in entries]
-    winner = random.choices(entries, weights=weights, k=1)[0]
+        raise HTTPException(status_code=400,
+            detail="Пока ни у кого нет билетиков — никто не написал качественных рецензий после старта")
+    winner = random.choices(pool, weights=weights, k=1)[0]
     cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s WHERE id=%s",
                 (winner[0], winner[1], gid))
     conn.commit(); cur.close(); conn.close()

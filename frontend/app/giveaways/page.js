@@ -83,20 +83,12 @@ export default function GiveawaysPage() {
         </p>
       </div>
 
-      {token && (
-        <div className="rounded-xl px-4 py-3 border text-sm" style={{ background: "#141d2e", borderColor: "#1e2d45" }}>
-          {data?.eligible ? (
-            <span className="text-slate-300">
-              Ваши шансы: <span className="text-amber-400 font-semibold">{data.my_potential_tickets} 🎟</span>
-              <span className="text-slate-500"> — чем больше качественных рецензий и комментариев, тем выше шанс.</span>
-            </span>
-          ) : (
-            <span className="text-slate-400">
-              Чтобы участвовать, напишите хотя бы одну рецензию от {minWords} слов. Активность в комментариях повышает шансы.
-            </span>
-          )}
-        </div>
-      )}
+      <div className="rounded-xl px-4 py-3 border text-sm text-slate-400" style={{ background: "#141d2e", borderColor: "#1e2d45" }}>
+        Как это работает: вступайте в розыгрыш, а билетики 🎟 начисляются за{" "}
+        <span className="text-slate-300">рецензии (от {minWords} слов)</span> и{" "}
+        <span className="text-slate-300">комментарии</span>, написанные <span className="text-slate-300">после старта</span> розыгрыша.
+        Старт — 0 билетиков; чем больше качественной активности, тем выше шанс. «Вода» и набор слов не засчитываются.
+      </div>
 
       {error && (
         <div className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{error}</div>
@@ -162,12 +154,15 @@ export default function GiveawaysPage() {
                       <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition">
                         Войдите, чтобы участвовать
                       </Link>
-                    ) : g.my_tickets != null ? (
-                      <span className="text-sm text-emerald-400">✓ Вы участвуете · {g.my_tickets} 🎟</span>
+                    ) : g.entered ? (
+                      <span className="text-sm text-emerald-400">
+                        ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets ?? 0} 🎟</span>
+                        <span className="text-slate-500"> (билетики копятся за активность)</span>
+                      </span>
                     ) : (
-                      <button onClick={() => enter(g.id)} disabled={busyId === g.id || !data?.eligible}
+                      <button onClick={() => enter(g.id)} disabled={busyId === g.id}
                         className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
-                        {busyId === g.id ? "..." : data?.eligible ? "Участвовать" : "Нужна рецензия от " + minWords + " слов"}
+                        {busyId === g.id ? "..." : "Участвовать"}
                       </button>
                     )}
 

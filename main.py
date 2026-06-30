@@ -1646,19 +1646,41 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
 
 @app.get("/_debug/llm")
 def _debug_llm():
-    """TEMP: verify the free LLM relevance check is actually reachable.
-    Returns no secrets. Remove after confirming."""
+    """TEMP: probe each configured free model on an off-topic and a genuine
+    review. Returns no secrets. Remove after confirming."""
     if not LLM_API_KEY:
         return {"key_set": False}
-    off = (
-        "Фильм/сериал: «Холоп».\nОфициальное описание: комедия.\n\n"
-        "Текст рецензии пользователя:\n\"\"\"\nSELECT * FROM users; DROP TABLE students; "
-        "это текст про sql-инъекции, к фильму отношения не имеет\n\"\"\"\n\n"
-        "Это настоящая содержательная рецензия именно на это произведение? "
-        "Ответь строго одним словом: YES или NO."
-    )
-    txt, info = _llm_classify(off)
-    return {"key_set": True, "offtopic_verdict": txt, "info": info}
+    base = ("Фильм/сериал: «Холоп».\nОфициальное описание: историческая комедия про барина.\n\n"
+            "Текст рецензии пользователя:\n\"\"\"\n{body}\n\"\"\"\n\n"
+            "Это настоящая содержательная рецензия именно на это произведение "
+            "(а не оффтоп/спам/набор слов)? Ответь строго одним словом: YES или NO.")
+    off = base.format(body="SELECT * FROM users; DROP TABLE students; текст про sql-инъекции, к фильму отношения не имеет")
+    good = base.format(body="Отличная комедия, Крюков прекрасно играет избалованного мажора, которого "
+                            "перевоспитывают в декорациях XIX века. Сюжет предсказуем, но смотрится легко и тепло, "
+                            "юмор добрый, а финал трогательный. Хорошее семейное кино на вечер.")
+    models = [m.strip() for m in LLM_MODEL.split(",") if m.strip()]
+    rows = []
+    for m in models:
+        one = []
+        for label, prompt in (("offtopic", off), ("genuine", good)):
+            try:
+                r = requests.post(
+                    LLM_API_URL,
+                    headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
+                    json={"model": m, "max_tokens": 5, "temperature": 0,
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=20,
+                )
+                v = None
+                if r.status_code == 200:
+                    ch = r.json().get("choices", [])
+                    v = (ch[0].get("message", {}).get("content") or "").strip() if ch else ""
+                one.append({"case": label, "http": r.status_code, "verdict": v,
+                            "body": (r.text[:120] if r.status_code != 200 else None)})
+            except Exception as e:
+                one.append({"case": label, "error": str(e)[:120]})
+        rows.append({"model": m, "results": one})
+    return {"key_set": True, "models": rows}
 
 
 @app.delete("/admin/giveaways/{gid}")

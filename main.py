@@ -1635,6 +1635,40 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_email": winner_email}
 
 
+@app.get("/_debug/llm")
+def _debug_llm():
+    """TEMP: verify the free LLM relevance check is actually reachable.
+    Returns no secrets. Remove after confirming."""
+    if not LLM_API_KEY:
+        return {"key_set": False}
+    prompt = (
+        "Фильм/сериал: «Холоп».\nОфициальное описание: комедия.\n\n"
+        "Текст рецензии пользователя:\n\"\"\"\nSELECT * FROM users; DROP TABLE students; "
+        "это текст про sql-инъекции, к фильму отношения не имеет\n\"\"\"\n\n"
+        "Это настоящая содержательная рецензия именно на это произведение? "
+        "Ответь строго одним словом: YES или NO."
+    )
+    try:
+        r = requests.post(
+            LLM_API_URL,
+            headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
+            json={"model": LLM_MODEL, "max_tokens": 5, "temperature": 0,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=20,
+        )
+        verdict = None
+        try:
+            ch = r.json().get("choices", [])
+            verdict = (ch[0].get("message", {}).get("content") or "").strip() if ch else None
+        except Exception:
+            pass
+        return {"key_set": True, "model": LLM_MODEL, "http": r.status_code,
+                "offtopic_verdict": verdict,
+                "body": (r.text[:300] if r.status_code != 200 else None)}
+    except Exception as e:
+        return {"key_set": True, "model": LLM_MODEL, "error": str(e)[:300]}
+
+
 @app.delete("/admin/giveaways/{gid}")
 def delete_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)

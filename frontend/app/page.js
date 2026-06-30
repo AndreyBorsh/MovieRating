@@ -32,7 +32,7 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
       <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div className="min-w-0">
           <div className="text-xs font-semibold tracking-wider text-amber-400 uppercase mb-1">
-            🎬 Идёт розыгрыш билетов в кино
+            🎬 Идёт розыгрыш билета в кино
           </div>
           <div className="text-xl sm:text-2xl font-bold text-slate-100 truncate">{g.title}</div>
           {g.description && <p className="text-sm text-slate-400 mt-1 line-clamp-1">{g.description}</p>}

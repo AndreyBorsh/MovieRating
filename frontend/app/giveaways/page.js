@@ -77,9 +77,9 @@ export default function GiveawaysPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100 mb-1">🎟 Розыгрыши билетов</h1>
+        <h1 className="text-2xl font-bold text-slate-100 mb-1">🎟 Розыгрыш билета</h1>
         <p className="text-sm text-slate-500">
-          Будь активен — пиши развёрнутые рецензии и комментируй — и участвуй в розыгрыше билетов в кино.
+          Будь активен — пиши развёрнутые рецензии и комментируй — и участвуй в розыгрыше билета в кино.
         </p>
       </div>
 

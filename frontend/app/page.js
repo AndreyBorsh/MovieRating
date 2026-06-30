@@ -349,7 +349,8 @@ export default function HomePage() {
 
   const loadGiveaways = () => {
     getGiveaways(token)
-      .then((d) => setGiveaways((d?.items || []).filter((g) => g.status === "open")))
+      // active = open and deadline not passed (expired ones stop inviting participation)
+      .then((d) => setGiveaways((d?.items || []).filter((g) => g.status === "open" && !g.expired)))
       .catch(() => {});
   };
   useEffect(() => { loadGiveaways(); /* eslint-disable-next-line */ }, [token]);

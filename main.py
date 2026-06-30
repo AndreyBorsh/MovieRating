@@ -1591,26 +1591,32 @@ def list_giveaways(authorization: str = Header(None)):
         FROM giveaways ORDER BY (status='open') DESC, created_at DESC
     """)
     rows = cur.fetchall()
-    cur.execute("SELECT giveaway_id, COUNT(*) FROM giveaway_entries GROUP BY giveaway_id")
-    counts = {r[0]: r[1] for r in cur.fetchall()}
 
     entered = set()
     if viewer_id:
         cur.execute("SELECT giveaway_id FROM giveaway_entries WHERE user_id=%s", (viewer_id,))
         entered = {r[0] for r in cur.fetchall()}
 
+    now = datetime.utcnow()
     items = []
     for r in rows:
         gid, created, deadline = r[0], r[6], r[3]
+        # Effective participants: entrants who STILL hold a valid ticket (deleting
+        # a review drops the ticket and removes the person from the count).
+        cur.execute("SELECT user_id FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
+        entrant_ids = [x[0] for x in cur.fetchall()]
+        eff_entries = sum(1 for eid in entrant_ids if giveaway_tickets(cur, eid, created, deadline) > 0)
         my_tickets = giveaway_tickets(cur, viewer_id, created, deadline) if viewer_id else None
+        entered_effective = (gid in entered) and (my_tickets or 0) > 0
         items.append({
             "id": gid, "title": r[1], "description": r[2],
             "deadline": (r[3].isoformat() + "Z") if r[3] else None,
             "status": r[4], "winner_name": r[5],
             "created_at": created.isoformat() if created else None,
-            "entries": counts.get(gid, 0),
-            "entered": gid in entered,
+            "entries": eff_entries,
+            "entered": entered_effective,
             "my_tickets": my_tickets,
+            "expired": bool(deadline and now > deadline),
             "winner_email": r[7] if is_admin else None,
         })
     cur.close(); conn.close()

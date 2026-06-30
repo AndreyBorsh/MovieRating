@@ -296,6 +296,7 @@ def ensure_giveaways_tables():
             UNIQUE(giveaway_id, user_id)
         )
     """)
+    cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_code TEXT")
     cur.close()
     conn.close()
 
@@ -1409,7 +1410,7 @@ def list_giveaways(authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, title, description, deadline, status, winner_name, created_at
+        SELECT id, title, description, deadline, status, winner_name, created_at, winner_code
         FROM giveaways ORDER BY (status='open') DESC, created_at DESC
     """)
     rows = cur.fetchall()
@@ -1433,6 +1434,7 @@ def list_giveaways(authorization: str = Header(None)):
             "entries": counts.get(gid, 0),
             "entered": gid in entered,
             "my_tickets": my_tickets,
+            "winner_code": r[7] if is_admin else None,
         })
     cur.close(); conn.close()
 
@@ -1504,7 +1506,7 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT status, created_at FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT status, created_at, title FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
@@ -1512,7 +1514,7 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     if g[0] != "open":
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Розыгрыш уже проведён")
-    since = g[1]
+    since, title = g[1], g[2]
     cur.execute("SELECT user_id, username FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
     entries = cur.fetchall()
     # live tickets per entrant (activity since giveaway start); only those with >0 can win
@@ -1527,10 +1529,18 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
         raise HTTPException(status_code=400,
             detail="Пока ни у кого нет билетиков — никто не написал качественных рецензий после старта")
     winner = random.choices(pool, weights=weights, k=1)[0]
-    cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s WHERE id=%s",
-                (winner[0], winner[1], gid))
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    code = "WAW-" + "".join(random.choices(alphabet, k=6))
+    cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s, winner_code=%s WHERE id=%s",
+                (winner[0], winner[1], code, gid))
+    # notify the winner with the claim code
+    cur.execute(
+        """INSERT INTO notifications (user_id, actor_id, actor_name, type, detail)
+           VALUES (%s,%s,%s,'giveaway',%s)""",
+        (winner[0], winner[0], title, code),
+    )
     conn.commit(); cur.close(); conn.close()
-    return {"winner_name": winner[1], "winner_user_id": winner[0]}
+    return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_code": code}
 
 
 @app.delete("/admin/giveaways/{gid}")

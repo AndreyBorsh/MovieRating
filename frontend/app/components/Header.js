@@ -37,11 +37,14 @@ function NotificationBell() {
 
   const go = (it) => {
     setOpen(false);
+    if (it.type === "giveaway") { router.push("/giveaways"); return; }
     const base = it.media_type === "tv" ? `/tv/${it.media_id}` : `/movies/${it.media_id}`;
     router.push(`${base}#review-${data.recipient_id}`);
   };
 
   const itemText = (it) => {
+    if (it.type === "giveaway")
+      return `🎉 Вы выиграли билет на «${it.actor_name}»! Ваш код: ${it.detail} — покажите администратору, чтобы получить приз.`;
     const where = it.title ? ` к «${it.title}»` : "";
     if (it.type === "reaction") return `${it.actor_name} отреагировал(а) ${it.detail || ""} на вашу рецензию${where}`;
     return `${it.actor_name} прокомментировал(а) вашу рецензию${where}: ${it.detail || ""}`;
@@ -86,7 +89,7 @@ function NotificationBell() {
                   className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
                   style={{ borderColor: "#1e2d45" }}
                 >
-                  <span className="text-base shrink-0">{it.type === "reaction" ? "❤️" : "💬"}</span>
+                  <span className="text-base shrink-0">{it.type === "reaction" ? "❤️" : it.type === "giveaway" ? "🎉" : "💬"}</span>
                   <div className="min-w-0">
                     <p className="text-sm text-slate-300 leading-snug">{itemText(it)}</p>
                     {it.created_at && (

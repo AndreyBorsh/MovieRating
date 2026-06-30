@@ -145,6 +145,9 @@ export default function GiveawaysPage() {
                 {closed && g.winner_name && (
                   <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
                     🏆 Победитель: <span className="text-amber-400 font-semibold">{g.winner_name}</span>
+                    {isAdmin && g.winner_code && (
+                      <span className="text-slate-500"> · код: <span className="font-mono text-slate-300">{g.winner_code}</span></span>
+                    )}
                   </div>
                 )}
 

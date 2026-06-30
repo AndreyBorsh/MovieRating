@@ -314,3 +314,16 @@ export async function deleteGiveaway(token, id) {
   const res = await fetch(`${API}/admin/giveaways/${id}`, { method: "DELETE", headers: authHeader(token) });
   return res.ok;
 }
+
+export async function getGiveawayEntries(token, id) {
+  const res = await fetch(`${API}/admin/giveaways/${id}/entries`, { headers: authHeader(token) });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function recheckGiveaway(token, id) {
+  const res = await fetch(`${API}/admin/giveaways/${id}/recheck`, { method: "POST", headers: authHeader(token) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Ошибка перепроверки");
+  return data;
+}

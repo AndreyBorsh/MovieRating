@@ -421,32 +421,62 @@ def _llm_classify(prompt):
 
 def check_review_genuine(title, overview, text):
     """Ask a free OpenAI-compatible LLM whether the text is a genuine review OF
-    THIS title (not off-topic/spam). Returns True/False. If no API key or on
-    error, returns True (don't block users)."""
+    THIS title. Returns True / False / None. None means 'could not determine'
+    (no API key or every model failed) — callers must NOT treat None as genuine."""
     if not LLM_API_KEY:
-        return True
+        return None
     prompt = (
-        f"Фильм/сериал: «{title}».\n"
+        "Ты — модератор рецензий на фильмы/сериалы.\n"
+        f"Произведение: «{title}».\n"
         f"Официальное описание: {overview or '—'}\n\n"
-        f"Текст рецензии пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n\n"
-        "Это настоящая содержательная рецензия/отзыв именно на это произведение "
-        "(а НЕ оффтоп, не спам, не набор слов, не текст на постороннюю тему, не бессмыслица)? "
+        f"Текст пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n\n"
+        "Засчитать этот текст как НАСТОЯЩУЮ рецензию ИМЕННО на это произведение?\n"
+        "Отвечай YES только если текст реально оценивает само произведение "
+        "(сюжет, игру актёров, режиссуру, атмосферу, личные впечатления от просмотра).\n"
+        "Отвечай NO, если текст на постороннюю тему (программирование, базы данных, "
+        "учёба, политика, реклама и т.п.), это спам, набор слов, бессмыслица, "
+        "пересказ комментариев или вообще не про этот фильм/сериал.\n"
         "Ответь строго одним словом: YES или NO."
     )
     txt, info = _llm_classify(prompt)
     if txt is None:
         print(f"LLM review check failed: {info}")
-        return True
+        return None
     up = txt.upper()
-    # Block only on a clear NO; anything ambiguous counts (never wrongly deny a ticket).
+    if "YES" in up and "NO" not in up:
+        return True
     if "NO" in up and "YES" not in up:
         return False
-    return True
+    # Ambiguous / non-compliant output (e.g. a reasoning model) — undetermined.
+    return None
+
+
+def verify_rating(cur, rating_id, review_text):
+    """Classify one rating's review relevance and cache it on the row.
+    Writes review_genuine only when the LLM gave a definite YES/NO (True/False);
+    leaves it untouched (NULL/previous) when undetermined. Returns the verdict
+    (True/False/None). Does not commit — caller commits."""
+    cur.execute("SELECT media_type, tmdb_id, tv_tmdb_id FROM ratings WHERE id=%s", (rating_id,))
+    row = cur.fetchone()
+    if not row:
+        return None
+    mtype, tmdb_id, tv_tmdb_id = row
+    if mtype == "tv":
+        cur.execute("SELECT title, overview FROM tv_shows WHERE tmdb_id=%s", (tv_tmdb_id,))
+    else:
+        cur.execute("SELECT title, overview FROM movies WHERE tmdb_id=%s", (tmdb_id,))
+    r2 = cur.fetchone()
+    title = r2[0] if r2 else ""
+    overview = r2[1] if r2 else ""
+    verdict = check_review_genuine(title, overview, review_text)
+    if verdict is not None:
+        cur.execute("UPDATE ratings SET review_genuine=%s WHERE id=%s", (verdict, rating_id))
+    return verdict
 
 
 def update_review_genuine(rating_id, review_text):
     """Best-effort: when a giveaway is open, classify a quality review's relevance
-    via Claude and cache it on the rating. Never blocks review saving."""
+    and cache it on the rating. Never blocks review saving."""
     if not rating_id or not review_text or not is_quality_review(review_text):
         return
     try:
@@ -455,20 +485,7 @@ def update_review_genuine(rating_id, review_text):
         cur.execute("SELECT 1 FROM giveaways WHERE status='open' LIMIT 1")
         if not cur.fetchone():
             cur.close(); conn.close(); return
-        cur.execute("SELECT media_type, tmdb_id, tv_tmdb_id FROM ratings WHERE id=%s", (rating_id,))
-        row = cur.fetchone()
-        if not row:
-            cur.close(); conn.close(); return
-        mtype, tmdb_id, tv_tmdb_id = row
-        if mtype == "tv":
-            cur.execute("SELECT title, overview FROM tv_shows WHERE tmdb_id=%s", (tv_tmdb_id,))
-        else:
-            cur.execute("SELECT title, overview FROM movies WHERE tmdb_id=%s", (tmdb_id,))
-        r2 = cur.fetchone()
-        title = r2[0] if r2 else ""
-        overview = r2[1] if r2 else ""
-        genuine = check_review_genuine(title, overview, review_text)
-        cur.execute("UPDATE ratings SET review_genuine=%s WHERE id=%s", (genuine, rating_id))
+        verify_rating(cur, rating_id, review_text)
         conn.commit(); cur.close(); conn.close()
     except Exception as e:
         print(f"update_review_genuine error: {e}")
@@ -484,11 +501,11 @@ def _too_similar(tokens_a, text_b):
     return union > 0 and inter / union >= 0.8
 
 
-def giveaway_tickets(cur, user_id, since):
-    """1 ticket per ORIGINAL quality review (>=100 words) written AFTER `since`.
-    Reviews that are near-duplicates of an earlier review (own or others') don't
-    count (anti-plagiarism). Comments are not counted. Computed live, so deleting
-    a review removes its ticket automatically."""
+def qualifying_review(cur, user_id, since):
+    """Return (rating_id, review_text) of the user's first ORIGINAL genuine
+    quality review (>=100 words) written AFTER `since`, else None.
+    Genuine = review_genuine IS TRUE (relevance verified). Near-duplicates of an
+    earlier review (own or others') are excluded (anti-plagiarism)."""
     cur.execute(
         """SELECT id, review, created_at FROM ratings
            WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
@@ -497,7 +514,7 @@ def giveaway_tickets(cur, user_id, since):
     )
     candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
     if not candidates:
-        return 0
+        return None
     cur.execute("SELECT id, review, created_at FROM ratings WHERE review IS NOT NULL")
     corpus = cur.fetchall()
     for rid, rv, ca in candidates:
@@ -513,8 +530,15 @@ def giveaway_tickets(cur, user_id, since):
                 original = False
                 break
         if original:
-            return 1  # one ticket per user per giveaway
-    return 0
+            return (rid, rv)
+    return None
+
+
+def giveaway_tickets(cur, user_id, since):
+    """1 ticket per user per giveaway — granted for the first original genuine
+    quality review written after the giveaway started. Computed live, so deleting
+    the review removes the ticket automatically."""
+    return 1 if qualifying_review(cur, user_id, since) else 0
 
 
 # =========================
@@ -1663,11 +1687,60 @@ def list_giveaway_entries(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("""SELECT username, tickets, created_at FROM giveaway_entries
-                   WHERE giveaway_id=%s ORDER BY tickets DESC, created_at""", (gid,))
+    cur.execute("SELECT created_at FROM giveaways WHERE id=%s", (gid,))
+    g = cur.fetchone()
+    if not g:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Розыгрыш не найден")
+    since = g[0]
+    cur.execute("""SELECT user_id, username, created_at FROM giveaway_entries
+                   WHERE giveaway_id=%s ORDER BY created_at""", (gid,))
     rows = cur.fetchall()
+    out = []
+    for uid, uname, ca in rows:
+        qr = qualifying_review(cur, uid, since)  # (rating_id, text) or None
+        out.append({
+            "username": uname,
+            "tickets": 1 if qr else 0,
+            "review": qr[1] if qr else None,
+            "created_at": ca.isoformat() if ca else None,
+        })
+    out.sort(key=lambda x: (-x["tickets"], x["username"] or ""))
     cur.close(); conn.close()
-    return [{"username": r[0], "tickets": r[1], "created_at": r[2].isoformat() if r[2] else None} for r in rows]
+    return out
+
+
+@app.post("/admin/giveaways/{gid}/recheck")
+def recheck_giveaway(gid: int, authorization: str = Header(None)):
+    """Force re-verify (via LLM) every quality review written after the giveaway
+    started. Fixes stale review_genuine values — e.g. reviews counted while the
+    LLM key was missing or all models were rate-limited."""
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT created_at FROM giveaways WHERE id=%s", (gid,))
+    g = cur.fetchone()
+    if not g:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Розыгрыш не найден")
+    since = g[0]
+    cur.execute(
+        "SELECT id, review FROM ratings WHERE review IS NOT NULL AND created_at > %s",
+        (since,),
+    )
+    rows = [(rid, rv) for rid, rv in cur.fetchall() if is_quality_review(rv)]
+    checked = genuine = offtopic = undetermined = 0
+    for rid, rv in rows:
+        v = verify_rating(cur, rid, rv)
+        checked += 1
+        if v is True:
+            genuine += 1
+        elif v is False:
+            offtopic += 1
+        else:
+            undetermined += 1
+    conn.commit(); cur.close(); conn.close()
+    return {"checked": checked, "genuine": genuine, "offtopic": offtopic, "undetermined": undetermined}
 
 
 # =========================

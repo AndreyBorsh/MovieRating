@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
   getGiveaways, enterGiveaway, createGiveaway, drawGiveaway, deleteGiveaway, searchMulti,
+  getGiveawayEntries, recheckGiveaway,
 } from "@/lib/api";
 
 function fmtDate(s) {
@@ -94,12 +95,69 @@ function FilmPicker({ value, onPick }) {
   );
 }
 
+// Admin-only: who entered + the exact review that earned each ticket, with re-check.
+function EntriesPanel({ token, giveawayId }) {
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const load = () => {
+    getGiveawayEntries(token, giveawayId).then((d) => setRows(Array.isArray(d) ? d : [])).catch(() => setRows([]));
+  };
+  useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [giveawayId]);
+
+  const recheck = async () => {
+    setBusy(true); setMsg("");
+    try {
+      const r = await recheckGiveaway(token, giveawayId);
+      setMsg(`Проверено: ${r.checked} · по теме: ${r.genuine} · оффтоп: ${r.offtopic}${r.undetermined ? ` · не удалось: ${r.undetermined}` : ""}`);
+      load();
+    } catch (e) { setMsg(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div className="mt-3 rounded-lg p-3" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-xs font-semibold text-slate-400">Участники и зачтённые рецензии</span>
+        <button onClick={recheck} disabled={busy}
+          className="text-xs px-2 py-1 rounded border border-slate-700 text-slate-400 hover:text-amber-400 hover:border-amber-400/50 transition disabled:opacity-50">
+          {busy ? "Проверяю…" : "🤖 Перепроверить рецензии"}
+        </button>
+      </div>
+      {msg && <div className="text-[11px] text-slate-500 mb-2">{msg}</div>}
+      {rows === null ? (
+        <div className="text-xs text-slate-600">Загрузка…</div>
+      ) : rows.length === 0 ? (
+        <div className="text-xs text-slate-600">Пока никто не участвует.</div>
+      ) : (
+        <div className="space-y-2">
+          {rows.map((e, i) => (
+            <div key={i} className="rounded-md px-3 py-2" style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm text-slate-200">{e.username}</span>
+                <span className={`text-xs font-semibold ${e.tickets > 0 ? "text-emerald-400" : "text-slate-500"}`}>
+                  {e.tickets > 0 ? `${e.tickets} 🎟` : "0 🎟"}
+                </span>
+              </div>
+              {e.review
+                ? <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap leading-snug">{e.review}</p>
+                : <p className="text-xs text-slate-600 mt-1 italic">нет зачтённой рецензии (оффтоп / не подтверждена / удалена)</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function GiveawaysPage() {
   const { token, ready } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
+  const [openEntries, setOpenEntries] = useState(null);
 
   // admin create form
   const [title, setTitle] = useState("");
@@ -234,6 +292,17 @@ export default function GiveawaysPage() {
                     {isAdmin && g.winner_email && (
                       <span className="text-slate-500"> · почта: <span className="font-mono text-slate-300">{g.winner_email}</span></span>
                     )}
+                  </div>
+                )}
+
+                {isAdmin && (
+                  <div className="mt-3">
+                    <button
+                      onClick={() => setOpenEntries(openEntries === g.id ? null : g.id)}
+                      className="text-xs text-slate-400 hover:text-amber-400 transition">
+                      {openEntries === g.id ? "▾ Скрыть участников" : "▸ Участники и рецензии"}
+                    </button>
+                    {openEntries === g.id && <EntriesPanel token={token} giveawayId={g.id} />}
                   </div>
                 )}
 

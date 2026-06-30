@@ -33,10 +33,10 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 # Comma-separated; tried in order until one responds (free models get rate-limited).
 LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
-    "qwen/qwen3-next-80b-a3b-instruct:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
     "google/gemma-4-31b-it:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
     "meta-llama/llama-3.3-70b-instruct:free",
+    "google/gemma-4-26b-a4b-it:free",
 ]))
 
 
@@ -437,7 +437,11 @@ def check_review_genuine(title, overview, text):
     if txt is None:
         print(f"LLM review check failed: {info}")
         return True
-    return txt.upper().startswith("YES")
+    up = txt.upper()
+    # Block only on a clear NO; anything ambiguous counts (never wrongly deny a ticket).
+    if "NO" in up and "YES" not in up:
+        return False
+    return True
 
 
 def update_review_genuine(rating_id, review_text):

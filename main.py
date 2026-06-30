@@ -273,9 +273,12 @@ def ensure_notifications_table():
     conn.close()
 
 
-def add_notification(cur, recipient_id, actor_id, ntype, rating_id, media_type, media_id, detail):
-    """Insert a notification (skip self-actions / missing target)."""
-    if not recipient_id or not media_id or recipient_id == actor_id:
+def add_notification(cur, recipient_id, actor_id, ntype, rating_id, media_type, media_id, detail, allow_self=False):
+    """Insert a notification. Skips self-actions unless allow_self (used for
+    manual-review notifications, where admin and actor can be the same person)."""
+    if not recipient_id or not media_id:
+        return
+    if recipient_id == actor_id and not allow_self:
         return
     cur.execute("SELECT username FROM users WHERE id=%s", (actor_id,))
     row = cur.fetchone()
@@ -1795,6 +1798,8 @@ def my_giveaway_reviews(authorization: str = Header(None)):
             continue
         if manual == "pending":
             status = "manual_pending"
+        elif manual == "rejected":
+            status = "manual_rejected"
         elif manual == "approved" or genuine is True:
             status = "passed"
         elif genuine is False:
@@ -1836,7 +1841,7 @@ def request_manual_review(rating_id: int, authorization: str = Header(None)):
         raise HTTPException(status_code=400, detail="Запрос уже отправлен — ожидайте проверки")
     cur.execute("UPDATE ratings SET manual_status='pending' WHERE id=%s", (rating_id,))
     for admin_id in ADMIN_IDS:
-        add_notification(cur, admin_id, uid, "manual_req", rating_id, mtype, media_id, None)
+        add_notification(cur, admin_id, uid, "manual_req", rating_id, mtype, media_id, None, allow_self=True)
     conn.commit(); cur.close(); conn.close()
     return {"ok": True}
 
@@ -1882,10 +1887,10 @@ def decide_manual_review(rating_id: int, data: dict, authorization: str = Header
     owner, mtype, media_id = r
     if decision == "approve":
         cur.execute("UPDATE ratings SET review_genuine=TRUE, manual_status='approved' WHERE id=%s", (rating_id,))
-        add_notification(cur, owner, admin_id, "manual_ok", rating_id, mtype, media_id, None)
+        add_notification(cur, owner, admin_id, "manual_ok", rating_id, mtype, media_id, None, allow_self=True)
     else:
         cur.execute("UPDATE ratings SET review_genuine=FALSE, manual_status='rejected' WHERE id=%s", (rating_id,))
-        add_notification(cur, owner, admin_id, "manual_no", rating_id, mtype, media_id, None)
+        add_notification(cur, owner, admin_id, "manual_no", rating_id, mtype, media_id, None, allow_self=True)
     conn.commit(); cur.close(); conn.close()
     return {"ok": True, "decision": decision}
 

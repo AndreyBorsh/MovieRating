@@ -153,10 +153,11 @@ function EntriesPanel({ token, giveawayId }) {
 }
 
 const STATUS_UI = {
-  passed:         { label: "✓ зачтена",            cls: "text-emerald-400" },
-  failed:         { label: "❌ не прошла ИИ-проверку", cls: "text-red-400" },
-  checking:       { label: "⏳ проверяется",        cls: "text-slate-400" },
-  manual_pending: { label: "🔎 на ручной проверке", cls: "text-amber-400" },
+  passed:          { label: "✓ зачтена",                cls: "text-emerald-400" },
+  failed:          { label: "❌ не прошла ИИ-проверку",   cls: "text-red-400" },
+  checking:        { label: "⏳ проверяется",            cls: "text-slate-400" },
+  manual_pending:  { label: "🔎 на ручной проверке",     cls: "text-amber-400" },
+  manual_rejected: { label: "❌ отклонено вручную",       cls: "text-red-400" },
 };
 
 // User-facing: status of the user's reviews for the current giveaway(s) + a

@@ -302,6 +302,7 @@ def ensure_giveaways_tables():
         )
     """)
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_code TEXT")
+    cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_email TEXT")
     cur.close()
     conn.close()
 
@@ -467,7 +468,7 @@ def giveaway_tickets(cur, user_id, since):
     a review removes its ticket automatically."""
     cur.execute(
         """SELECT id, review, created_at FROM ratings
-           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s AND review_genuine IS TRUE""",
+           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s""",
         (user_id, since),
     )
     candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
@@ -1489,7 +1490,7 @@ def list_giveaways(authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, title, description, deadline, status, winner_name, created_at, winner_code
+        SELECT id, title, description, deadline, status, winner_name, created_at, winner_email
         FROM giveaways ORDER BY (status='open') DESC, created_at DESC
     """)
     rows = cur.fetchall()
@@ -1513,7 +1514,7 @@ def list_giveaways(authorization: str = Header(None)):
             "entries": counts.get(gid, 0),
             "entered": gid in entered,
             "my_tickets": my_tickets,
-            "winner_code": r[7] if is_admin else None,
+            "winner_email": r[7] if is_admin else None,
         })
     cur.close(); conn.close()
 
@@ -1608,18 +1609,19 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
         raise HTTPException(status_code=400,
             detail="Пока ни у кого нет билетиков — никто не написал качественных рецензий после старта")
     winner = random.choices(pool, weights=weights, k=1)[0]
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    code = "WAW-" + "".join(random.choices(alphabet, k=6))
-    cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s, winner_code=%s WHERE id=%s",
-                (winner[0], winner[1], code, gid))
-    # notify the winner with the claim code
+    cur.execute("SELECT email FROM users WHERE id=%s", (winner[0],))
+    erow = cur.fetchone()
+    winner_email = erow[0] if erow else None
+    cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s, winner_email=%s WHERE id=%s",
+                (winner[0], winner[1], winner_email, gid))
+    # notify the winner — owner will reach out by email
     cur.execute(
         """INSERT INTO notifications (user_id, actor_id, actor_name, type, detail)
            VALUES (%s,%s,%s,'giveaway',%s)""",
-        (winner[0], winner[0], title, code),
+        (winner[0], winner[0], title, None),
     )
     conn.commit(); cur.close(); conn.close()
-    return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_code": code}
+    return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_email": winner_email}
 
 
 @app.delete("/admin/giveaways/{gid}")

@@ -55,7 +55,7 @@ export default function GiveawaysPage() {
   const draw = async (id) => {
     if (!confirm("Провести розыгрыш? Победитель выбирается случайно с учётом билетиков.")) return;
     setBusyId(id); setError("");
-    try { const r = await drawGiveaway(token, id); alert(`Победитель: ${r.winner_name} 🎉`); load(); }
+    try { const r = await drawGiveaway(token, id); alert(`Победитель: ${r.winner_name} 🎉${r.winner_email ? `\nПочта для связи: ${r.winner_email}` : ""}`); load(); }
     catch (e) { setError(e.message); }
     finally { setBusyId(null); }
   };
@@ -87,7 +87,7 @@ export default function GiveawaysPage() {
         Как это работает: за каждую <span className="text-slate-300">оригинальную рецензию (от {minWords} слов)</span>,
         написанную <span className="text-slate-300">после старта</span> розыгрыша, начисляется 1 билетик 🎟.
         Старт — 0 билетиков; чем больше качественных рецензий, тем выше шанс.
-        «Вода», набор слов, оффтоп (рецензия не по теме фильма) и копии чужих рецензий не засчитываются — это проверяется. Удалишь рецензию — билетик пропадёт.
+        «Вода», набор слов и копии чужих рецензий не засчитываются. Рецензию победителя я проверяю вручную. Удалишь рецензию — билетик пропадёт.
       </div>
 
       {error && (
@@ -140,13 +140,19 @@ export default function GiveawaysPage() {
                       {g.deadline && !closed && <span>До: {fmtDate(g.deadline)}</span>}
                     </div>
                   </div>
+                  {isAdmin && (
+                    <button onClick={() => remove(g.id)} title="Удалить розыгрыш"
+                      className="shrink-0 px-2 py-1 rounded-lg text-sm text-slate-500 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition">
+                      🗑
+                    </button>
+                  )}
                 </div>
 
                 {closed && g.winner_name && (
                   <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#0c1220", border: "1px solid #1e2d45" }}>
                     🏆 Победитель: <span className="text-amber-400 font-semibold">{g.winner_name}</span>
-                    {isAdmin && g.winner_code && (
-                      <span className="text-slate-500"> · код: <span className="font-mono text-slate-300">{g.winner_code}</span></span>
+                    {isAdmin && g.winner_email && (
+                      <span className="text-slate-500"> · почта: <span className="font-mono text-slate-300">{g.winner_email}</span></span>
                     )}
                   </div>
                 )}
@@ -180,16 +186,10 @@ export default function GiveawaysPage() {
                     )}
 
                     {isAdmin && (
-                      <>
-                        <button onClick={() => draw(g.id)} disabled={busyId === g.id}
-                          className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition">
-                          🎲 Разыграть
-                        </button>
-                        <button onClick={() => remove(g.id)}
-                          className="px-3 py-2 rounded-lg text-sm text-slate-500 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition">
-                          🗑
-                        </button>
-                      </>
+                      <button onClick={() => draw(g.id)} disabled={busyId === g.id}
+                        className="px-3 py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition">
+                        🎲 Разыграть
+                      </button>
                     )}
                   </div>
                 )}

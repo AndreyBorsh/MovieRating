@@ -31,7 +31,14 @@ GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward ticket
 # etc. Just set the three env vars below to switch providers (no code changes).
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
-LLM_MODEL = os.environ.get("LLM_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
+# Comma-separated; tried in order until one responds (free models get rate-limited).
+LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
+    "google/gemini-2.0-flash-exp:free",
+    "meta-llama/llama-3.3-70b-instruct:free",
+    "deepseek/deepseek-chat-v3-0324:free",
+    "qwen/qwen-2.5-72b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+]))
 
 
 def get_db():
@@ -389,6 +396,30 @@ def is_quality_review(text):
     return len(sentences) >= 2
 
 
+def _llm_classify(prompt):
+    """Try each configured free model in order until one returns HTTP 200.
+    Returns (text_or_None, info_dict). text is None if every model failed."""
+    models = [m.strip() for m in LLM_MODEL.split(",") if m.strip()]
+    last = {}
+    for m in models:
+        try:
+            r = requests.post(
+                LLM_API_URL,
+                headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
+                json={"model": m, "max_tokens": 5, "temperature": 0,
+                      "messages": [{"role": "user", "content": prompt}]},
+                timeout=20,
+            )
+            if r.status_code == 200:
+                ch = r.json().get("choices", [])
+                txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
+                return txt.strip(), {"model": m, "http": 200}
+            last = {"model": m, "http": r.status_code, "body": r.text[:200]}
+        except Exception as e:
+            last = {"model": m, "error": str(e)[:200]}
+    return None, last
+
+
 def check_review_genuine(title, overview, text):
     """Ask a free OpenAI-compatible LLM whether the text is a genuine review OF
     THIS title (not off-topic/spam). Returns True/False. If no API key or on
@@ -403,32 +434,11 @@ def check_review_genuine(title, overview, text):
         "(а НЕ оффтоп, не спам, не набор слов, не текст на постороннюю тему, не бессмыслица)? "
         "Ответь строго одним словом: YES или NO."
     )
-    try:
-        r = requests.post(
-            LLM_API_URL,
-            headers={
-                "Authorization": f"Bearer {LLM_API_KEY}",
-                "content-type": "application/json",
-            },
-            json={
-                "model": LLM_MODEL,
-                "max_tokens": 5,
-                "temperature": 0,
-                "messages": [{"role": "user", "content": prompt}],
-            },
-            timeout=20,
-        )
-        if r.status_code != 200:
-            print(f"LLM review check HTTP {r.status_code}: {r.text[:200]}")
-            return True
-        choices = r.json().get("choices", [])
-        out = ""
-        if choices:
-            out = (choices[0].get("message", {}).get("content") or "").strip().upper()
-        return out.startswith("YES")
-    except Exception as e:
-        print(f"LLM review check error: {e}")
+    txt, info = _llm_classify(prompt)
+    if txt is None:
+        print(f"LLM review check failed: {info}")
         return True
+    return txt.upper().startswith("YES")
 
 
 def update_review_genuine(rating_id, review_text):
@@ -1641,32 +1651,15 @@ def _debug_llm():
     Returns no secrets. Remove after confirming."""
     if not LLM_API_KEY:
         return {"key_set": False}
-    prompt = (
+    off = (
         "Фильм/сериал: «Холоп».\nОфициальное описание: комедия.\n\n"
         "Текст рецензии пользователя:\n\"\"\"\nSELECT * FROM users; DROP TABLE students; "
         "это текст про sql-инъекции, к фильму отношения не имеет\n\"\"\"\n\n"
         "Это настоящая содержательная рецензия именно на это произведение? "
         "Ответь строго одним словом: YES или NO."
     )
-    try:
-        r = requests.post(
-            LLM_API_URL,
-            headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
-            json={"model": LLM_MODEL, "max_tokens": 5, "temperature": 0,
-                  "messages": [{"role": "user", "content": prompt}]},
-            timeout=20,
-        )
-        verdict = None
-        try:
-            ch = r.json().get("choices", [])
-            verdict = (ch[0].get("message", {}).get("content") or "").strip() if ch else None
-        except Exception:
-            pass
-        return {"key_set": True, "model": LLM_MODEL, "http": r.status_code,
-                "offtopic_verdict": verdict,
-                "body": (r.text[:300] if r.status_code != 200 else None)}
-    except Exception as e:
-        return {"key_set": True, "model": LLM_MODEL, "error": str(e)[:300]}
+    txt, info = _llm_classify(off)
+    return {"key_set": True, "offtopic_verdict": txt, "info": info}
 
 
 @app.delete("/admin/giveaways/{gid}")

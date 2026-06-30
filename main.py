@@ -25,7 +25,6 @@ DATABASE_URL = os.environ.get(
 # Admin user ids (manage giveaways). Override via ADMIN_USER_IDS="1,5".
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
 GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
-GIVEAWAY_COMMENT_MIN_WORDS = 6   # min words for a comment to count
 
 
 def get_db():
@@ -380,28 +379,46 @@ def is_quality_review(text):
     return len(sentences) >= 2
 
 
-def is_quality_comment(text):
-    words = _words(text)
-    n = len(words)
-    if n < GIVEAWAY_COMMENT_MIN_WORDS:
+def _too_similar(tokens_a, text_b):
+    """Jaccard token-set similarity >= 0.8 → near-duplicate (copy/paste)."""
+    tb = set(_words(text_b))
+    if not tokens_a or not tb:
         return False
-    return len(set(words)) / n >= 0.5
+    inter = len(tokens_a & tb)
+    union = len(tokens_a | tb)
+    return union > 0 and inter / union >= 0.8
 
 
 def giveaway_tickets(cur, user_id, since):
-    """Tickets earned from quality reviews + comments written AFTER `since`.
-    Starts at 0; reviews are worth more than comments."""
+    """1 ticket per ORIGINAL quality review (>=100 words) written AFTER `since`.
+    Reviews that are near-duplicates of an earlier review (own or others') don't
+    count (anti-plagiarism). Comments are not counted. Computed live, so deleting
+    a review removes its ticket automatically."""
     cur.execute(
-        "SELECT review FROM ratings WHERE user_id=%s AND review IS NOT NULL AND created_at > %s",
+        "SELECT id, review, created_at FROM ratings WHERE user_id=%s AND review IS NOT NULL AND created_at > %s",
         (user_id, since),
     )
-    quality_reviews = sum(1 for (r,) in cur.fetchall() if is_quality_review(r))
-    cur.execute(
-        "SELECT text FROM comments WHERE user_id=%s AND created_at > %s",
-        (user_id, since),
-    )
-    quality_comments = sum(1 for (t,) in cur.fetchall() if is_quality_comment(t))
-    return quality_reviews + quality_comments // 3
+    candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
+    if not candidates:
+        return 0
+    cur.execute("SELECT id, review, created_at FROM ratings WHERE review IS NOT NULL")
+    corpus = cur.fetchall()
+    tickets = 0
+    for rid, rv, ca in candidates:
+        toks = set(_words(rv))
+        original = True
+        for oid, orv, oca in corpus:
+            if oid == rid:
+                continue
+            # an earlier (or simultaneous) near-duplicate means this one is a copy
+            if oca is not None and ca is not None and oca > ca:
+                continue
+            if _too_similar(toks, orv):
+                original = False
+                break
+        if original:
+            tickets += 1
+    return tickets
 
 
 # =========================

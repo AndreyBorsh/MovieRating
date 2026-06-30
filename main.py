@@ -33,11 +33,10 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 # Comma-separated; tried in order until one responds (free models get rate-limited).
 LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
-    "google/gemini-2.0-flash-exp:free",
+    "qwen/qwen3-next-80b-a3b-instruct:free",
+    "nvidia/nemotron-3-super-120b-a12b:free",
+    "google/gemma-4-31b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "deepseek/deepseek-chat-v3-0324:free",
-    "qwen/qwen-2.5-72b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
 ]))
 
 

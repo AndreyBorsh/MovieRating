@@ -26,6 +26,10 @@ DATABASE_URL = os.environ.get(
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
 GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
 
+# Claude API for review relevance/quality check (giveaways)
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
@@ -218,6 +222,7 @@ def ensure_season_columns():
     cur = conn.cursor()
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_from INT")
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_to INT")
+    cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS review_genuine BOOLEAN")
     # one TV rating per (user, show, season-scope) — NULLs normalized to 0
     cur.execute("ALTER TABLE ratings DROP CONSTRAINT IF EXISTS ratings_user_tv_unique")
     cur.execute("""
@@ -380,6 +385,71 @@ def is_quality_review(text):
     return len(sentences) >= 2
 
 
+def check_review_genuine(title, overview, text):
+    """Ask Claude whether the text is a genuine review OF THIS title (not off-topic/spam).
+    Returns True/False. If no API key or on error, returns True (don't block users)."""
+    if not ANTHROPIC_API_KEY:
+        return True
+    prompt = (
+        f"Фильм/сериал: «{title}».\n"
+        f"Официальное описание: {overview or '—'}\n\n"
+        f"Текст рецензии пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n\n"
+        "Это настоящая содержательная рецензия/отзыв именно на это произведение "
+        "(а НЕ оффтоп, не спам, не набор слов, не текст на постороннюю тему, не бессмыслица)? "
+        "Ответь строго одним словом: YES или NO."
+    )
+    try:
+        r = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json={"model": ANTHROPIC_MODEL, "max_tokens": 5,
+                  "messages": [{"role": "user", "content": prompt}]},
+            timeout=15,
+        )
+        if r.status_code != 200:
+            print(f"LLM review check HTTP {r.status_code}: {r.text[:200]}")
+            return True
+        out = "".join(b.get("text", "") for b in r.json().get("content", [])).strip().upper()
+        return out.startswith("YES")
+    except Exception as e:
+        print(f"LLM review check error: {e}")
+        return True
+
+
+def update_review_genuine(rating_id, review_text):
+    """Best-effort: when a giveaway is open, classify a quality review's relevance
+    via Claude and cache it on the rating. Never blocks review saving."""
+    if not rating_id or not review_text or not is_quality_review(review_text):
+        return
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT 1 FROM giveaways WHERE status='open' LIMIT 1")
+        if not cur.fetchone():
+            cur.close(); conn.close(); return
+        cur.execute("SELECT media_type, tmdb_id, tv_tmdb_id FROM ratings WHERE id=%s", (rating_id,))
+        row = cur.fetchone()
+        if not row:
+            cur.close(); conn.close(); return
+        mtype, tmdb_id, tv_tmdb_id = row
+        if mtype == "tv":
+            cur.execute("SELECT title, overview FROM tv_shows WHERE tmdb_id=%s", (tv_tmdb_id,))
+        else:
+            cur.execute("SELECT title, overview FROM movies WHERE tmdb_id=%s", (tmdb_id,))
+        r2 = cur.fetchone()
+        title = r2[0] if r2 else ""
+        overview = r2[1] if r2 else ""
+        genuine = check_review_genuine(title, overview, review_text)
+        cur.execute("UPDATE ratings SET review_genuine=%s WHERE id=%s", (genuine, rating_id))
+        conn.commit(); cur.close(); conn.close()
+    except Exception as e:
+        print(f"update_review_genuine error: {e}")
+
+
 def _too_similar(tokens_a, text_b):
     """Jaccard token-set similarity >= 0.8 → near-duplicate (copy/paste)."""
     tb = set(_words(text_b))
@@ -396,7 +466,8 @@ def giveaway_tickets(cur, user_id, since):
     count (anti-plagiarism). Comments are not counted. Computed live, so deleting
     a review removes its ticket automatically."""
     cur.execute(
-        "SELECT id, review, created_at FROM ratings WHERE user_id=%s AND review IS NOT NULL AND created_at > %s",
+        """SELECT id, review, created_at FROM ratings
+           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s AND review_genuine IS TRUE""",
         (user_id, since),
     )
     candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
@@ -947,12 +1018,14 @@ def create_rating(data: dict, authorization: str = Header(None)):
                 """INSERT INTO ratings
                    (user_id, tv_tmdb_id, overall, story, characters, acting, visuals, pacing,
                     score, review, media_type, season_from, season_to)
-                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv',%s,%s)""",
+                   VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'tv',%s,%s) RETURNING id""",
                 (user_id, tmdb_id, overall, story, characters, acting, visuals, pacing,
                  score, review or None, season_from, season_to),
             )
+            new_id = cur.fetchone()[0]
             conn.commit()
             cur.close(); conn.close()
+            update_review_genuine(new_id, review or None)
             return {"score": score}
         except HTTPException:
             raise
@@ -987,12 +1060,14 @@ def create_rating(data: dict, authorization: str = Header(None)):
             """INSERT INTO ratings
                (user_id, tmdb_id, overall, story, direction, acting, visuals, music,
                 score, review, media_type)
-               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'movie')""",
+               VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'movie') RETURNING id""",
             (user_id, tmdb_id, overall, story, direction, acting, visuals, music,
              score, review or None),
         )
+        new_id = cur.fetchone()[0]
         conn.commit()
         cur.close(); conn.close()
+        update_review_genuine(new_id, review or None)
         return {"score": score}
 
 
@@ -1037,6 +1112,7 @@ def update_rating(data: dict, authorization: str = Header(None)):
             raise HTTPException(status_code=404, detail="Оценка не найдена")
         conn.commit()
         cur.close(); conn.close()
+        update_review_genuine(rating_id, review or None)
         return {"score": score}
 
     else:  # movie
@@ -1058,13 +1134,16 @@ def update_rating(data: dict, authorization: str = Header(None)):
             SET overall=%s, story=%s, direction=%s, acting=%s, visuals=%s, music=%s,
                 score=%s, review=%s
             WHERE user_id=%s AND tmdb_id=%s
+            RETURNING id
         """, (overall, story, direction, acting, visuals, music,
               score, review or None, user_id, tmdb_id))
-        if cur.rowcount == 0:
+        updated = cur.fetchone()
+        if not updated:
             cur.close(); conn.close()
             raise HTTPException(status_code=404, detail="Оценка не найдена")
         conn.commit()
         cur.close(); conn.close()
+        update_review_genuine(updated[0], review or None)
         return {"score": score}
 
 

@@ -26,9 +26,9 @@ DATABASE_URL = os.environ.get(
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
 GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
 
-# Claude API for review relevance/quality check (giveaways)
-ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-ANTHROPIC_MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-haiku-4-5-20251001")
+# Free LLM (Google Gemini) for review relevance/quality check (giveaways)
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
 
 def get_db():
@@ -387,9 +387,10 @@ def is_quality_review(text):
 
 
 def check_review_genuine(title, overview, text):
-    """Ask Claude whether the text is a genuine review OF THIS title (not off-topic/spam).
-    Returns True/False. If no API key or on error, returns True (don't block users)."""
-    if not ANTHROPIC_API_KEY:
+    """Ask Google Gemini (free API) whether the text is a genuine review OF THIS
+    title (not off-topic/spam). Returns True/False. If no API key or on error,
+    returns True (don't block users)."""
+    if not GEMINI_API_KEY:
         return True
     prompt = (
         f"Фильм/сериал: «{title}».\n"
@@ -401,23 +402,28 @@ def check_review_genuine(title, overview, text):
     )
     try:
         r = requests.post(
-            "https://api.anthropic.com/v1/messages",
-            headers={
-                "x-api-key": ANTHROPIC_API_KEY,
-                "anthropic-version": "2023-06-01",
-                "content-type": "application/json",
+            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+            params={"key": GEMINI_API_KEY},
+            headers={"content-type": "application/json"},
+            json={
+                "contents": [{"parts": [{"text": prompt}]}],
+                "generationConfig": {"maxOutputTokens": 5, "temperature": 0},
             },
-            json={"model": ANTHROPIC_MODEL, "max_tokens": 5,
-                  "messages": [{"role": "user", "content": prompt}]},
             timeout=15,
         )
         if r.status_code != 200:
-            print(f"LLM review check HTTP {r.status_code}: {r.text[:200]}")
+            print(f"Gemini review check HTTP {r.status_code}: {r.text[:200]}")
             return True
-        out = "".join(b.get("text", "") for b in r.json().get("content", [])).strip().upper()
+        cands = r.json().get("candidates", [])
+        out = ""
+        if cands:
+            out = "".join(
+                p.get("text", "")
+                for p in cands[0].get("content", {}).get("parts", [])
+            ).strip().upper()
         return out.startswith("YES")
     except Exception as e:
-        print(f"LLM review check error: {e}")
+        print(f"Gemini review check error: {e}")
         return True
 
 
@@ -468,7 +474,8 @@ def giveaway_tickets(cur, user_id, since):
     a review removes its ticket automatically."""
     cur.execute(
         """SELECT id, review, created_at FROM ratings
-           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s""",
+           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
+             AND review_genuine IS TRUE""",
         (user_id, since),
     )
     candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]

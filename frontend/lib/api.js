@@ -267,3 +267,42 @@ export async function markNotificationsRead(token) {
   });
   return res.ok;
 }
+
+// =========================
+// GIVEAWAYS
+// =========================
+export async function getGiveaways(token) {
+  const res = await fetch(`${API}/giveaways`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) return { is_admin: false, eligible: false, items: [], min_words: 30, my_potential_tickets: 0 };
+  return res.json();
+}
+
+export async function enterGiveaway(token, id) {
+  const res = await fetch(`${API}/giveaways/${id}/enter`, { method: "POST", headers: authHeader(token) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось участвовать");
+  return data;
+}
+
+export async function createGiveaway(token, payload) {
+  const res = await fetch(`${API}/admin/giveaways`, {
+    method: "POST", headers: authHeader(token), body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Ошибка создания");
+  return data;
+}
+
+export async function drawGiveaway(token, id) {
+  const res = await fetch(`${API}/admin/giveaways/${id}/draw`, { method: "POST", headers: authHeader(token) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Ошибка розыгрыша");
+  return data;
+}
+
+export async function deleteGiveaway(token, id) {
+  const res = await fetch(`${API}/admin/giveaways/${id}`, { method: "DELETE", headers: authHeader(token) });
+  return res.ok;
+}

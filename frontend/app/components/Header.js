@@ -150,6 +150,16 @@ export default function Header() {
         <nav className="flex items-center gap-0.5 sm:gap-1 min-w-0">
           {navLink("/", "Главная")}
           {navLink("/search", "Поиск")}
+          <Link
+            href="/giveaways"
+            className={`text-sm font-medium transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
+              pathname === "/giveaways" ? "text-amber-400 bg-amber-400/10" : "text-slate-400 hover:text-slate-100"
+            }`}
+            title="Розыгрыши"
+          >
+            <span className="hidden sm:inline">Розыгрыши</span>
+            <span className="sm:hidden">🎟</span>
+          </Link>
           {token && navLink(`/profile/${user?.user_id}`, "Профиль")}
         </nav>
 

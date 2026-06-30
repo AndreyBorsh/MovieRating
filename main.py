@@ -22,6 +22,10 @@ DATABASE_URL = os.environ.get(
     "postgresql://admin:admin123@localhost:5432/movies_db",
 )
 
+# Admin user ids (manage giveaways). Override via ADMIN_USER_IDS="1,5".
+ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
+GIVEAWAY_MIN_WORDS = 30
+
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
@@ -264,12 +268,48 @@ def add_notification(cur, recipient_id, actor_id, ntype, rating_id, media_type, 
     )
 
 
+def ensure_giveaways_tables():
+    """Create giveaway tables (autocommit, idempotent)."""
+    conn = get_db()
+    conn.autocommit = True
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaways (
+            id SERIAL PRIMARY KEY,
+            title TEXT NOT NULL,
+            description TEXT,
+            deadline TIMESTAMP,
+            status VARCHAR(10) NOT NULL DEFAULT 'open',
+            winner_user_id INT,
+            winner_name TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS giveaway_entries (
+            id SERIAL PRIMARY KEY,
+            giveaway_id INT REFERENCES giveaways(id) ON DELETE CASCADE,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            username TEXT,
+            tickets INT NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT NOW(),
+            UNIQUE(giveaway_id, user_id)
+        )
+    """)
+    cur.close()
+    conn.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
         ensure_tables()
     except Exception as e:
         print(f"WARNING: DB init skipped: {e}")
+    try:
+        ensure_giveaways_tables()
+    except Exception as e:
+        print(f"WARNING: giveaways table init failed: {e}")
     try:
         ensure_notes_table()
     except Exception as e:
@@ -314,6 +354,26 @@ def require_auth(authorization: str = Header(None)) -> dict:
         return decode_token(authorization.split(" ", 1)[1])
     except Exception:
         raise HTTPException(status_code=401, detail="Недействительный токен")
+
+
+def require_admin(authorization: str = Header(None)) -> dict:
+    payload = require_auth(authorization)
+    if payload["user_id"] not in ADMIN_IDS:
+        raise HTTPException(status_code=403, detail="Доступ только для администратора")
+    return payload
+
+
+def giveaway_tickets(cur, user_id):
+    """Weighted chances by activity. Returns (tickets, quality_reviews, comments).
+    tickets == 0 means not eligible (no review of >= GIVEAWAY_MIN_WORDS words)."""
+    cur.execute("SELECT review FROM ratings WHERE user_id=%s AND review IS NOT NULL", (user_id,))
+    quality = sum(1 for (r,) in cur.fetchall() if r and len(r.split()) >= GIVEAWAY_MIN_WORDS)
+    cur.execute("SELECT COUNT(*) FROM comments WHERE user_id=%s", (user_id,))
+    comments = cur.fetchone()[0]
+    if quality < 1:
+        return 0, quality, comments
+    tickets = 1 + min(quality, 5) + min(comments // 3, 5)
+    return tickets, quality, comments
 
 
 # =========================
@@ -1269,6 +1329,166 @@ def mark_notifications_read(authorization: str = Header(None)):
     conn.commit()
     cur.close(); conn.close()
     return {"ok": True}
+
+
+# =========================
+# GIVEAWAYS (cinema tickets)
+# =========================
+
+@app.get("/giveaways")
+def list_giveaways(authorization: str = Header(None)):
+    viewer_id = None
+    is_admin = False
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            p = decode_token(authorization.split(" ", 1)[1])
+            viewer_id = p["user_id"]
+            is_admin = viewer_id in ADMIN_IDS
+        except Exception:
+            pass
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT id, title, description, deadline, status, winner_name, created_at
+        FROM giveaways ORDER BY (status='open') DESC, created_at DESC
+    """)
+    rows = cur.fetchall()
+    cur.execute("SELECT giveaway_id, COUNT(*), COALESCE(SUM(tickets),0) FROM giveaway_entries GROUP BY giveaway_id")
+    counts = {r[0]: (r[1], r[2]) for r in cur.fetchall()}
+
+    my_entries = {}
+    my_tickets = 0
+    eligible = False
+    if viewer_id:
+        cur.execute("SELECT giveaway_id, tickets FROM giveaway_entries WHERE user_id=%s", (viewer_id,))
+        my_entries = {r[0]: r[1] for r in cur.fetchall()}
+        my_tickets, _, _ = giveaway_tickets(cur, viewer_id)
+        eligible = my_tickets > 0
+    cur.close(); conn.close()
+
+    return {
+        "is_admin": is_admin,
+        "eligible": eligible,
+        "my_potential_tickets": my_tickets,
+        "min_words": GIVEAWAY_MIN_WORDS,
+        "items": [
+            {
+                "id": r[0], "title": r[1], "description": r[2],
+                "deadline": r[3].isoformat() if r[3] else None,
+                "status": r[4], "winner_name": r[5],
+                "created_at": r[6].isoformat() if r[6] else None,
+                "entries": counts.get(r[0], (0, 0))[0],
+                "tickets_total": counts.get(r[0], (0, 0))[1],
+                "my_tickets": my_entries.get(r[0]),
+            }
+            for r in rows
+        ],
+    }
+
+
+@app.post("/giveaways/{gid}/enter")
+def enter_giveaway(gid: int, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT status, deadline FROM giveaways WHERE id=%s", (gid,))
+    g = cur.fetchone()
+    if not g:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Розыгрыш не найден")
+    if g[0] != "open":
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Розыгрыш уже завершён")
+    if g[1] and datetime.utcnow() > g[1]:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Приём заявок закрыт")
+    cur.execute("SELECT id FROM giveaway_entries WHERE giveaway_id=%s AND user_id=%s", (gid, uid))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Вы уже участвуете")
+    tickets, quality, comments = giveaway_tickets(cur, uid)
+    if tickets <= 0:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400,
+            detail=f"Чтобы участвовать, напишите хотя бы одну рецензию от {GIVEAWAY_MIN_WORDS} слов")
+    cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
+    uname = cur.fetchone()[0]
+    cur.execute("INSERT INTO giveaway_entries (giveaway_id, user_id, username, tickets) VALUES (%s,%s,%s,%s)",
+                (gid, uid, uname, tickets))
+    conn.commit(); cur.close(); conn.close()
+    return {"tickets": tickets}
+
+
+@app.post("/admin/giveaways")
+def create_giveaway(data: dict, authorization: str = Header(None)):
+    require_admin(authorization)
+    title = (data.get("title") or "").strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Укажите название фильма")
+    desc = (data.get("description") or "").strip() or None
+    dl = None
+    if data.get("deadline"):
+        try:
+            dl = datetime.fromisoformat(str(data["deadline"]).replace("Z", ""))
+        except ValueError:
+            dl = None
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO giveaways (title, description, deadline) VALUES (%s,%s,%s) RETURNING id",
+                (title, desc, dl))
+    gid = cur.fetchone()[0]
+    conn.commit(); cur.close(); conn.close()
+    return {"id": gid}
+
+
+@app.post("/admin/giveaways/{gid}/draw")
+def draw_giveaway(gid: int, authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT status FROM giveaways WHERE id=%s", (gid,))
+    g = cur.fetchone()
+    if not g:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Розыгрыш не найден")
+    if g[0] != "open":
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Розыгрыш уже проведён")
+    cur.execute("SELECT user_id, username, tickets FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
+    entries = cur.fetchall()
+    if not entries:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Нет участников")
+    weights = [max(1, e[2]) for e in entries]
+    winner = random.choices(entries, weights=weights, k=1)[0]
+    cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s WHERE id=%s",
+                (winner[0], winner[1], gid))
+    conn.commit(); cur.close(); conn.close()
+    return {"winner_name": winner[1], "winner_user_id": winner[0]}
+
+
+@app.delete("/admin/giveaways/{gid}")
+def delete_giveaway(gid: int, authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM giveaways WHERE id=%s", (gid,))
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True}
+
+
+@app.get("/admin/giveaways/{gid}/entries")
+def list_giveaway_entries(gid: int, authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""SELECT username, tickets, created_at FROM giveaway_entries
+                   WHERE giveaway_id=%s ORDER BY tickets DESC, created_at""", (gid,))
+    rows = cur.fetchall()
+    cur.close(); conn.close()
+    return [{"username": r[0], "tickets": r[1], "created_at": r[2].isoformat() if r[2] else None} for r in rows]
 
 
 # =========================

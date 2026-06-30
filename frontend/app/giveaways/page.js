@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth";
 import {
   getGiveaways, enterGiveaway, createGiveaway, drawGiveaway, deleteGiveaway, searchMulti,
   getGiveawayEntries, recheckGiveaway,
+  getMyGiveawayReviews, requestManualReview, getManualReviews, decideManualReview,
 } from "@/lib/api";
 
 function fmtDate(s) {
@@ -151,6 +152,100 @@ function EntriesPanel({ token, giveawayId }) {
   );
 }
 
+const STATUS_UI = {
+  passed:         { label: "✓ зачтена",            cls: "text-emerald-400" },
+  failed:         { label: "❌ не прошла ИИ-проверку", cls: "text-red-400" },
+  checking:       { label: "⏳ проверяется",        cls: "text-slate-400" },
+  manual_pending: { label: "🔎 на ручной проверке", cls: "text-amber-400" },
+};
+
+// User-facing: status of the user's reviews for the current giveaway(s) + a
+// "request manual review" button for ones the AI didn't pass.
+function MyReviewsSummary({ token }) {
+  const [data, setData] = useState(null);
+  const [busy, setBusy] = useState(null);
+
+  const load = () => {
+    getMyGiveawayReviews(token).then(setData).catch(() => setData({ open: false, items: [] }));
+  };
+  useEffect(() => { if (token) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
+
+  if (!token || !data || !data.open || data.items.length === 0) return null;
+
+  const ask = async (rid) => {
+    setBusy(rid);
+    try { await requestManualReview(token, rid); load(); }
+    catch (e) { alert(e.message); }
+    finally { setBusy(null); }
+  };
+
+  return (
+    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#0c1220", borderColor: "#1e2d45" }}>
+      <div className="text-sm font-semibold text-slate-300">Мои рецензии для розыгрыша</div>
+      {data.items.map((it) => {
+        const ui = STATUS_UI[it.status] || STATUS_UI.checking;
+        return (
+          <div key={it.rating_id} className="rounded-lg px-3 py-2 flex items-start justify-between gap-3"
+            style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
+            <div className="min-w-0">
+              <div className="text-sm text-slate-200 truncate">🎬 {it.title || "—"}</div>
+              <div className={`text-xs mt-0.5 ${ui.cls}`}>{ui.label}</div>
+            </div>
+            {it.status === "failed" && (
+              <button onClick={() => ask(it.rating_id)} disabled={busy === it.rating_id}
+                className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg border border-slate-700 text-slate-300 hover:border-amber-400/50 hover:text-amber-400 transition disabled:opacity-50">
+                {busy === it.rating_id ? "…" : "Запросить ручную проверку"}
+              </button>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// Admin-only: pending manual-review requests with approve/reject.
+function ManualQueue({ token, onChange }) {
+  const [rows, setRows] = useState([]);
+  const [busy, setBusy] = useState(null);
+
+  const load = () => {
+    getManualReviews(token).then((d) => setRows(Array.isArray(d) ? d : [])).catch(() => setRows([]));
+  };
+  useEffect(() => { if (token) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
+
+  const decide = async (rid, decision) => {
+    setBusy(rid);
+    try { await decideManualReview(token, rid, decision); load(); onChange && onChange(); }
+    catch (e) { alert(e.message); }
+    finally { setBusy(null); }
+  };
+
+  if (rows.length === 0) return null;
+
+  return (
+    <div className="rounded-xl p-4 border space-y-3" style={{ background: "#0c1220", borderColor: "#3a4d2a" }}>
+      <div className="text-sm font-semibold text-amber-400">🔎 Запросы на ручную проверку ({rows.length})</div>
+      {rows.map((r) => (
+        <div key={r.rating_id} className="rounded-lg px-3 py-2" style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
+          <div className="text-sm text-slate-200">{r.username} · 🎬 {r.title || "—"}</div>
+          <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap leading-snug">{r.review}</p>
+          <div className="flex gap-2 mt-2">
+            <button onClick={() => decide(r.rating_id, "approve")} disabled={busy === r.rating_id}
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition disabled:opacity-50">
+              ✓ Засчитать билетик
+            </button>
+            <button onClick={() => decide(r.rating_id, "reject")} disabled={busy === r.rating_id}
+              className="text-xs px-3 py-1.5 rounded-lg text-slate-300 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition disabled:opacity-50">
+              ✕ Отклонить
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function GiveawaysPage() {
   const { token, ready } = useAuth();
   const [data, setData] = useState(null);
@@ -224,15 +319,20 @@ export default function GiveawaysPage() {
       </div>
 
       <div className="rounded-xl px-4 py-3 border text-sm text-slate-400" style={{ background: "#141d2e", borderColor: "#1e2d45" }}>
-        Как это работает: за каждую <span className="text-slate-300">оригинальную рецензию (от {minWords} слов)</span>,
-        написанную <span className="text-slate-300">после старта</span> розыгрыша, начисляется 1 билетик 🎟.
-        Старт — 0 билетиков; чем больше качественных рецензий, тем выше шанс.
-        «Вода», набор слов, оффтоп (рецензия не по теме) и копии чужих рецензий не засчитываются — это проверяется автоматически. Удалишь рецензию — билетик пропадёт.
+        Как это работает: напиши <span className="text-slate-300">оригинальную рецензию (от {minWords} слов)</span> на любой
+        фильм или сериал <span className="text-slate-300">после старта</span> розыгрыша — и получишь 1 билетик 🎟.
+        Один билетик на участника, у всех равный шанс.
+        «Вода», набор слов, оффтоп (рецензия не по теме) и копии чужих рецензий не засчитываются — это проверяет ИИ.
+        Не согласен с проверкой — можно запросить ручную проверку ниже. Удалишь рецензию — билетик пропадёт.
       </div>
 
       {error && (
         <div className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">{error}</div>
       )}
+
+      {isAdmin && <ManualQueue token={token} onChange={load} />}
+
+      <MyReviewsSummary token={token} />
 
       {isAdmin && (
         <div className="rounded-xl p-4 border space-y-3" style={{ background: "#0c1220", borderColor: "#1e2d45" }}>

@@ -327,3 +327,31 @@ export async function recheckGiveaway(token, id) {
   if (!res.ok) throw new Error(data.detail || "Ошибка перепроверки");
   return data;
 }
+
+export async function getMyGiveawayReviews(token) {
+  const res = await fetch(`${API}/giveaways/my-reviews`, { headers: authHeader(token) });
+  if (!res.ok) return { open: false, items: [] };
+  return res.json();
+}
+
+export async function requestManualReview(token, ratingId) {
+  const res = await fetch(`${API}/giveaways/request-manual/${ratingId}`, { method: "POST", headers: authHeader(token) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось отправить запрос");
+  return data;
+}
+
+export async function getManualReviews(token) {
+  const res = await fetch(`${API}/admin/manual-reviews`, { headers: authHeader(token) });
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export async function decideManualReview(token, ratingId, decision) {
+  const res = await fetch(`${API}/admin/manual-reviews/${ratingId}`, {
+    method: "POST", headers: authHeader(token), body: JSON.stringify({ decision }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Ошибка");
+  return data;
+}

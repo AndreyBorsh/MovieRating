@@ -268,6 +268,7 @@ def ensure_notifications_table():
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+    cur.execute("ALTER TABLE notifications ALTER COLUMN type TYPE VARCHAR(20)")
     cur.close()
     conn.close()
 
@@ -317,6 +318,8 @@ def ensure_giveaways_tables():
     """)
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_code TEXT")
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_email TEXT")
+    # manual review of a ticket: NULL | 'pending' | 'approved' | 'rejected'
+    cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS manual_status TEXT")
     cur.close()
     conn.close()
 
@@ -1759,6 +1762,132 @@ def recheck_giveaway(gid: int, authorization: str = Header(None)):
             undetermined += 1
     conn.commit(); cur.close(); conn.close()
     return {"checked": checked, "genuine": genuine, "offtopic": offtopic, "undetermined": undetermined}
+
+
+@app.get("/giveaways/my-reviews")
+def my_giveaway_reviews(authorization: str = Header(None)):
+    """User-facing summary: the user's quality reviews written after the earliest
+    OPEN giveaway started, with their relevance status (so they see what counted
+    and what the AI rejected)."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT MIN(created_at) FROM giveaways WHERE status='open'")
+    row = cur.fetchone()
+    since = row[0] if row else None
+    if not since:
+        cur.close(); conn.close()
+        return {"open": False, "items": []}
+    cur.execute("""
+        SELECT r.id, r.review, r.review_genuine, r.manual_status, r.media_type,
+               COALESCE(r.tmdb_id, r.tv_tmdb_id) AS media_id,
+               COALESCE(m.title, t.title) AS title
+        FROM ratings r
+        LEFT JOIN movies   m ON r.media_type = 'movie' AND m.tmdb_id = r.tmdb_id
+        LEFT JOIN tv_shows t ON r.media_type = 'tv'    AND t.tmdb_id = r.tv_tmdb_id
+        WHERE r.user_id = %s AND r.review IS NOT NULL AND r.created_at > %s
+        ORDER BY r.created_at DESC
+    """, (uid, since))
+    items = []
+    for rid, review, genuine, manual, mtype, media_id, title in cur.fetchall():
+        if not is_quality_review(review):
+            continue
+        if manual == "pending":
+            status = "manual_pending"
+        elif manual == "approved" or genuine is True:
+            status = "passed"
+        elif genuine is False:
+            status = "failed"
+        else:
+            status = "checking"
+        items.append({
+            "rating_id": rid, "title": title, "media_type": mtype, "media_id": media_id,
+            "status": status,
+            "snippet": (review[:240] + ("…" if len(review) > 240 else "")),
+        })
+    cur.close(); conn.close()
+    return {"open": True, "items": items}
+
+
+@app.post("/giveaways/request-manual/{rating_id}")
+def request_manual_review(rating_id: int, authorization: str = Header(None)):
+    """User asks the admin to manually review a rejected/unchecked review."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""SELECT user_id, review, review_genuine, manual_status, media_type,
+                          COALESCE(tmdb_id, tv_tmdb_id)
+                   FROM ratings WHERE id=%s""", (rating_id,))
+    r = cur.fetchone()
+    if not r or r[0] != uid:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Рецензия не найдена")
+    owner, review, genuine, manual, mtype, media_id = r
+    if not is_quality_review(review):
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail=f"Рецензия должна быть от {GIVEAWAY_MIN_WORDS} слов")
+    if genuine is True or manual == "approved":
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Эта рецензия уже засчитана")
+    if manual == "pending":
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Запрос уже отправлен — ожидайте проверки")
+    cur.execute("UPDATE ratings SET manual_status='pending' WHERE id=%s", (rating_id,))
+    for admin_id in ADMIN_IDS:
+        add_notification(cur, admin_id, uid, "manual_req", rating_id, mtype, media_id, None)
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True}
+
+
+@app.get("/admin/manual-reviews")
+def admin_manual_reviews(authorization: str = Header(None)):
+    """Pending manual-review requests for the admin to approve/reject."""
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT r.id, u.username, r.review, r.media_type,
+               COALESCE(r.tmdb_id, r.tv_tmdb_id), COALESCE(m.title, t.title)
+        FROM ratings r
+        JOIN users u ON u.id = r.user_id
+        LEFT JOIN movies   m ON r.media_type = 'movie' AND m.tmdb_id = r.tmdb_id
+        LEFT JOIN tv_shows t ON r.media_type = 'tv'    AND t.tmdb_id = r.tv_tmdb_id
+        WHERE r.manual_status = 'pending'
+        ORDER BY r.id DESC
+    """)
+    out = [{"rating_id": x[0], "username": x[1], "review": x[2],
+            "media_type": x[3], "media_id": x[4], "title": x[5]} for x in cur.fetchall()]
+    cur.close(); conn.close()
+    return out
+
+
+@app.post("/admin/manual-reviews/{rating_id}")
+def decide_manual_review(rating_id: int, data: dict, authorization: str = Header(None)):
+    """Admin approves (grants ticket) or rejects a manual-review request."""
+    payload = require_admin(authorization)
+    admin_id = payload["user_id"]
+    decision = (data.get("decision") or "").lower()
+    if decision not in ("approve", "reject"):
+        raise HTTPException(status_code=400, detail="decision must be approve|reject")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""SELECT user_id, media_type, COALESCE(tmdb_id, tv_tmdb_id)
+                   FROM ratings WHERE id=%s""", (rating_id,))
+    r = cur.fetchone()
+    if not r:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Рецензия не найдена")
+    owner, mtype, media_id = r
+    if decision == "approve":
+        cur.execute("UPDATE ratings SET review_genuine=TRUE, manual_status='approved' WHERE id=%s", (rating_id,))
+        add_notification(cur, owner, admin_id, "manual_ok", rating_id, mtype, media_id, None)
+    else:
+        cur.execute("UPDATE ratings SET review_genuine=FALSE, manual_status='rejected' WHERE id=%s", (rating_id,))
+        add_notification(cur, owner, admin_id, "manual_no", rating_id, mtype, media_id, None)
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True, "decision": decision}
 
 
 # =========================

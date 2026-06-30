@@ -35,17 +35,25 @@ function NotificationBell() {
     }
   };
 
+  const GIVEAWAY_TYPES = ["giveaway", "manual_req", "manual_ok", "manual_no"];
+
   const go = (it) => {
     setOpen(false);
-    if (it.type === "giveaway") { router.push("/giveaways"); return; }
+    if (GIVEAWAY_TYPES.includes(it.type)) { router.push("/giveaways"); return; }
     const base = it.media_type === "tv" ? `/tv/${it.media_id}` : `/movies/${it.media_id}`;
     router.push(`${base}#review-${data.recipient_id}`);
   };
 
   const itemText = (it) => {
+    const where = it.title ? ` к «${it.title}»` : "";
     if (it.type === "giveaway")
       return `🎉 Вы выиграли билет на «${it.actor_name}»! Админ скоро свяжется с вами по почте, чтобы передать приз.`;
-    const where = it.title ? ` к «${it.title}»` : "";
+    if (it.type === "manual_req")
+      return `🔎 ${it.actor_name} просит проверить рецензию вручную${where}. Откройте «Розыгрыши» и подтвердите или отклоните билетик.`;
+    if (it.type === "manual_ok")
+      return `✅ Ваша рецензия${where} прошла ручную проверку — билетик начислен!`;
+    if (it.type === "manual_no")
+      return `❌ Ваша рецензия${where} не прошла ручную проверку — билетик не начислен.`;
     if (it.type === "reaction") return `${it.actor_name} отреагировал(а) ${it.detail || ""} на вашу рецензию${where}`;
     return `${it.actor_name} прокомментировал(а) вашу рецензию${where}: ${it.detail || ""}`;
   };
@@ -89,7 +97,14 @@ function NotificationBell() {
                   className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
                   style={{ borderColor: "#1e2d45" }}
                 >
-                  <span className="text-base shrink-0">{it.type === "reaction" ? "❤️" : it.type === "giveaway" ? "🎉" : "💬"}</span>
+                  <span className="text-base shrink-0">{
+                    it.type === "reaction" ? "❤️"
+                    : it.type === "giveaway" ? "🎉"
+                    : it.type === "manual_req" ? "🔎"
+                    : it.type === "manual_ok" ? "✅"
+                    : it.type === "manual_no" ? "❌"
+                    : "💬"
+                  }</span>
                   <div className="min-w-0">
                     <p className="text-sm text-slate-300 leading-snug">{itemText(it)}</p>
                     {it.created_at && (

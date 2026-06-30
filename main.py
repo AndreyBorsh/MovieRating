@@ -1648,45 +1648,6 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_email": winner_email}
 
 
-@app.get("/_debug/llm")
-def _debug_llm():
-    """TEMP: probe each configured free model on an off-topic and a genuine
-    review. Returns no secrets. Remove after confirming."""
-    if not LLM_API_KEY:
-        return {"key_set": False}
-    base = ("Фильм/сериал: «Холоп».\nОфициальное описание: историческая комедия про барина.\n\n"
-            "Текст рецензии пользователя:\n\"\"\"\n{body}\n\"\"\"\n\n"
-            "Это настоящая содержательная рецензия именно на это произведение "
-            "(а не оффтоп/спам/набор слов)? Ответь строго одним словом: YES или NO.")
-    off = base.format(body="SELECT * FROM users; DROP TABLE students; текст про sql-инъекции, к фильму отношения не имеет")
-    good = base.format(body="Отличная комедия, Крюков прекрасно играет избалованного мажора, которого "
-                            "перевоспитывают в декорациях XIX века. Сюжет предсказуем, но смотрится легко и тепло, "
-                            "юмор добрый, а финал трогательный. Хорошее семейное кино на вечер.")
-    models = [m.strip() for m in LLM_MODEL.split(",") if m.strip()]
-    rows = []
-    for m in models:
-        one = []
-        for label, prompt in (("offtopic", off), ("genuine", good)):
-            try:
-                r = requests.post(
-                    LLM_API_URL,
-                    headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
-                    json={"model": m, "max_tokens": 5, "temperature": 0,
-                          "messages": [{"role": "user", "content": prompt}]},
-                    timeout=20,
-                )
-                v = None
-                if r.status_code == 200:
-                    ch = r.json().get("choices", [])
-                    v = (ch[0].get("message", {}).get("content") or "").strip() if ch else ""
-                one.append({"case": label, "http": r.status_code, "verdict": v,
-                            "body": (r.text[:120] if r.status_code != 200 else None)})
-            except Exception as e:
-                one.append({"case": label, "error": str(e)[:120]})
-        rows.append({"model": m, "results": one})
-    return {"key_set": True, "models": rows}
-
-
 @app.delete("/admin/giveaways/{gid}")
 def delete_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)

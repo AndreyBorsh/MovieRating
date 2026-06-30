@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
-import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies, getMovieDetails, deleteRating } from "@/lib/api";
+import { getMovie, getReviews, getMyRating, sendRating, updateRating, reactToReview, postComment, getSimilarMovies, getMovieDetails, deleteMyMovieRating } from "@/lib/api";
 import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
@@ -345,10 +345,9 @@ export default function MoviePage() {
   };
 
   const removeRating = async () => {
-    if (!myRating?.rating_id) return;
     if (!confirm("Удалить вашу рецензию на этот фильм?")) return;
     try {
-      await deleteRating(token, myRating.rating_id);
+      await deleteMyMovieRating(token, parseInt(movieId));
       setMyRating(null);
       setEditing(false);
       setSuccess(false);

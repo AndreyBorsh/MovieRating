@@ -136,6 +136,14 @@ export async function updateRating(token, payload) {
   return data;
 }
 
+export async function deleteMyMovieRating(token, tmdbId) {
+  const res = await fetch(`${API}/movies/${tmdbId}/my-rating`, {
+    method: "DELETE",
+    headers: authHeader(token),
+  });
+  return res.ok;
+}
+
 export async function deleteRating(token, ratingId) {
   const res = await fetch(`${API}/ratings/${ratingId}`, {
     method: "DELETE",

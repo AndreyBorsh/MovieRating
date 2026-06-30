@@ -1182,6 +1182,21 @@ def get_my_movie_rating(tmdb_id: int, authorization: str = Header(None)):
     }
 
 
+@app.delete("/movies/{tmdb_id}/my-rating")
+def delete_my_movie_rating(tmdb_id: int, authorization: str = Header(None)):
+    payload = require_auth(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM ratings WHERE user_id=%s AND tmdb_id=%s",
+                (payload["user_id"], tmdb_id))
+    deleted = cur.rowcount
+    conn.commit()
+    cur.close(); conn.close()
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Оценка не найдена")
+    return {"ok": True}
+
+
 # =========================
 # REVIEWS (TV)
 # =========================

@@ -2,9 +2,70 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMovies, getTvShows, getRecent, getReviews, getTvReviews } from "@/lib/api";
+import { getMovies, getTvShows, getRecent, getReviews, getTvReviews, getGiveaways, enterGiveaway } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
+
+function GiveawayBanner({ giveaways, token, onEntered }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  if (!giveaways || giveaways.length === 0) return null;
+  const g = giveaways[0];
+  const more = giveaways.length - 1;
+
+  const enter = async () => {
+    setBusy(true); setErr("");
+    try { await enterGiveaway(token, g.id); onEntered(); }
+    catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div
+      className="rounded-2xl p-5 sm:p-6 border relative overflow-hidden"
+      style={{
+        background: "linear-gradient(110deg, #2a1f05 0%, #1a2b1a 55%, #141d2e 100%)",
+        borderColor: "#5a4a14",
+      }}
+    >
+      <div className="absolute -right-6 -top-6 text-[120px] opacity-10 select-none pointer-events-none">🎟</div>
+      <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
+        <div className="min-w-0">
+          <div className="text-xs font-semibold tracking-wider text-amber-400 uppercase mb-1">
+            🎬 Идёт розыгрыш билетов в кино
+          </div>
+          <div className="text-xl sm:text-2xl font-bold text-slate-100 truncate">{g.title}</div>
+          {g.description && <p className="text-sm text-slate-400 mt-1 line-clamp-1">{g.description}</p>}
+          <p className="text-xs text-slate-500 mt-1">
+            Участников: {g.entries}
+            {more > 0 && <> · и ещё {more} {more === 1 ? "розыгрыш" : "розыгрыша"}</>}
+          </p>
+        </div>
+
+        <div className="shrink-0 flex flex-col items-stretch sm:items-end gap-1.5">
+          {!token ? (
+            <Link href="/login" className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition text-center">
+              Войти и участвовать
+            </Link>
+          ) : g.entered ? (
+            <span className="text-sm text-emerald-400 font-medium text-center sm:text-right">
+              ✓ Вы участвуете · {g.my_tickets ?? 0} 🎟
+            </span>
+          ) : (
+            <button onClick={enter} disabled={busy}
+              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
+              {busy ? "..." : "🎟 Участвовать"}
+            </button>
+          )}
+          <Link href="/giveaways" className="text-xs text-amber-400/80 hover:text-amber-300 transition text-center sm:text-right">
+            Подробнее →
+          </Link>
+          {err && <span className="text-xs text-red-400">{err}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const POSTER = (path) =>
   path ? `/api/tmdb-image/w342${path}` : null;
@@ -273,6 +334,7 @@ export default function HomePage() {
   const [modalItem, setModalItem] = useState(null);
   const [filter,   setFilter]   = useState("all");   // all | movie | tv
   const [sort,     setSort]     = useState("count");  // count | score | title | year
+  const [giveaways, setGiveaways] = useState([]);
 
   useEffect(() => {
     Promise.all([getMovies(), getTvShows(), getRecent()])
@@ -280,6 +342,13 @@ export default function HomePage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
+
+  const loadGiveaways = () => {
+    getGiveaways(token)
+      .then((d) => setGiveaways((d?.items || []).filter((g) => g.status === "open")))
+      .catch(() => {});
+  };
+  useEffect(() => { loadGiveaways(); /* eslint-disable-next-line */ }, [token]);
 
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setModalItem(null);
@@ -309,6 +378,8 @@ export default function HomePage() {
       {modalItem && (
         <ReviewModal item={modalItem} onClose={() => setModalItem(null)} />
       )}
+
+      <GiveawayBanner giveaways={giveaways} token={token} onEntered={loadGiveaways} />
 
       {!token && (
         <div className="text-center py-12">

@@ -155,15 +155,25 @@ export default function GiveawaysPage() {
                         Войдите, чтобы участвовать
                       </Link>
                     ) : g.entered ? (
-                      <span className="text-sm text-emerald-400">
-                        ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets ?? 0} 🎟</span>
-                        <span className="text-slate-500"> (билетики копятся за активность)</span>
-                      </span>
-                    ) : (
+                      (g.my_tickets || 0) > 0 ? (
+                        <span className="text-sm text-emerald-400">
+                          ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets} 🎟</span>
+                          <span className="text-slate-500"> (билетики копятся за активность)</span>
+                        </span>
+                      ) : (
+                        <span className="text-sm text-amber-400/90">
+                          Вы записаны, но пока 0 🎟 — напишите рецензию от {minWords} слов, чтобы появился шанс
+                        </span>
+                      )
+                    ) : (g.my_tickets || 0) > 0 ? (
                       <button onClick={() => enter(g.id)} disabled={busyId === g.id}
                         className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
-                        {busyId === g.id ? "..." : "Участвовать"}
+                        {busyId === g.id ? "..." : `Участвовать · ${g.my_tickets} 🎟`}
                       </button>
+                    ) : (
+                      <span className="text-sm text-slate-500">
+                        Напишите рецензию от {minWords} слов <span className="text-slate-600">(после старта розыгрыша)</span>, чтобы получить билетик и участвовать
+                      </span>
                     )}
 
                     {isAdmin && (

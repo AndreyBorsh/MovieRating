@@ -1418,7 +1418,7 @@ def enter_giveaway(gid: int, authorization: str = Header(None)):
     uid = payload["user_id"]
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT status, deadline FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT status, deadline, created_at FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
@@ -1433,12 +1433,17 @@ def enter_giveaway(gid: int, authorization: str = Header(None)):
     if cur.fetchone():
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Вы уже участвуете")
+    tickets = giveaway_tickets(cur, uid, g[2])
+    if tickets <= 0:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400,
+            detail=f"Чтобы участвовать, после старта розыгрыша напишите рецензию от {GIVEAWAY_MIN_WORDS} слов")
     cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
     uname = cur.fetchone()[0]
-    cur.execute("INSERT INTO giveaway_entries (giveaway_id, user_id, username, tickets) VALUES (%s,%s,%s,0)",
-                (gid, uid, uname))
+    cur.execute("INSERT INTO giveaway_entries (giveaway_id, user_id, username, tickets) VALUES (%s,%s,%s,%s)",
+                (gid, uid, uname, tickets))
     conn.commit(); cur.close(); conn.close()
-    return {"ok": True}
+    return {"tickets": tickets}
 
 
 @app.post("/admin/giveaways")

@@ -51,11 +51,15 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
             <span className="text-sm text-emerald-400 font-medium text-center sm:text-right">
               ✓ Вы участвуете · {g.my_tickets ?? 0} 🎟
             </span>
-          ) : (
+          ) : (g.my_tickets || 0) > 0 ? (
             <button onClick={enter} disabled={busy}
               className="px-5 py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
-              {busy ? "..." : "🎟 Участвовать"}
+              {busy ? "..." : `🎟 Участвовать · ${g.my_tickets}`}
             </button>
+          ) : (
+            <span className="text-xs text-slate-400 text-center sm:text-right max-w-[220px]">
+              Напишите рецензию от 100 слов после старта, чтобы получить билетик
+            </span>
           )}
           <Link href="/giveaways" className="text-xs text-amber-400/80 hover:text-amber-300 transition text-center sm:text-right">
             Подробнее →

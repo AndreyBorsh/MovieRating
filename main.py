@@ -26,9 +26,12 @@ DATABASE_URL = os.environ.get(
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
 GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
 
-# Free LLM (Google Gemini) for review relevance/quality check (giveaways)
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+# Free LLM for review relevance/quality check (giveaways).
+# OpenAI-compatible chat-completions API — works with OpenRouter, Groq, Mistral,
+# etc. Just set the three env vars below to switch providers (no code changes).
+LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
+LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
+LLM_MODEL = os.environ.get("LLM_MODEL", "meta-llama/llama-3.3-70b-instruct:free")
 
 
 def get_db():
@@ -387,10 +390,10 @@ def is_quality_review(text):
 
 
 def check_review_genuine(title, overview, text):
-    """Ask Google Gemini (free API) whether the text is a genuine review OF THIS
-    title (not off-topic/spam). Returns True/False. If no API key or on error,
-    returns True (don't block users)."""
-    if not GEMINI_API_KEY:
+    """Ask a free OpenAI-compatible LLM whether the text is a genuine review OF
+    THIS title (not off-topic/spam). Returns True/False. If no API key or on
+    error, returns True (don't block users)."""
+    if not LLM_API_KEY:
         return True
     prompt = (
         f"Фильм/сериал: «{title}».\n"
@@ -402,28 +405,29 @@ def check_review_genuine(title, overview, text):
     )
     try:
         r = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-            params={"key": GEMINI_API_KEY},
-            headers={"content-type": "application/json"},
-            json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "generationConfig": {"maxOutputTokens": 5, "temperature": 0},
+            LLM_API_URL,
+            headers={
+                "Authorization": f"Bearer {LLM_API_KEY}",
+                "content-type": "application/json",
             },
-            timeout=15,
+            json={
+                "model": LLM_MODEL,
+                "max_tokens": 5,
+                "temperature": 0,
+                "messages": [{"role": "user", "content": prompt}],
+            },
+            timeout=20,
         )
         if r.status_code != 200:
-            print(f"Gemini review check HTTP {r.status_code}: {r.text[:200]}")
+            print(f"LLM review check HTTP {r.status_code}: {r.text[:200]}")
             return True
-        cands = r.json().get("candidates", [])
+        choices = r.json().get("choices", [])
         out = ""
-        if cands:
-            out = "".join(
-                p.get("text", "")
-                for p in cands[0].get("content", {}).get("parts", [])
-            ).strip().upper()
+        if choices:
+            out = (choices[0].get("message", {}).get("content") or "").strip().upper()
         return out.startswith("YES")
     except Exception as e:
-        print(f"Gemini review check error: {e}")
+        print(f"LLM review check error: {e}")
         return True
 
 

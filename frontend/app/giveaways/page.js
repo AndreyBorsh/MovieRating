@@ -283,7 +283,10 @@ export default function GiveawaysPage() {
   const create = async () => {
     setError("");
     try {
-      await createGiveaway(token, { title, description: desc, deadline: deadline || null });
+      // datetime-local is in the admin's local time; send UTC so it matches
+      // the server's review timestamps.
+      const deadlineUtc = deadline ? new Date(deadline).toISOString() : null;
+      await createGiveaway(token, { title, description: desc, deadline: deadlineUtc });
       setTitle(""); setDesc(""); setDeadline(""); load();
     } catch (e) { setError(e.message); }
   };

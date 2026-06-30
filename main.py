@@ -1605,7 +1605,7 @@ def list_giveaways(authorization: str = Header(None)):
         my_tickets = giveaway_tickets(cur, viewer_id, created, deadline) if viewer_id else None
         items.append({
             "id": gid, "title": r[1], "description": r[2],
-            "deadline": r[3].isoformat() if r[3] else None,
+            "deadline": (r[3].isoformat() + "Z") if r[3] else None,
             "status": r[4], "winner_name": r[5],
             "created_at": created.isoformat() if created else None,
             "entries": counts.get(gid, 0),

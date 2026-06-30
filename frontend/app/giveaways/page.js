@@ -1,15 +1,97 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
-  getGiveaways, enterGiveaway, createGiveaway, drawGiveaway, deleteGiveaway,
+  getGiveaways, enterGiveaway, createGiveaway, drawGiveaway, deleteGiveaway, searchMulti,
 } from "@/lib/api";
 
 function fmtDate(s) {
   if (!s) return null;
   return new Date(s).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+}
+
+const POSTER = (path) => (path ? `/api/tmdb-image/w92${path}` : null);
+
+// Search-as-you-type film/TV picker for the admin create form.
+function FilmPicker({ value, onPick }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
+  const reqId = useRef(0);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) { setResults([]); setLoading(false); return; }
+    setLoading(true);
+    const myId = ++reqId.current;
+    const t = setTimeout(async () => {
+      try {
+        const data = await searchMulti(q);
+        if (myId !== reqId.current) return;
+        setResults(Array.isArray(data) ? data.slice(0, 8) : []);
+      } catch {
+        if (myId === reqId.current) setResults([]);
+      } finally {
+        if (myId === reqId.current) setLoading(false);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const pick = (film) => {
+    const label = film.year ? `${film.title} (${film.year})` : film.title;
+    onPick(label);
+    setQuery(""); setResults([]); setOpen(false);
+  };
+
+  if (value) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
+        <span className="text-sm text-slate-100 flex-1 min-w-0 truncate">🎬 {value}</span>
+        <button onClick={() => onPick("")} className="text-xs text-slate-500 hover:text-red-400 transition shrink-0">сменить</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <input
+        value={query}
+        onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Найдите фильм или сериал…"
+        className="w-full rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50"
+        style={{ background: "#141d2e", border: "1px solid #1e2d45" }}
+      />
+      {open && query.trim().length >= 2 && (
+        <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border shadow-2xl"
+          style={{ background: "#0c1220", borderColor: "#1e2d45" }}>
+          {loading && results.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-slate-500">Поиск…</div>
+          ) : results.length === 0 ? (
+            <div className="px-3 py-3 text-sm text-slate-500">Ничего не найдено</div>
+          ) : (
+            results.map((f) => (
+              <button key={`${f.media_type}-${f.id}`} onClick={() => pick(f)}
+                className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/5 transition border-b last:border-b-0"
+                style={{ borderColor: "#1e2d45" }}>
+                {POSTER(f.poster)
+                  ? <img src={POSTER(f.poster)} alt="" className="w-8 h-12 object-cover rounded shrink-0" />
+                  : <div className="w-8 h-12 rounded shrink-0 flex items-center justify-center text-base" style={{ background: "#141d2e" }}>{f.media_type === "tv" ? "📺" : "🎬"}</div>}
+                <div className="min-w-0">
+                  <div className="text-sm text-slate-100 truncate">{f.title}</div>
+                  <div className="text-xs text-slate-500">{f.media_type === "tv" ? "Сериал" : "Фильм"}{f.year ? ` · ${f.year}` : ""}</div>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function GiveawaysPage() {
@@ -97,9 +179,7 @@ export default function GiveawaysPage() {
       {isAdmin && (
         <div className="rounded-xl p-4 border space-y-3" style={{ background: "#0c1220", borderColor: "#1e2d45" }}>
           <div className="text-sm font-semibold text-amber-400">Админ · создать розыгрыш</div>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Название фильма"
-            className="w-full rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50"
-            style={{ background: "#141d2e", border: "1px solid #1e2d45" }} />
+          <FilmPicker value={title} onPick={setTitle} />
           <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Описание / кинотеатр / сеанс (необязательно)"
             className="w-full rounded-lg px-3 py-2 text-sm text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50"
             style={{ background: "#141d2e", border: "1px solid #1e2d45" }} />

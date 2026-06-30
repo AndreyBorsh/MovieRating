@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import threading
 import random
 from datetime import datetime, timedelta
 import dns.resolver
@@ -499,8 +500,9 @@ def verify_rating(cur, rating_id, review_text):
 
 
 def update_review_genuine(rating_id, review_text):
-    """Best-effort: when a giveaway is open, classify a quality review's relevance
-    and cache it on the rating. Never blocks review saving."""
+    """When a giveaway is open, classify a quality review's relevance and cache it.
+    Runs in a background thread, so it retries patiently until the (free, often
+    rate-limited) LLM returns a verdict — no admin button needed."""
     if not rating_id or not review_text or not is_quality_review(review_text):
         return
     try:
@@ -509,10 +511,24 @@ def update_review_genuine(rating_id, review_text):
         cur.execute("SELECT 1 FROM giveaways WHERE status='open' LIMIT 1")
         if not cur.fetchone():
             cur.close(); conn.close(); return
-        verify_rating(cur, rating_id, review_text)
-        conn.commit(); cur.close(); conn.close()
+        for attempt in range(6):
+            verdict = verify_rating(cur, rating_id, review_text)
+            if verdict is not None:
+                conn.commit()
+                break
+            conn.rollback()  # undetermined (all models busy) — wait and retry
+            if attempt < 5:
+                time.sleep(20)
+        cur.close(); conn.close()
     except Exception as e:
         print(f"update_review_genuine error: {e}")
+
+
+def verify_in_background(rating_id, review_text):
+    """Fire-and-forget relevance check so saving a review returns immediately."""
+    if not rating_id or not review_text:
+        return
+    threading.Thread(target=update_review_genuine, args=(rating_id, review_text), daemon=True).start()
 
 
 def _too_similar(tokens_a, text_b):
@@ -525,17 +541,26 @@ def _too_similar(tokens_a, text_b):
     return union > 0 and inter / union >= 0.8
 
 
-def qualifying_review(cur, user_id, since):
+def qualifying_review(cur, user_id, since, until=None):
     """Return (rating_id, review_text) of the user's first ORIGINAL genuine
-    quality review (>=100 words) written AFTER `since`, else None.
+    quality review (>=100 words) written AFTER `since` and (if `until` is given)
+    no later than `until` (the giveaway deadline), else None.
     Genuine = review_genuine IS TRUE (relevance verified). Near-duplicates of an
     earlier review (own or others') are excluded (anti-plagiarism)."""
-    cur.execute(
-        """SELECT id, review, created_at FROM ratings
-           WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
-             AND review_genuine IS TRUE""",
-        (user_id, since),
-    )
+    if until is not None:
+        cur.execute(
+            """SELECT id, review, created_at FROM ratings
+               WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
+                 AND created_at <= %s AND review_genuine IS TRUE""",
+            (user_id, since, until),
+        )
+    else:
+        cur.execute(
+            """SELECT id, review, created_at FROM ratings
+               WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
+                 AND review_genuine IS TRUE""",
+            (user_id, since),
+        )
     candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
     if not candidates:
         return None
@@ -558,11 +583,11 @@ def qualifying_review(cur, user_id, since):
     return None
 
 
-def giveaway_tickets(cur, user_id, since):
+def giveaway_tickets(cur, user_id, since, until=None):
     """1 ticket per user per giveaway — granted for the first original genuine
-    quality review written after the giveaway started. Computed live, so deleting
-    the review removes the ticket automatically."""
-    return 1 if qualifying_review(cur, user_id, since) else 0
+    quality review written after the giveaway started and before its deadline.
+    Computed live, so deleting the review removes the ticket automatically."""
+    return 1 if qualifying_review(cur, user_id, since, until) else 0
 
 
 # =========================
@@ -1098,7 +1123,7 @@ def create_rating(data: dict, authorization: str = Header(None)):
             new_id = cur.fetchone()[0]
             conn.commit()
             cur.close(); conn.close()
-            update_review_genuine(new_id, review or None)
+            verify_in_background(new_id, review or None)
             return {"score": score}
         except HTTPException:
             raise
@@ -1140,7 +1165,7 @@ def create_rating(data: dict, authorization: str = Header(None)):
         new_id = cur.fetchone()[0]
         conn.commit()
         cur.close(); conn.close()
-        update_review_genuine(new_id, review or None)
+        verify_in_background(new_id, review or None)
         return {"score": score}
 
 
@@ -1185,7 +1210,7 @@ def update_rating(data: dict, authorization: str = Header(None)):
             raise HTTPException(status_code=404, detail="Оценка не найдена")
         conn.commit()
         cur.close(); conn.close()
-        update_review_genuine(rating_id, review or None)
+        verify_in_background(rating_id, review or None)
         return {"score": score}
 
     else:  # movie
@@ -1216,7 +1241,7 @@ def update_rating(data: dict, authorization: str = Header(None)):
             raise HTTPException(status_code=404, detail="Оценка не найдена")
         conn.commit()
         cur.close(); conn.close()
-        update_review_genuine(updated[0], review or None)
+        verify_in_background(updated[0], review or None)
         return {"score": score}
 
 
@@ -1576,8 +1601,8 @@ def list_giveaways(authorization: str = Header(None)):
 
     items = []
     for r in rows:
-        gid, created = r[0], r[6]
-        my_tickets = giveaway_tickets(cur, viewer_id, created) if viewer_id else None
+        gid, created, deadline = r[0], r[6], r[3]
+        my_tickets = giveaway_tickets(cur, viewer_id, created, deadline) if viewer_id else None
         items.append({
             "id": gid, "title": r[1], "description": r[2],
             "deadline": r[3].isoformat() if r[3] else None,
@@ -1618,7 +1643,7 @@ def enter_giveaway(gid: int, authorization: str = Header(None)):
     if cur.fetchone():
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Вы уже участвуете")
-    tickets = giveaway_tickets(cur, uid, g[2])
+    tickets = giveaway_tickets(cur, uid, g[2], g[1])
     if tickets <= 0:
         cur.close(); conn.close()
         raise HTTPException(status_code=400,
@@ -1658,7 +1683,7 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT status, created_at, title FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT status, created_at, title, deadline FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
@@ -1666,13 +1691,13 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     if g[0] != "open":
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Розыгрыш уже проведён")
-    since, title = g[1], g[2]
+    since, title, deadline = g[1], g[2], g[3]
     cur.execute("SELECT user_id, username FROM giveaway_entries WHERE giveaway_id=%s", (gid,))
     entries = cur.fetchall()
-    # live tickets per entrant (activity since giveaway start); only those with >0 can win
+    # live tickets per entrant (within [start, deadline]); only those with >0 can win
     pool, weights = [], []
     for uid, uname in entries:
-        t = giveaway_tickets(cur, uid, since)
+        t = giveaway_tickets(cur, uid, since, deadline)
         if t > 0:
             pool.append((uid, uname, t))
             weights.append(t)
@@ -1711,18 +1736,18 @@ def list_giveaway_entries(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT created_at FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT created_at, deadline FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Розыгрыш не найден")
-    since = g[0]
+    since, deadline = g[0], g[1]
     cur.execute("""SELECT user_id, username, created_at FROM giveaway_entries
                    WHERE giveaway_id=%s ORDER BY created_at""", (gid,))
     rows = cur.fetchall()
     out = []
     for uid, uname, ca in rows:
-        qr = qualifying_review(cur, uid, since)  # (rating_id, text) or None
+        qr = qualifying_review(cur, uid, since, deadline)  # (rating_id, text) or None
         out.append({
             "username": uname,
             "tickets": 1 if qr else 0,
@@ -1742,16 +1767,22 @@ def recheck_giveaway(gid: int, authorization: str = Header(None)):
     require_admin(authorization)
     conn = get_db()
     cur = conn.cursor()
-    cur.execute("SELECT created_at FROM giveaways WHERE id=%s", (gid,))
+    cur.execute("SELECT created_at, deadline FROM giveaways WHERE id=%s", (gid,))
     g = cur.fetchone()
     if not g:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Розыгрыш не найден")
-    since = g[0]
-    cur.execute(
-        "SELECT id, review FROM ratings WHERE review IS NOT NULL AND created_at > %s",
-        (since,),
-    )
+    since, deadline = g[0], g[1]
+    if deadline is not None:
+        cur.execute(
+            "SELECT id, review FROM ratings WHERE review IS NOT NULL AND created_at > %s AND created_at <= %s",
+            (since, deadline),
+        )
+    else:
+        cur.execute(
+            "SELECT id, review FROM ratings WHERE review IS NOT NULL AND created_at > %s",
+            (since,),
+        )
     rows = [(rid, rv) for rid, rv in cur.fetchall() if is_quality_review(rv)]
     checked = genuine = offtopic = undetermined = 0
     for rid, rv in rows:

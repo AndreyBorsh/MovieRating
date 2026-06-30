@@ -1,5 +1,6 @@
 import os
 import re
+import time
 import random
 from datetime import datetime, timedelta
 import dns.resolver
@@ -35,8 +36,12 @@ LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/c
 LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
     "google/gemma-4-31b-it:free",
     "qwen/qwen3-next-80b-a3b-instruct:free",
+    "openai/gpt-oss-120b:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemma-4-26b-a4b-it:free",
+    "nousresearch/hermes-3-llama-3.1-405b:free",
+    "openai/gpt-oss-20b:free",
+    "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
 ]))
 
 
@@ -395,27 +400,40 @@ def is_quality_review(text):
     return len(sentences) >= 2
 
 
-def _llm_classify(prompt):
-    """Try each configured free model in order until one returns HTTP 200.
-    Returns (text_or_None, info_dict). text is None if every model failed."""
+def _llm_classify(prompt, attempts=3):
+    """Try the configured free models until one returns HTTP 200. Free models are
+    often rate-limited (429), so on a pass where every model failed transiently
+    (429/5xx/network) we wait briefly and retry. Returns (text_or_None, info).
+    text is None only if no model produced an answer after all attempts."""
     models = [m.strip() for m in LLM_MODEL.split(",") if m.strip()]
     last = {}
-    for m in models:
-        try:
-            r = requests.post(
-                LLM_API_URL,
-                headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
-                json={"model": m, "max_tokens": 5, "temperature": 0,
-                      "messages": [{"role": "user", "content": prompt}]},
-                timeout=20,
-            )
-            if r.status_code == 200:
-                ch = r.json().get("choices", [])
-                txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
-                return txt.strip(), {"model": m, "http": 200}
-            last = {"model": m, "http": r.status_code, "body": r.text[:200]}
-        except Exception as e:
-            last = {"model": m, "error": str(e)[:200]}
+    for attempt in range(attempts):
+        transient = False
+        for m in models:
+            try:
+                r = requests.post(
+                    LLM_API_URL,
+                    headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
+                    json={"model": m, "max_tokens": 5, "temperature": 0,
+                          "messages": [{"role": "user", "content": prompt}]},
+                    timeout=20,
+                )
+                if r.status_code == 200:
+                    ch = r.json().get("choices", [])
+                    txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
+                    if txt.strip():
+                        return txt.strip(), {"model": m, "http": 200}
+                    transient = True  # empty body — treat as retryable
+                if r.status_code in (429, 500, 502, 503, 504):
+                    transient = True
+                last = {"model": m, "http": r.status_code, "body": r.text[:200]}
+            except Exception as e:
+                transient = True
+                last = {"model": m, "error": str(e)[:200]}
+        if not transient:
+            break  # only permanent failures (e.g. 404) — retrying won't help
+        if attempt < attempts - 1:
+            time.sleep(2.5)
     return None, last
 
 

@@ -136,13 +136,13 @@ function EntriesPanel({ token, giveawayId }) {
           {rows.map((e, i) => (
             <div key={i} className="rounded-md px-3 py-2" style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-slate-200">{e.username}</span>
-                <span className={`text-xs font-semibold ${e.tickets > 0 ? "text-emerald-400" : "text-slate-500"}`}>
+                <span className="text-sm text-slate-200 min-w-0 truncate">{e.username}</span>
+                <span className={`text-xs font-semibold shrink-0 ${e.tickets > 0 ? "text-emerald-400" : "text-slate-500"}`}>
                   {e.tickets > 0 ? `${e.tickets} 🎟` : "0 🎟"}
                 </span>
               </div>
               {e.review
-                ? <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap leading-snug">{e.review}</p>
+                ? <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap break-words leading-snug">{e.review}</p>
                 : <p className="text-xs text-slate-600 mt-1 italic">нет зачтённой рецензии (оффтоп / не подтверждена / удалена)</p>}
             </div>
           ))}
@@ -229,8 +229,8 @@ function ManualQueue({ token, onChange }) {
       <div className="text-sm font-semibold text-amber-400">🔎 Запросы на ручную проверку ({rows.length})</div>
       {rows.map((r) => (
         <div key={r.rating_id} className="rounded-lg px-3 py-2" style={{ background: "#141d2e", border: "1px solid #1e2d45" }}>
-          <div className="text-sm text-slate-200">{r.username} · 🎬 {r.title || "—"}</div>
-          <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap leading-snug">{r.review}</p>
+          <div className="text-sm text-slate-200 break-words">{r.username} · 🎬 {r.title || "—"}</div>
+          <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap break-words leading-snug">{r.review}</p>
           <div className="flex gap-2 mt-2">
             <button onClick={() => decide(r.rating_id, "approve")} disabled={busy === r.rating_id}
               className="text-xs px-3 py-1.5 rounded-lg font-semibold text-slate-900 bg-emerald-400 hover:bg-emerald-300 transition disabled:opacity-50">

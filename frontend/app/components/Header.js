@@ -133,7 +133,7 @@ export default function Header() {
     return (
       <Link
         href={href}
-        className={`text-sm font-medium transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
+        className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
           active
             ? "text-amber-400 bg-amber-400/10"
             : "text-slate-400 hover:text-slate-100"
@@ -154,7 +154,7 @@ export default function Header() {
       className="sticky top-0 z-50 border-b"
       style={{ background: "#0c1220", borderColor: "#1e2d45" }}
     >
-      <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 flex items-center justify-between gap-1.5 sm:gap-4">
+      <div className="max-w-6xl mx-auto px-2 sm:px-6 h-14 flex items-center justify-between gap-0.5 sm:gap-4">
         {/* Logo */}
         <Link
           href="/"
@@ -165,12 +165,12 @@ export default function Header() {
         </Link>
 
         {/* Nav */}
-        <nav className="flex items-center gap-0.5 sm:gap-1 min-w-0">
+        <nav className="flex items-center gap-0 sm:gap-1 min-w-0">
           {navLink("/", "Главная")}
           {navLink("/search", "Поиск")}
           <Link
             href="/giveaways"
-            className={`text-sm font-medium transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
+            className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
               pathname === "/giveaways" ? "text-amber-400 bg-amber-400/10" : "text-slate-400 hover:text-slate-100"
             }`}
             title="Розыгрыши"
@@ -178,7 +178,18 @@ export default function Header() {
             <span className="hidden sm:inline">Розыгрыши</span>
             <span className="sm:hidden">🎟</span>
           </Link>
-          {token && navLink(`/profile/${user?.user_id}`, "Профиль")}
+          {token && (
+            <Link
+              href={`/profile/${user?.user_id}`}
+              className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
+                pathname === `/profile/${user?.user_id}` ? "text-amber-400 bg-amber-400/10" : "text-slate-400 hover:text-slate-100"
+              }`}
+              title="Профиль"
+            >
+              <span className="hidden sm:inline">Профиль</span>
+              <span className="sm:hidden">👤</span>
+            </Link>
+          )}
         </nav>
 
         {/* Auth */}

@@ -16,3 +16,6 @@ node_modules/
 .DS_Store
 Thumbs.db
 frontend_tmp/
+
+# Local preview tooling
+.claude/

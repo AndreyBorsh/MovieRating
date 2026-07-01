@@ -1608,10 +1608,22 @@ def list_giveaways(authorization: str = Header(None)):
         eff_entries = sum(1 for eid in entrant_ids if giveaway_tickets(cur, eid, created, deadline) > 0)
         my_tickets = giveaway_tickets(cur, viewer_id, created, deadline) if viewer_id else None
         entered_effective = (gid in entered) and (my_tickets or 0) > 0
+
+        status = r[4]
+        winner_name = r[5]
+        # Deadline passed with nobody holding a valid ticket — nothing to draw.
+        # Auto-close with no winner instead of leaving it stuck "open" forever.
+        if status == "open" and deadline and now > deadline and eff_entries == 0:
+            cur.execute(
+                "UPDATE giveaways SET status='closed', winner_user_id=NULL, winner_name=NULL, winner_email=NULL WHERE id=%s",
+                (gid,),
+            )
+            status, winner_name = "closed", None
+
         items.append({
             "id": gid, "title": r[1], "description": r[2],
             "deadline": (r[3].isoformat() + "Z") if r[3] else None,
-            "status": r[4], "winner_name": r[5],
+            "status": status, "winner_name": winner_name,
             "created_at": created.isoformat() if created else None,
             "entries": eff_entries,
             "entered": entered_effective,
@@ -1619,7 +1631,7 @@ def list_giveaways(authorization: str = Header(None)):
             "expired": bool(deadline and now > deadline),
             "winner_email": r[7] if is_admin else None,
         })
-    cur.close(); conn.close()
+    conn.commit(); cur.close(); conn.close()
 
     return {
         "is_admin": is_admin,
@@ -1708,6 +1720,15 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
             pool.append((uid, uname, t))
             weights.append(t)
     if not pool:
+        if deadline and datetime.utcnow() > deadline:
+            # Deadline passed and nobody ever qualified — close with no winner
+            # instead of leaving the giveaway stuck with no valid action.
+            cur.execute(
+                "UPDATE giveaways SET status='closed', winner_user_id=NULL, winner_name=NULL, winner_email=NULL WHERE id=%s",
+                (gid,),
+            )
+            conn.commit(); cur.close(); conn.close()
+            return {"winner_name": None, "winner_user_id": None, "winner_email": None}
         cur.close(); conn.close()
         raise HTTPException(status_code=400,
             detail="Пока ни у кого нет билетиков — никто не написал качественных рецензий после старта")

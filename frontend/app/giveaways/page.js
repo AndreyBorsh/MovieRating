@@ -335,7 +335,13 @@ export default function GiveawaysPage() {
   const draw = async (id) => {
     if (!confirm("Провести розыгрыш? Победитель выбирается случайно с учётом билетиков.")) return;
     setBusyId(id); setError("");
-    try { const r = await drawGiveaway(token, id); alert(`Победитель: ${r.winner_name} 🎉${r.winner_email ? `\nПочта для связи: ${r.winner_email}` : ""}`); load(); }
+    try {
+      const r = await drawGiveaway(token, id);
+      alert(r.winner_name
+        ? `Победитель: ${r.winner_name} 🎉${r.winner_email ? `\nПочта для связи: ${r.winner_email}` : ""}`
+        : "Приём заявок завершён, но никто так и не набрал билетик — розыгрыш закрыт без победителя.");
+      load();
+    }
     catch (e) { setError(e.message); }
     finally { setBusyId(null); }
   };

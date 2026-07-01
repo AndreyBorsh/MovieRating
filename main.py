@@ -1758,6 +1758,7 @@ def list_giveaway_entries(gid: int, authorization: str = Header(None)):
             "username": uname,
             "tickets": 1 if qr else 0,
             "review": qr[1] if qr else None,
+            "rating_id": qr[0] if qr else None,
             "created_at": ca.isoformat() if ca else None,
         })
     out.sort(key=lambda x: (-x["tickets"], x["username"] or ""))
@@ -1907,10 +1908,14 @@ def admin_manual_reviews(authorization: str = Header(None)):
 
 @app.post("/admin/manual-reviews/{rating_id}")
 def decide_manual_review(rating_id: int, data: dict, authorization: str = Header(None)):
-    """Admin approves (grants ticket) or rejects a manual-review request."""
+    """Admin approves (grants ticket) or rejects a review — either a user-requested
+    manual-review request, or a spot-check of a review the AI already passed
+    (e.g. plagiarized from another site, which the AI has no way to detect).
+    An optional `comment` explains a rejection to the user."""
     payload = require_admin(authorization)
     admin_id = payload["user_id"]
     decision = (data.get("decision") or "").lower()
+    comment = (data.get("comment") or "").strip() or None
     if decision not in ("approve", "reject"):
         raise HTTPException(status_code=400, detail="decision must be approve|reject")
     conn = get_db()
@@ -1924,10 +1929,10 @@ def decide_manual_review(rating_id: int, data: dict, authorization: str = Header
     owner, mtype, media_id = r
     if decision == "approve":
         cur.execute("UPDATE ratings SET review_genuine=TRUE, manual_status='approved' WHERE id=%s", (rating_id,))
-        add_notification(cur, owner, admin_id, "manual_ok", rating_id, mtype, media_id, None, allow_self=True)
+        add_notification(cur, owner, admin_id, "manual_ok", rating_id, mtype, media_id, comment, allow_self=True)
     else:
         cur.execute("UPDATE ratings SET review_genuine=FALSE, manual_status='rejected' WHERE id=%s", (rating_id,))
-        add_notification(cur, owner, admin_id, "manual_no", rating_id, mtype, media_id, None, allow_self=True)
+        add_notification(cur, owner, admin_id, "manual_no", rating_id, mtype, media_id, comment, allow_self=True)
     conn.commit(); cur.close(); conn.close()
     return {"ok": True, "decision": decision}
 

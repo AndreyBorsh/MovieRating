@@ -51,9 +51,9 @@ function NotificationBell() {
     if (it.type === "manual_req")
       return `🔎 ${it.actor_name} просит проверить рецензию вручную${where}. Откройте «Розыгрыши» и подтвердите или отклоните билетик.`;
     if (it.type === "manual_ok")
-      return `✅ Ваша рецензия${where} прошла ручную проверку — билетик начислен!`;
+      return `✅ Ваша рецензия${where} прошла ручную проверку — билетик начислен!${it.detail ? ` Комментарий: ${it.detail}` : ""}`;
     if (it.type === "manual_no")
-      return `❌ Ваша рецензия${where} не прошла ручную проверку — билетик не начислен.`;
+      return `❌ Ваша рецензия${where} не прошла ручную проверку — билетик не начислен.${it.detail ? ` Причина: ${it.detail}` : ""}`;
     if (it.type === "reaction") return `${it.actor_name} отреагировал(а) ${it.detail || ""} на вашу рецензию${where}`;
     return `${it.actor_name} прокомментировал(а) вашу рецензию${where}: ${it.detail || ""}`;
   };

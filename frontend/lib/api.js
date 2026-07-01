@@ -347,9 +347,9 @@ export async function getManualReviews(token) {
   return res.json();
 }
 
-export async function decideManualReview(token, ratingId, decision) {
+export async function decideManualReview(token, ratingId, decision, comment) {
   const res = await fetch(`${API}/admin/manual-reviews/${ratingId}`, {
-    method: "POST", headers: authHeader(token), body: JSON.stringify({ decision }),
+    method: "POST", headers: authHeader(token), body: JSON.stringify({ decision, comment }),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.detail || "Ошибка");

@@ -96,11 +96,16 @@ function FilmPicker({ value, onPick }) {
   );
 }
 
-// Admin-only: who entered + the exact review that earned each ticket, with re-check.
+// Admin-only: who entered + the exact review that earned each ticket, with re-check
+// and a manual spot-check (AI can pass a review copy-pasted from another site —
+// only a human reading it against the real film would catch that).
 function EntriesPanel({ token, giveawayId }) {
   const [rows, setRows] = useState(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
+  const [rejecting, setRejecting] = useState(null); // rating_id currently showing the comment form
+  const [comment, setComment] = useState("");
+  const [deciding, setDeciding] = useState(false);
 
   const load = () => {
     getGiveawayEntries(token, giveawayId).then((d) => setRows(Array.isArray(d) ? d : [])).catch(() => setRows([]));
@@ -115,6 +120,15 @@ function EntriesPanel({ token, giveawayId }) {
       load();
     } catch (e) { setMsg(e.message); }
     finally { setBusy(false); }
+  };
+
+  const confirmReject = async (ratingId) => {
+    setDeciding(true);
+    try {
+      await decideManualReview(token, ratingId, "reject", comment);
+      setRejecting(null); setComment(""); load();
+    } catch (e) { alert(e.message); }
+    finally { setDeciding(false); }
   };
 
   return (
@@ -144,6 +158,33 @@ function EntriesPanel({ token, giveawayId }) {
               {e.review
                 ? <p className="text-xs text-slate-400 mt-1 whitespace-pre-wrap break-words leading-snug">{e.review}</p>
                 : <p className="text-xs text-slate-600 mt-1 italic">нет зачтённой рецензии (оффтоп / не подтверждена / удалена)</p>}
+
+              {e.review && e.rating_id && (
+                rejecting === e.rating_id ? (
+                  <div className="mt-2 space-y-1.5">
+                    <textarea value={comment} onChange={(ev) => setComment(ev.target.value)}
+                      placeholder="Почему рецензия не проходит (необязательно) — увидит пользователь"
+                      rows={2}
+                      className="w-full rounded-md px-2 py-1.5 text-xs text-slate-100 outline-none resize-none"
+                      style={{ background: "#0c1220", border: "1px solid #1e2d45" }} />
+                    <div className="flex gap-2">
+                      <button onClick={() => confirmReject(e.rating_id)} disabled={deciding}
+                        className="text-xs px-3 py-1.5 rounded-lg text-slate-900 bg-red-400 hover:bg-red-300 transition disabled:opacity-50">
+                        {deciding ? "…" : "Подтвердить отклонение"}
+                      </button>
+                      <button onClick={() => { setRejecting(null); setComment(""); }}
+                        className="text-xs px-3 py-1.5 rounded-lg text-slate-400 border border-slate-700 hover:text-slate-200 transition">
+                        Отмена
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setRejecting(e.rating_id); setComment(""); }}
+                    className="mt-2 text-xs px-2 py-1 rounded border border-slate-700 text-slate-500 hover:text-red-400 hover:border-red-400/50 transition">
+                    🔎 Перепроверить · отклонить
+                  </button>
+                )
+              )}
             </div>
           ))}
         </div>

@@ -63,7 +63,7 @@ function NotificationBell() {
       <button
         onClick={toggle}
         aria-label="Уведомления"
-        className="relative px-2 py-1.5 rounded-md text-slate-400 hover:text-slate-100 transition-colors flex items-center"
+        className="relative px-2 py-1.5 rounded-md text-stone-400 hover:text-stone-100 transition-colors flex items-center"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
           strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -82,20 +82,20 @@ function NotificationBell() {
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-xl border shadow-2xl z-50"
-            style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+            style={{ background: "#1b1613", borderColor: "#2e2723" }}
           >
-            <div className="px-4 py-2.5 border-b text-sm font-semibold text-slate-200" style={{ borderColor: "#1e2d45" }}>
+            <div className="px-4 py-2.5 border-b text-sm font-semibold text-stone-200" style={{ borderColor: "#2e2723" }}>
               Уведомления
             </div>
             {data.items.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-slate-500">Пока пусто</div>
+              <div className="px-4 py-6 text-center text-sm text-stone-500">Пока пусто</div>
             ) : (
               data.items.map((it) => (
                 <button
                   key={it.id}
                   onClick={() => go(it)}
                   className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
-                  style={{ borderColor: "#1e2d45" }}
+                  style={{ borderColor: "#2e2723" }}
                 >
                   <span className="text-base shrink-0">{
                     it.type === "reaction" ? "❤️"
@@ -106,9 +106,9 @@ function NotificationBell() {
                     : "💬"
                   }</span>
                   <div className="min-w-0">
-                    <p className="text-sm text-slate-300 leading-snug">{itemText(it)}</p>
+                    <p className="text-sm text-stone-300 leading-snug">{itemText(it)}</p>
                     {it.created_at && (
-                      <p className="text-[11px] text-slate-600 mt-0.5">
+                      <p className="text-[11px] text-stone-600 mt-0.5">
                         {new Date(it.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                       </p>
                     )}
@@ -136,7 +136,7 @@ export default function Header() {
         className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
           active
             ? "text-amber-400 bg-amber-400/10"
-            : "text-slate-400 hover:text-slate-100"
+            : "text-stone-400 hover:text-stone-100"
         }`}
       >
         {label}
@@ -152,13 +152,13 @@ export default function Header() {
   return (
     <header
       className="sticky top-0 z-50 border-b"
-      style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+      style={{ background: "#100d0b", borderColor: "#2e2723" }}
     >
       <div className="max-w-6xl mx-auto px-2 sm:px-6 h-14 flex items-center justify-between gap-0.5 sm:gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="text-base sm:text-lg font-bold tracking-tight text-amber-400 shrink-0"
+          className="font-display text-lg sm:text-xl font-medium tracking-tight text-amber-400 shrink-0"
         >
           <span className="hidden sm:inline">🎬 What's Andrew Watching</span>
           <span className="sm:hidden">🎬 WAW</span>
@@ -171,7 +171,7 @@ export default function Header() {
           <Link
             href="/giveaways"
             className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-              pathname === "/giveaways" ? "text-amber-400 bg-amber-400/10" : "text-slate-400 hover:text-slate-100"
+              pathname === "/giveaways" ? "text-amber-400 bg-amber-400/10" : "text-stone-400 hover:text-stone-100"
             }`}
             title="Розыгрыши"
           >
@@ -182,7 +182,7 @@ export default function Header() {
             <Link
               href={`/profile/${user?.user_id}`}
               className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-                pathname === `/profile/${user?.user_id}` ? "text-amber-400 bg-amber-400/10" : "text-slate-400 hover:text-slate-100"
+                pathname === `/profile/${user?.user_id}` ? "text-amber-400 bg-amber-400/10" : "text-stone-400 hover:text-stone-100"
               }`}
               title="Профиль"
             >
@@ -197,12 +197,12 @@ export default function Header() {
           {token ? (
             <>
               <NotificationBell />
-              <span className="text-xs text-slate-500 hidden sm:block">
+              <span className="text-xs text-stone-500 hidden sm:block">
                 {user?.username}
               </span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-slate-400 hover:text-red-400 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
+                className="text-sm text-stone-400 hover:text-red-400 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Выйти
               </button>
@@ -211,7 +211,7 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="text-sm text-slate-400 hover:text-slate-100 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
+                className="text-sm text-stone-400 hover:text-stone-100 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
               >
                 Войти
               </Link>

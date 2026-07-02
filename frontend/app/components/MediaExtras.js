@@ -9,8 +9,8 @@ const PROFILE = (p) => p && `/api/tmdb-image/w185${p}`;
 function Chip({ children }) {
   return (
     <span
-      className="text-[11px] px-2 py-0.5 rounded-full text-slate-300"
-      style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+      className="text-[11px] px-2 py-0.5 rounded-full text-stone-300"
+      style={{ background: "#100d0b", border: "1px solid #2e2723" }}
     >
       {children}
     </span>
@@ -105,18 +105,18 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {showMeta && hasMeta && (
         <div
           className="rounded-xl px-4 py-3 border"
-          style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+          style={{ background: "#1b1613", borderColor: "#2e2723" }}
         >
           {cleanTagline && (
-            <p className="text-xs italic text-slate-500 mb-2">«{cleanTagline}»</p>
+            <p className="text-xs italic text-stone-500 mb-2">«{cleanTagline}»</p>
           )}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
             {genres.map((g) => (
               <Chip key={g}>{g}</Chip>
             ))}
             {metaItems.map((it, i) => (
-              <span key={i} className="flex items-center gap-2 text-slate-400">
-                {(genres.length > 0 || i > 0) && <span className="text-slate-700">·</span>}
+              <span key={i} className="flex items-center gap-2 text-stone-400">
+                {(genres.length > 0 || i > 0) && <span className="text-stone-700">·</span>}
                 <span>{it}</span>
               </span>
             ))}
@@ -127,7 +127,7 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Backdrop gallery (clickable → lightbox) */}
       {showMedia && backdrops.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-slate-100 mb-2">Кадры</h2>
+          <h2 className="text-base font-semibold text-stone-100 mb-2">Кадры</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {backdrops.map((b, i) => (
               <button
@@ -151,7 +151,7 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Cast */}
       {showMedia && cast.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-slate-100 mb-2">В ролях</h2>
+          <h2 className="text-base font-semibold text-stone-100 mb-2">В ролях</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {cast.map((c, i) => (
               <div key={c.id ?? i} className="shrink-0 w-20 text-center">
@@ -163,13 +163,13 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
                     className="w-20 h-28 rounded-lg object-cover mb-1"
                   />
                 ) : (
-                  <div className="w-20 h-28 rounded-lg bg-slate-800 flex items-center justify-center text-2xl text-slate-600 mb-1">
+                  <div className="w-20 h-28 rounded-lg bg-stone-800 flex items-center justify-center text-2xl text-stone-600 mb-1">
                     👤
                   </div>
                 )}
-                <p className="text-xs text-slate-200 leading-tight line-clamp-2">{c.name}</p>
+                <p className="text-xs text-stone-200 leading-tight line-clamp-2">{c.name}</p>
                 {c.character && (
-                  <p className="text-[10px] text-slate-500 leading-tight line-clamp-2 mt-0.5">
+                  <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">
                     {c.character}
                   </p>
                 )}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getProfile, getMyNotes } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
+import ScoreBadge, { scoreColor } from "@/app/components/Score";
 
 const POSTER = (p) => p && `/api/tmdb-image/w185${p}`;
 
@@ -26,9 +27,6 @@ const TV_CRITERIA_LABELS = {
   visuals:    "Визуал",
   pacing:     "Темп",
 };
-
-const scoreColor = (n) =>
-  n >= 7.5 ? "text-emerald-400" : n >= 5.5 ? "text-amber-400" : "text-red-400";
 
 function seasonLabel(from, to) {
   if (from == null) return null;
@@ -51,25 +49,16 @@ function rankLabels(sorted) {
   return labels;
 }
 
-function ScoreBadge({ score }) {
-  const n = parseFloat(score);
-  return (
-    <span className={`text-xl font-bold ${scoreColor(n)}`}>
-      {n > 0 ? n.toFixed(1) : "—"}
-    </span>
-  );
-}
-
-function Stat({ icon, value, label, color = "text-slate-100" }) {
+function Stat({ icon, value, label, color = "text-stone-100" }) {
   return (
     <div
       className="flex items-center gap-2.5 rounded-lg px-3 py-2 border"
-      style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+      style={{ background: "#100d0b", borderColor: "#2e2723" }}
     >
       <span className="text-lg leading-none">{icon}</span>
       <div className="leading-tight">
         <div className={`text-base font-bold ${color}`}>{value}</div>
-        <div className="text-[10px] text-slate-500">{label}</div>
+        <div className="text-[10px] text-stone-500">{label}</div>
       </div>
     </div>
   );
@@ -95,7 +84,7 @@ function ProfileStats({ ratings, onOpen }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-slate-100">Статистика</h2>
+      <h2 className="text-lg font-semibold text-stone-100">Статистика</h2>
 
       <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
         {/* Indicators — fixed, compact width */}
@@ -115,9 +104,9 @@ function ProfileStats({ ratings, onOpen }) {
         {/* Top by score — larger podium taking the rest */}
         <div
           className="rounded-xl px-4 py-3 border md:flex-1 flex flex-col"
-          style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+          style={{ background: "#100d0b", borderColor: "#2e2723" }}
         >
-          <div className="text-xs text-slate-400 mb-3 text-center">🏆 Топ по оценке</div>
+          <div className="text-xs text-stone-400 mb-3 text-center">🏆 Топ по оценке</div>
           <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-5">
             <div className="flex items-end justify-center shrink-0">
               <Podium top={top} labels={topLabels} onOpen={onOpen} />
@@ -126,7 +115,7 @@ function ProfileStats({ ratings, onOpen }) {
             {top.length > 3 && (
               <div
                 className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5"
-                style={{ borderColor: "#1e2d45" }}
+                style={{ borderColor: "#2e2723" }}
               >
                 {top.slice(3).map((r, i) => (
                   <button
@@ -135,19 +124,19 @@ function ProfileStats({ ratings, onOpen }) {
                     className="flex items-center gap-2 group w-full text-left"
                     title={r.movie_title}
                   >
-                    <span className="text-xs text-slate-500 font-semibold w-8 text-right shrink-0">{topLabels[i + 3]}</span>
+                    <span className="text-xs text-stone-500 font-semibold w-8 text-right shrink-0">{topLabels[i + 3]}</span>
                     {POSTER(r.poster) ? (
                       <img src={POSTER(r.poster)} alt={r.movie_title}
                         className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
                     ) : (
-                      <div className="w-7 h-10 rounded bg-slate-800 flex items-center justify-center text-xs shrink-0">
+                      <div className="w-7 h-10 rounded bg-stone-800 flex items-center justify-center text-xs shrink-0">
                         {r.media_type === "tv" ? "📺" : "🎬"}
                       </div>
                     )}
-                    <span className="flex-1 min-w-0 text-sm text-slate-300 truncate group-hover:text-amber-400 transition-colors">
+                    <span className="flex-1 min-w-0 text-sm text-stone-300 truncate group-hover:text-amber-400 transition-colors">
                       {r.movie_title}
                     </span>
-                    <span className={`text-xs font-bold shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
+                    <span className={`text-xs font-display font-medium shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
                   </button>
                 ))}
               </div>
@@ -184,14 +173,14 @@ function Podium({ top, labels, onOpen }) {
             />
           ) : (
             <div
-              className={`${POSTER_CLS[rank]} rounded-lg bg-slate-800 flex items-center justify-center text-2xl`}
+              className={`${POSTER_CLS[rank]} rounded-lg bg-stone-800 flex items-center justify-center text-2xl`}
               style={{ border: `2px solid ${ACCENT[rank]}` }}
             >
               {r.media_type === "tv" ? "📺" : "🎬"}
             </div>
           )}
         </button>
-        <div className={`text-sm font-bold mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
+        <div className={`text-sm font-display font-medium mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
         <div
           className={`${BASE_H[rank]} w-full rounded-t-md mt-1 flex items-start justify-center`}
           style={{ background: `linear-gradient(180deg, ${ACCENT[rank]}40, ${ACCENT[rank]}10)`, borderTop: `2px solid ${ACCENT[rank]}` }}
@@ -221,14 +210,14 @@ function CriteriaBars({ rating }) {
         if (val == null) return null;
         return (
           <div key={k} className="flex items-center gap-2">
-            <span className="text-xs text-slate-600 w-20 shrink-0">{label}</span>
-            <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+            <span className="text-xs text-stone-600 w-20 shrink-0">{label}</span>
+            <div className="flex-1 h-1 bg-stone-800 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full ${k === "overall" ? "bg-amber-400" : "bg-slate-500"}`}
+                className={`h-full rounded-full ${k === "overall" ? "bg-amber-400" : "bg-stone-500"}`}
                 style={{ width: `${((val - 1) / 9) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-slate-400 w-4 text-right">{val}</span>
+            <span className="text-xs text-stone-400 w-4 text-right">{val}</span>
           </div>
         );
       })}
@@ -248,7 +237,7 @@ function ReviewModal({ rating, onClose }) {
     >
       <div
         className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
-        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+        style={{ background: "#1b1613", borderColor: "#2e2723" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -256,12 +245,12 @@ function ReviewModal({ rating, onClose }) {
             {POSTER(rating.poster) ? (
               <img src={POSTER(rating.poster)} alt={rating.movie_title} className="w-14 h-20 rounded-lg object-cover shrink-0" />
             ) : (
-              <div className="w-14 h-20 rounded-lg bg-slate-800 flex items-center justify-center text-2xl shrink-0">
+              <div className="w-14 h-20 rounded-lg bg-stone-800 flex items-center justify-center text-2xl shrink-0">
                 {isTV ? "📺" : "🎬"}
               </div>
             )}
             <div className="min-w-0">
-              <div className="text-base font-semibold text-slate-100 leading-tight">{rating.movie_title}</div>
+              <div className="text-base font-semibold text-stone-100 leading-tight">{rating.movie_title}</div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {isTV && (
                   <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
@@ -273,23 +262,23 @@ function ReviewModal({ rating, onClose }) {
               <div className="mt-1"><ScoreBadge score={rating.score} /></div>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-slate-200 transition text-lg leading-none shrink-0">✕</button>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-200 transition text-lg leading-none shrink-0">✕</button>
         </div>
 
         <CriteriaBars rating={rating} />
 
         {rating.review ? (
-          <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+          <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
             <ReviewText text={rating.review} />
           </div>
         ) : (
-          <div className="border-t pt-3 text-sm text-slate-600 italic" style={{ borderColor: "#1e2d45" }}>
+          <div className="border-t pt-3 text-sm text-stone-600 italic" style={{ borderColor: "#2e2723" }}>
             Без текстовой рецензии
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#1e2d45" }}>
-          <span className="text-xs text-slate-600">
+        <div className="flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#2e2723" }}>
+          <span className="text-xs text-stone-600">
             {rating.created_at
               ? new Date(rating.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
               : ""}
@@ -336,14 +325,14 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-slate-500 text-sm">Загрузка...</div>
+        <div className="text-stone-500 text-sm">Загрузка...</div>
       </div>
     );
   }
 
   if (!profile) {
     return (
-      <div className="text-center py-16 text-slate-500">
+      <div className="text-center py-16 text-stone-500">
         Профиль не найден
       </div>
     );
@@ -367,13 +356,13 @@ export default function ProfilePage() {
       {/* Profile header */}
       <div
         className="rounded-xl p-6 border flex items-center gap-6"
-        style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+        style={{ background: "#1b1613", borderColor: "#2e2723" }}
       >
         <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl text-amber-400 font-bold shrink-0">
           {profile.username.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-slate-100">
+          <h1 className="text-xl font-bold text-stone-100">
             {profile.username}
             {isMe && (
               <span className="ml-2 text-xs font-normal text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
@@ -382,20 +371,20 @@ export default function ProfilePage() {
             )}
           </h1>
           {joined && (
-            <div className="text-sm text-slate-500 mt-0.5">
+            <div className="text-sm text-stone-500 mt-0.5">
               На платформе с {joined}
             </div>
           )}
-          <div className="flex flex-wrap gap-4 mt-2 text-sm text-slate-400">
+          <div className="flex flex-wrap gap-4 mt-2 text-sm text-stone-400">
             {movieCount > 0 && (
               <span>
-                <span className="text-slate-100 font-semibold">{movieCount}</span>{" "}
+                <span className="text-stone-100 font-semibold">{movieCount}</span>{" "}
                 {movieCount === 1 ? "фильм" : movieCount < 5 ? "фильма" : "фильмов"}
               </span>
             )}
             {tvCount > 0 && (
               <span>
-                <span className="text-slate-100 font-semibold">{tvCount}</span>{" "}
+                <span className="text-stone-100 font-semibold">{tvCount}</span>{" "}
                 {tvCount === 1 ? "сериал" : tvCount < 5 ? "сериала" : "сериалов"}
               </span>
             )}
@@ -409,9 +398,9 @@ export default function ProfilePage() {
       {/* My private notes (own profile only) */}
       {isMe && notes.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-slate-100 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-stone-100 flex items-center gap-2">
             📝 Мои заметки
-            <span className="text-xs font-normal text-slate-600">только вы их видите</span>
+            <span className="text-xs font-normal text-stone-600">только вы их видите</span>
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {notes.map((n) => {
@@ -421,27 +410,27 @@ export default function ProfilePage() {
                   key={`${n.media_type}-${n.media_id}`}
                   href={href}
                   className="flex gap-3 rounded-xl p-3 border hover:border-amber-400/40 transition-colors min-w-0"
-                  style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+                  style={{ background: "#1b1613", borderColor: "#2e2723" }}
                 >
                   {POSTER(n.poster) ? (
                     <img src={POSTER(n.poster)} alt={n.title || ""} className="w-12 h-16 rounded-lg object-cover shrink-0" />
                   ) : (
-                    <div className="w-12 h-16 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 shrink-0">
+                    <div className="w-12 h-16 rounded-lg bg-stone-800 flex items-center justify-center text-stone-600 shrink-0">
                       {n.media_type === "tv" ? "📺" : "🎬"}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-slate-100 line-clamp-1">
+                      <p className="text-sm font-semibold text-stone-100 line-clamp-1">
                         {n.title || (n.media_type === "tv" ? "Сериал" : "Фильм")}
                       </p>
                       {n.media_type === "tv" && (
                         <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1 py-0.5 rounded shrink-0">сериал</span>
                       )}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
+                    <p className="text-xs text-stone-400 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
                     {n.updated_at && (
-                      <p className="text-[10px] text-slate-600 mt-1">
+                      <p className="text-[10px] text-stone-600 mt-1">
                         {new Date(n.updated_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
                     )}
@@ -456,8 +445,8 @@ export default function ProfilePage() {
       {/* Ratings list */}
       {profile.ratings.length === 0 ? (
         <div
-          className="rounded-xl p-8 border text-center text-slate-500 text-sm"
-          style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+          className="rounded-xl p-8 border text-center text-stone-500 text-sm"
+          style={{ background: "#1b1613", borderColor: "#2e2723" }}
         >
           {isMe
             ? "Вы ещё не оценивали фильмы и сериалы. Найдите что-нибудь в поиске!"
@@ -465,7 +454,7 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-slate-100">Рецензии</h2>
+          <h2 className="text-lg font-semibold text-stone-100">Рецензии</h2>
           {profile.ratings.map((r, idx) => {
             const isTV = r.media_type === "tv";
             const href = isTV ? `/tv/${r.movie_id}` : `/movies/${r.movie_id}`;
@@ -473,7 +462,7 @@ export default function ProfilePage() {
               <div
                 key={idx}
                 className="rounded-xl border overflow-hidden"
-                style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+                style={{ background: "#1b1613", borderColor: "#2e2723" }}
               >
                 <div className="flex gap-4 p-4">
                   {/* Poster */}
@@ -485,7 +474,7 @@ export default function ProfilePage() {
                         className="w-16 h-24 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-24 rounded-lg bg-slate-800 flex items-center justify-center text-slate-600 text-2xl">
+                      <div className="w-16 h-24 rounded-lg bg-stone-800 flex items-center justify-center text-stone-600 text-2xl">
                         {isTV ? "📺" : "🎬"}
                       </div>
                     )}
@@ -497,7 +486,7 @@ export default function ProfilePage() {
                       <div className="min-w-0">
                         <Link
                           href={href}
-                          className="text-base font-semibold text-slate-100 hover:text-amber-400 transition-colors line-clamp-1"
+                          className="text-base font-semibold text-stone-100 hover:text-amber-400 transition-colors line-clamp-1"
                         >
                           {r.movie_title}
                         </Link>
@@ -520,13 +509,13 @@ export default function ProfilePage() {
                     <CriteriaBars rating={r} />
 
                     {r.review && (
-                      <p className="text-sm text-slate-400 mt-2 line-clamp-3">
+                      <p className="text-sm text-stone-400 mt-2 line-clamp-3">
                         {stripMarkers(r.review)}
                       </p>
                     )}
 
                     <div className="flex items-center justify-between gap-2 mt-2">
-                      <span className="text-xs text-slate-600">
+                      <span className="text-xs text-stone-600">
                         {r.created_at
                           ? new Date(r.created_at).toLocaleDateString("ru-RU", {
                               day: "numeric",

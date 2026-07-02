@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0c1220;
-  --card: #141d2e;
-  --card-hover: #1a2640;
-  --border: #1e2d45;
+  --bg: #100d0b;
+  --card: #1b1613;
+  --card-hover: #241d19;
+  --border: #2e2723;
   --accent: #f5a623;
   --accent-dim: #c47e0e;
-  --text: #e8edf5;
-  --muted: #6b7d96;
+  --text: #f3ede3;
+  --muted: #9c9086;
 }
 
 * {
@@ -20,7 +20,7 @@
 body {
   background-color: var(--bg);
   color: var(--text);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
 }
 
@@ -70,7 +70,7 @@ input[type="range"]::-moz-range-thumb {
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
 /* ── Subtle thin scrollbar for recent reviews slider ── */
-.scrollbar-subtle { scrollbar-width: thin; scrollbar-color: #2a3a55 transparent; }
+.scrollbar-subtle { scrollbar-width: thin; scrollbar-color: #3a2f28 transparent; }
 .scrollbar-subtle::-webkit-scrollbar { height: 3px; }
 .scrollbar-subtle::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-subtle::-webkit-scrollbar-thumb { background: #2a3a55; border-radius: 2px; }
+.scrollbar-subtle::-webkit-scrollbar-thumb { background: #3a2f28; border-radius: 2px; }

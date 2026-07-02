@@ -12,6 +12,7 @@ import ReviewText from "@/app/components/ReviewText";
 import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
 import PrivateNote from "@/app/components/PrivateNote";
+import ScoreBadge, { scoreColor } from "@/app/components/Score";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -47,30 +48,14 @@ function calcTVScore(vals) {
   return Math.max(1, Math.min(10, score)).toFixed(2);
 }
 
-function ScoreColor({ score }) {
-  const n = parseFloat(score);
-  if (n >= 7.5) return "text-emerald-400";
-  if (n >= 5.5) return "text-amber-400";
-  return "text-red-400";
-}
-
-function ScoreBadge({ score, size = "lg" }) {
-  const cls = ScoreColor({ score });
-  return (
-    <span className={`font-bold ${cls} ${size === "lg" ? "text-4xl" : "text-base"}`}>
-      {score > 0 ? (typeof score === "number" ? score.toFixed(1) : score) : "—"}
-    </span>
-  );
-}
-
 function Tooltip({ tip, children }) {
   return (
     <div className="relative group/tip">
       {children}
       {tip && (
         <div
-          className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-slate-300 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
-          style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+          className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-stone-300 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
+          style={{ background: "#100d0b", border: "1px solid #2e2723" }}
         >
           {tip}
         </div>
@@ -81,19 +66,19 @@ function Tooltip({ tip, children }) {
 
 function CriteriaBar({ label, value, weight, main, tip }) {
   const pct = ((value - 1) / 9) * 100;
-  const barColor = main ? "bg-amber-400" : "bg-slate-500";
+  const barColor = main ? "bg-amber-400" : "bg-stone-500";
   return (
     <div className="flex items-center gap-2 text-sm">
       <Tooltip tip={tip}>
-        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-400 font-medium" : "text-slate-400"}`}>
+        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-400 font-medium" : "text-stone-400"}`}>
           {label}
         </div>
       </Tooltip>
-      <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-stone-800 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="w-6 text-right text-slate-300 font-semibold">{value}</div>
-      <div className="w-8 text-right text-slate-600 text-xs">{weight}</div>
+      <div className="w-6 text-right text-stone-300 font-semibold">{value}</div>
+      <div className="w-8 text-right text-stone-600 text-xs">{weight}</div>
     </div>
   );
 }
@@ -103,14 +88,14 @@ function Slider({ criterion, value, onChange }) {
     <div>
       <div className="flex justify-between items-center mb-1.5">
         <Tooltip tip={criterion.tip}>
-          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-400 font-semibold" : "text-slate-300"}`}>
+          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-400 font-semibold" : "text-stone-300"}`}>
             {criterion.label}
-            {criterion.main && <span className="ml-1 text-xs text-slate-500">(главный)</span>}
+            {criterion.main && <span className="ml-1 text-xs text-stone-500">(главный)</span>}
           </span>
         </Tooltip>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500">{criterion.weight}</span>
-          <span className={`text-lg font-bold w-8 text-right ${criterion.main ? "text-amber-400" : "text-slate-100"}`}>
+          <span className="text-xs text-stone-500">{criterion.weight}</span>
+          <span className={`text-lg font-bold w-8 text-right ${criterion.main ? "text-amber-400" : "text-stone-100"}`}>
             {value}
           </span>
         </div>
@@ -122,7 +107,7 @@ function Slider({ criterion, value, onChange }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <div className="flex justify-between text-xs text-slate-600 mt-0.5">
+      <div className="flex justify-between text-xs text-stone-600 mt-0.5">
         <span>1</span>
         <span>10</span>
       </div>
@@ -146,7 +131,7 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "#1e2d45" }}>
+    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "#2e2723" }}>
       {EMOJIS.map((emoji) => {
         const count = reactions[emoji] || 0;
         const active = myReaction === emoji;
@@ -158,9 +143,9 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm transition-all
               ${active
                 ? "bg-amber-400/20 border border-amber-400/50 text-amber-300"
-                : "border text-slate-400 hover:border-slate-500 hover:text-slate-200 disabled:opacity-40 disabled:cursor-default"
+                : "border text-stone-400 hover:border-stone-500 hover:text-stone-200 disabled:opacity-40 disabled:cursor-default"
               }`}
-            style={{ borderColor: active ? undefined : "#1e2d45" }}
+            style={{ borderColor: active ? undefined : "#2e2723" }}
             title={!token ? "Войдите чтобы реагировать" : undefined}
           >
             <span>{emoji}</span>
@@ -195,20 +180,20 @@ function Comments({ ratingId, initialComments, token, currentUserId }) {
   };
 
   return (
-    <div className="pt-2 border-t space-y-2" style={{ borderColor: "#1e2d45" }}>
+    <div className="pt-2 border-t space-y-2" style={{ borderColor: "#2e2723" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        className="text-xs text-stone-500 hover:text-stone-300 transition-colors"
       >
         {open ? "Скрыть комментарии ▲" : `Комментарии${comments.length > 0 ? ` (${comments.length})` : ""} ▼`}
       </button>
       {open && (
         <div className="space-y-2">
-          {comments.length === 0 && <p className="text-xs text-slate-600">Комментариев пока нет</p>}
+          {comments.length === 0 && <p className="text-xs text-stone-600">Комментариев пока нет</p>}
           {comments.map((c, i) => (
             <div key={c.id ?? i} className="text-xs overflow-hidden">
               <span className="text-amber-400 font-medium mr-2">{c.username}</span>
-              <span className="text-slate-400 break-all">{c.text}</span>
+              <span className="text-stone-400 break-all">{c.text}</span>
             </div>
           ))}
           {token && (
@@ -219,20 +204,20 @@ function Comments({ ratingId, initialComments, token, currentUserId }) {
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
                 maxLength={500}
                 placeholder="Написать комментарий..."
-                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-slate-100 outline-none focus:ring-1 focus:ring-amber-400/50"
-                style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-stone-100 outline-none focus:ring-1 focus:ring-amber-400/50"
+                style={{ background: "#100d0b", border: "1px solid #2e2723" }}
               />
               <button
                 onClick={submit}
                 disabled={sending || !text.trim()}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 transition"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 transition"
               >
                 →
               </button>
             </div>
           )}
           {error && <p className="text-xs text-red-400">{error}</p>}
-          {!token && <p className="text-xs text-slate-600">Войдите чтобы оставить комментарий</p>}
+          {!token && <p className="text-xs text-stone-600">Войдите чтобы оставить комментарий</p>}
         </div>
       )}
     </div>
@@ -422,13 +407,13 @@ export default function TvPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-slate-500 text-sm">Загрузка...</div>
+        <div className="text-stone-500 text-sm">Загрузка...</div>
       </div>
     );
   }
 
   if (!show) {
-    return <div className="text-center py-16 text-slate-500">Сериал не найден</div>;
+    return <div className="text-center py-16 text-stone-500">Сериал не найден</div>;
   }
 
   const communityScore = show.score || 0;
@@ -479,8 +464,8 @@ export default function TvPage() {
           />
         ) : (
           <div
-            className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-slate-600 text-5xl"
-            style={{ background: "#141d2e" }}
+            className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-600 text-5xl"
+            style={{ background: "#1b1613" }}
           >
             📺
           </div>
@@ -492,16 +477,16 @@ export default function TvPage() {
               📺 Сериал
             </span>
             {show.seasons && (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-stone-500">
                 {show.seasons} {show.seasons === 1 ? "сезон" : show.seasons < 5 ? "сезона" : "сезонов"}
               </span>
             )}
           </div>
 
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-100">
+          <h1 className="text-xl sm:text-2xl font-bold text-stone-100">
             {show.title}
             {show.year && (
-              <span className="ml-2 text-base font-normal text-slate-500">
+              <span className="ml-2 text-base font-normal text-stone-500">
                 ({show.year})
               </span>
             )}
@@ -509,7 +494,7 @@ export default function TvPage() {
 
           {show.overview && (
             <div className="mt-2">
-              <p className={`text-sm text-slate-400 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
+              <p className={`text-sm text-stone-400 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
                 {show.overview}
               </p>
               <button
@@ -523,7 +508,7 @@ export default function TvPage() {
 
           <div className="flex items-end gap-3 mt-4">
             <ScoreBadge score={communityScore} size="lg" />
-            <span className="text-slate-500 text-sm mb-1">
+            <span className="text-stone-500 text-sm mb-1">
               средняя оценка · {ratingCount}{" "}
               {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
             </span>
@@ -535,11 +520,11 @@ export default function TvPage() {
                 <span
                   key={b.label}
                   className="inline-flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1"
-                  style={{ background: "#0c1220", border: "1px solid #1e2d45" }}
+                  style={{ background: "#100d0b", border: "1px solid #2e2723" }}
                 >
-                  <span className="text-slate-400">{b.label}</span>
-                  <span className={`font-bold ${ScoreColor({ score: b.avg })}`}>{b.avg.toFixed(1)}</span>
-                  <span className="text-slate-600">· {b.n}</span>
+                  <span className="text-stone-400">{b.label}</span>
+                  <span className={`font-display font-medium ${scoreColor(b.avg)}`}>{b.avg.toFixed(1)}</span>
+                  <span className="text-stone-600">· {b.n}</span>
                 </span>
               ))}
             </div>
@@ -552,14 +537,14 @@ export default function TvPage() {
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
         <div className="space-y-4 order-2 lg:order-1 min-w-0">
-          <h2 className="text-lg font-semibold text-slate-100">
+          <h2 className="text-lg font-semibold text-stone-100">
             Рецензии ({reviews.length})
           </h2>
 
           {reviews.length === 0 && (
             <div
-              className="rounded-xl p-6 text-center text-slate-500 text-sm border"
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+              className="rounded-xl p-6 text-center text-stone-500 text-sm border"
+              style={{ background: "#1b1613", borderColor: "#2e2723" }}
             >
               Пока нет рецензий. Будьте первым!
             </div>
@@ -572,7 +557,7 @@ export default function TvPage() {
               className={`rounded-xl p-4 border space-y-3 scroll-mt-20 transition-all ${
                 highlightUser === r.user_id ? "ring-2 ring-amber-400" : ""
               }`}
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+              style={{ background: "#1b1613", borderColor: "#2e2723" }}
             >
               <div className="flex items-center justify-between">
                 <Link
@@ -602,12 +587,12 @@ export default function TvPage() {
               </div>
 
               {r.review && (
-                <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+                <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
                   <ReviewText text={r.review} />
                 </div>
               )}
 
-              <div className="text-xs text-slate-600">
+              <div className="text-xs text-stone-600">
                 {r.created_at
                   ? new Date(r.created_at).toLocaleDateString("ru-RU", {
                       day: "numeric", month: "long", year: "numeric",
@@ -637,19 +622,19 @@ export default function TvPage() {
           {!token ? (
             <div
               className="rounded-xl p-6 border text-center"
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+              style={{ background: "#1b1613", borderColor: "#2e2723" }}
             >
               {sessionExpired && (
                 <p className="text-sm text-amber-400 mb-3">
                   Сессия истекла. Войдите заново, чтобы оценить.
                 </p>
               )}
-              <p className="text-sm text-slate-400 mb-4">
+              <p className="text-sm text-stone-400 mb-4">
                 Войдите, чтобы оставить оценку
               </p>
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition"
               >
                 Войти
               </Link>
@@ -660,7 +645,7 @@ export default function TvPage() {
                 <div
                   key={r.rating_id}
                   className="rounded-xl p-5 border space-y-3"
-                  style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+                  style={{ background: "#1b1613", borderColor: "#2e2723" }}
                 >
                   <div className="flex items-center justify-between">
                     <span className="inline-block text-xs text-amber-400/80 bg-amber-400/10 px-2 py-0.5 rounded">
@@ -675,20 +660,20 @@ export default function TvPage() {
                     ))}
                   </div>
                   {r.review && (
-                    <div className="border-t pt-3" style={{ borderColor: "#1e2d45" }}>
+                    <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
                       <ReviewText text={r.review} muted />
                     </div>
                   )}
                   <div className="flex gap-2">
                     <button
                       onClick={() => openEdit(r)}
-                      className="flex-1 py-2 rounded-lg text-sm font-medium text-slate-300 border border-slate-700 hover:border-amber-400/50 hover:text-amber-400 transition"
+                      className="flex-1 py-2 rounded-lg text-sm font-medium text-stone-300 border border-stone-700 hover:border-amber-400/50 hover:text-amber-400 transition"
                     >
                       ✏️ Изменить
                     </button>
                     <button
                       onClick={() => removeRating(r.rating_id)}
-                      className="px-3 py-2 rounded-lg text-sm text-slate-500 border border-slate-700 hover:border-red-400/50 hover:text-red-400 transition"
+                      className="px-3 py-2 rounded-lg text-sm text-stone-500 border border-stone-700 hover:border-red-400/50 hover:text-red-400 transition"
                       aria-label="Удалить оценку"
                     >
                       🗑
@@ -701,51 +686,51 @@ export default function TvPage() {
                 canRateMore ? (
                   <button
                     onClick={openNew}
-                    className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 transition"
+                    className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition"
                   >
                     ＋ {addLabel}
                   </button>
                 ) : (
-                  <p className="text-xs text-slate-600 text-center">
+                  <p className="text-xs text-stone-600 text-center">
                     Вы оценили все вышедшие сезоны
                   </p>
                 )
               ) : (
             <div
               className="rounded-xl p-5 border space-y-5"
-              style={{ background: "#141d2e", borderColor: "#1e2d45" }}
+              style={{ background: "#1b1613", borderColor: "#2e2723" }}
             >
-              <h3 className="text-base font-semibold text-slate-100">
+              <h3 className="text-base font-semibold text-stone-100">
                 {editingId != null ? "Редактировать оценку" : "Новая оценка"}
               </h3>
 
               {show?.seasons > 1 && (
-                <div className="rounded-lg p-3 border" style={{ background: "#0c1220", borderColor: "#1e2d45" }}>
-                  <div className="text-xs font-medium text-slate-400 mb-2">Что оцениваешь</div>
-                  <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                <div className="rounded-lg p-3 border" style={{ background: "#100d0b", borderColor: "#2e2723" }}>
+                  <div className="text-xs font-medium text-stone-400 mb-2">Что оцениваешь</div>
+                  <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#0b1426", border: "1px solid #2e2723" }}>
                     <button type="button" onClick={() => setSeasonMode("all")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"}`}>
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-stone-900" : "text-stone-400 hover:text-stone-200"}`}>
                       Все сезоны
                     </button>
                     <button type="button" onClick={() => setSeasonMode("range")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "range" ? "bg-amber-400 text-slate-900" : "text-slate-400 hover:text-slate-200"}`}>
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "range" ? "bg-amber-400 text-stone-900" : "text-stone-400 hover:text-stone-200"}`}>
                       Выбрать
                     </button>
                   </div>
                   {seasonMode === "range" && (
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-300 mt-2">
-                      <span className="text-slate-500">с</span>
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-stone-300 mt-2">
+                      <span className="text-stone-500">с</span>
                       <select value={seasonFrom}
                         onChange={(e) => { const v = +e.target.value; setSeasonFrom(v); if (v > seasonTo) setSeasonTo(v); }}
-                        className="rounded-md px-2 py-1 text-slate-100 outline-none"
-                        style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                        className="rounded-md px-2 py-1 text-stone-100 outline-none"
+                        style={{ background: "#0b1426", border: "1px solid #2e2723" }}>
                         {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
-                      <span className="text-slate-500">по</span>
+                      <span className="text-stone-500">по</span>
                       <select value={seasonTo}
                         onChange={(e) => { const v = +e.target.value; setSeasonTo(v); if (v < seasonFrom) setSeasonFrom(v); }}
-                        className="rounded-md px-2 py-1 text-slate-100 outline-none"
-                        style={{ background: "#0b1426", border: "1px solid #1e2d45" }}>
+                        className="rounded-md px-2 py-1 text-stone-100 outline-none"
+                        style={{ background: "#0b1426", border: "1px solid #2e2723" }}>
                         {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                       <span className="text-xs text-amber-400 ml-auto">{seasonLabel(seasonFrom, seasonTo)}</span>
@@ -768,21 +753,21 @@ export default function TvPage() {
               {/* Live score */}
               <div
                 className="flex items-center justify-between rounded-lg px-4 py-3 border"
-                style={{ background: "#0c1220", borderColor: "#1e2d45" }}
+                style={{ background: "#100d0b", borderColor: "#2e2723" }}
               >
-                <span className="text-sm text-slate-400">Итоговая оценка</span>
-                <span className={`text-2xl font-bold ${ScoreColor({ score: parseFloat(preview) })}`}>
+                <span className="text-sm text-stone-400">Итоговая оценка</span>
+                <span className={`font-display text-2xl font-medium ${scoreColor(parseFloat(preview))}`}>
                   {preview}
                 </span>
               </div>
-              <p className="text-[10px] text-slate-700 text-center leading-relaxed -mt-3">
+              <p className="text-[10px] text-stone-700 text-center leading-relaxed -mt-3">
                 {TV_FORMULA_TEXT}
               </p>
 
               {/* Review editor */}
               <div>
-                <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                  Рецензия <span className="text-slate-600">(необязательно)</span>
+                <label className="block text-xs font-medium text-stone-400 mb-1.5">
+                  Рецензия <span className="text-stone-600">(необязательно)</span>
                 </label>
                 <ReviewEditor
                   value={reviewText}
@@ -800,13 +785,13 @@ export default function TvPage() {
               <button
                 onClick={submit}
                 disabled={submitting}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-slate-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
               >
                 {submitting ? "Сохраняем..." : editingId != null ? "Сохранить изменения" : "Опубликовать оценку"}
               </button>
               <button
                 onClick={cancelForm}
-                className="w-full py-2 rounded-lg text-sm text-slate-500 hover:text-slate-300 transition"
+                className="w-full py-2 rounded-lg text-sm text-stone-500 hover:text-stone-300 transition"
               >
                 Отмена
               </button>
@@ -828,8 +813,8 @@ export default function TvPage() {
       {/* Similar TV Shows */}
       {similar.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-slate-100 mb-4">Похожие сериалы</h2>
-          <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+          <h2 className="text-lg font-semibold text-stone-100 mb-4">Похожие сериалы</h2>
+          <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
             {similar.map((item) => (
               <Link
                 key={item.id}
@@ -844,16 +829,16 @@ export default function TvPage() {
                       className="w-28 h-40 object-cover"
                     />
                   ) : (
-                    <div className="w-28 h-40 bg-slate-800 flex items-center justify-center text-3xl text-slate-600">
+                    <div className="w-28 h-40 bg-stone-800 flex items-center justify-center text-3xl text-stone-600">
                       📺
                     </div>
                   )}
-                  <div className="px-1.5 py-1.5" style={{ background: "#141d2e" }}>
-                    <p className="text-xs text-slate-300 leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
+                  <div className="px-1.5 py-1.5" style={{ background: "#1b1613" }}>
+                    <p className="text-xs text-stone-300 leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
                       {item.title}
                     </p>
                     {item.year && (
-                      <p className="text-[10px] text-slate-600 mt-0.5">{item.year}</p>
+                      <p className="text-[10px] text-stone-600 mt-0.5">{item.year}</p>
                     )}
                   </div>
                 </div>

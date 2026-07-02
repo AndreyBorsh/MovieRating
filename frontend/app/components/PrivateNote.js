@@ -77,19 +77,19 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
   const hasNote = (savedRef.current || "").trim().length > 0;
 
   return (
-    <div className="rounded-xl border" style={{ background: "#141d2e", borderColor: "#1e2d45" }}>
+    <div className="rounded-xl border" style={{ background: "#1b1613", borderColor: "#2e2723" }}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-2.5 text-left group"
       >
-        <span className="text-sm text-slate-400 group-hover:text-slate-300 transition-colors flex items-center gap-2">
+        <span className="text-sm text-stone-400 group-hover:text-stone-300 transition-colors flex items-center gap-2">
           📝 Заметка для себя
           {!open && hasNote && (
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400/70" title="Есть заметка" />
           )}
         </span>
-        <span className="text-slate-600 text-xs">{open ? "▲" : "▼"}</span>
+        <span className="text-stone-600 text-xs">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
@@ -100,12 +100,12 @@ export default function PrivateNote({ mediaType, mediaId, token }) {
             onChange={(e) => setContent(e.target.value)}
             onBlur={flush}
             placeholder="Мысли по ходу просмотра, что не забыть, на чём остановились…"
-            className="w-full rounded-lg px-3 py-2 text-sm text-slate-200 outline-none focus:ring-1 focus:ring-amber-400/40 resize-y leading-relaxed"
-            style={{ background: "#0c1220", border: "1px solid #1e2d45", minHeight: 90 }}
+            className="w-full rounded-lg px-3 py-2 text-sm text-stone-200 outline-none focus:ring-1 focus:ring-amber-400/40 resize-y leading-relaxed"
+            style={{ background: "#100d0b", border: "1px solid #2e2723", minHeight: 90 }}
           />
-          <div className="flex items-center justify-between text-[11px] text-slate-600">
+          <div className="flex items-center justify-between text-[11px] text-stone-600">
             <span>🔒 Видите только вы</span>
-            <span className="text-slate-500">
+            <span className="text-stone-500">
               {status === "saving" ? "Сохранение…" : status === "saved" ? "Сохранено ✓" : ""}
             </span>
           </div>

@@ -133,12 +133,12 @@ function ReviewModal({ item, onClose }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(0,0,0,0.75)" }}
+      style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
       onClick={onClose}
     >
       <div
         className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
-        style={{ background: "rgba(255,255,255,0.9)", borderColor: "rgba(0,0,0,0.06)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", boxShadow: "0 20px 50px rgba(40,30,15,0.2)" }}
+        style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

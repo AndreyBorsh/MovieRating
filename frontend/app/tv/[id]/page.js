@@ -16,6 +16,7 @@ import ScoreBadge, { scoreColor } from "@/app/components/Score";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
+const BACKDROP_HERO = (p) => p && `/api/tmdb-image/w1280${p}`;
 
 // TV-specific criteria (different weights from movies)
 const TV_CRITERIA = [
@@ -452,83 +453,108 @@ export default function TvPage() {
     ? "Оценить сериал"
     : (allCovered && newSeasonOut ? "Оценить новый сезон" : "Оценить ещё сезоны");
 
+  const heroBackdrop = details?.backdrops?.[0];
+
   return (
     <div className="space-y-8">
       {/* ── Show header ── */}
-      <div className="flex flex-col sm:flex-row gap-5">
-        {POSTER_LG(show.poster) ? (
-          <img
-            src={POSTER_LG(show.poster)}
-            alt={show.title}
-            className="w-32 sm:w-40 rounded-xl object-cover shrink-0 shadow-lg self-start"
-          />
-        ) : (
-          <div
-            className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-600 text-5xl"
-            style={{ background: "#1b1613" }}
-          >
-            📺
-          </div>
+      <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: "#2e2723" }}>
+        {heroBackdrop && (
+          <>
+            <img
+              src={BACKDROP_HERO(heroBackdrop)}
+              alt=""
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div
+              className="absolute inset-0"
+              style={{ background: "linear-gradient(180deg, rgba(16,13,11,0.35) 0%, rgba(16,13,11,0.6) 45%, #100d0b 100%)" }}
+            />
+          </>
         )}
-
-        <div className="flex-1 min-w-0 py-1">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
-              📺 Сериал
-            </span>
-            {show.seasons && (
-              <span className="text-xs text-stone-500">
-                {show.seasons} {show.seasons === 1 ? "сезон" : show.seasons < 5 ? "сезона" : "сезонов"}
-              </span>
-            )}
-          </div>
-
-          <h1 className="text-xl sm:text-2xl font-bold text-stone-100">
-            {show.title}
-            {show.year && (
-              <span className="ml-2 text-base font-normal text-stone-500">
-                ({show.year})
-              </span>
-            )}
-          </h1>
-
-          {show.overview && (
-            <div className="mt-2">
-              <p className={`text-sm text-stone-400 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
-                {show.overview}
-              </p>
-              <button
-                onClick={() => setOverviewExpanded((v) => !v)}
-                className="text-xs text-amber-400 hover:text-amber-300 mt-1 transition-colors"
-              >
-                {overviewExpanded ? "Скрыть ▲" : "Читать далее ▼"}
-              </button>
+        <div
+          className="relative z-10 flex flex-col sm:flex-row gap-5 p-4 sm:p-7"
+          style={!heroBackdrop ? { background: "#1b1613" } : undefined}
+        >
+          {POSTER_LG(show.poster) ? (
+            <img
+              src={POSTER_LG(show.poster)}
+              alt={show.title}
+              className="w-32 sm:w-40 rounded-xl object-cover shrink-0 shadow-lg self-start"
+            />
+          ) : (
+            <div
+              className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-600 text-5xl"
+              style={{ background: "#1b1613" }}
+            >
+              📺
             </div>
           )}
 
-          <div className="flex items-end gap-3 mt-4">
-            <ScoreBadge score={communityScore} size="lg" />
-            <span className="text-stone-500 text-sm mb-1">
-              средняя оценка · {ratingCount}{" "}
-              {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
-            </span>
-          </div>
-
-          {showBreakdown && (
-            <div className="flex flex-wrap gap-2 mt-3">
-              {breakdown.map((b) => (
-                <span
-                  key={b.label}
-                  className="inline-flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1"
-                  style={{ background: "#100d0b", border: "1px solid #2e2723" }}
-                >
-                  <span className="text-stone-400">{b.label}</span>
-                  <span className={`font-display font-medium ${scoreColor(b.avg)}`}>{b.avg.toFixed(1)}</span>
-                  <span className="text-stone-600">· {b.n}</span>
+          <div className="flex-1 min-w-0 py-1">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-xs font-medium text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full border border-amber-400/20">
+                📺 Сериал
+              </span>
+              {show.seasons && (
+                <span className="text-xs text-stone-400">
+                  {show.seasons} {show.seasons === 1 ? "сезон" : show.seasons < 5 ? "сезона" : "сезонов"}
                 </span>
-              ))}
+              )}
             </div>
-          )}
+
+            <h1 className="font-serif text-2xl sm:text-3xl font-medium text-stone-100">
+              {show.title}
+              {show.year && (
+                <span className="ml-2 text-base font-normal text-stone-400">
+                  ({show.year})
+                </span>
+              )}
+            </h1>
+
+            {show.overview && (
+              <div className="mt-2">
+                <p className={`text-sm text-stone-300 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
+                  {show.overview}
+                </p>
+                <button
+                  onClick={() => setOverviewExpanded((v) => !v)}
+                  className="text-xs text-amber-400 hover:text-amber-300 mt-1 transition-colors"
+                >
+                  {overviewExpanded ? "Скрыть ▲" : "Читать далее ▼"}
+                </button>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 mt-4">
+              <div
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 flex items-center justify-center shrink-0"
+                style={{ borderColor: "rgba(251,191,36,0.35)", background: "rgba(16,13,11,0.55)" }}
+              >
+                <ScoreBadge score={communityScore} size="lg" />
+              </div>
+              <span className="text-stone-400 text-sm">
+                средняя оценка · {ratingCount}{" "}
+                {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
+              </span>
+            </div>
+
+            {showBreakdown && (
+              <div className="flex flex-wrap gap-2 mt-3">
+                {breakdown.map((b) => (
+                  <span
+                    key={b.label}
+                    className="inline-flex items-center gap-1.5 text-xs rounded-lg px-2.5 py-1"
+                    style={{ background: "rgba(16,13,11,0.7)", border: "1px solid #2e2723" }}
+                  >
+                    <span className="text-stone-400">{b.label}</span>
+                    <span className={`font-display font-medium ${scoreColor(b.avg)}`}>{b.avg.toFixed(1)}</span>
+                    <span className="text-stone-600">· {b.n}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

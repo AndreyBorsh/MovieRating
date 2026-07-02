@@ -63,7 +63,7 @@ function NotificationBell() {
       <button
         onClick={toggle}
         aria-label="Уведомления"
-        className="relative px-2 py-1.5 rounded-md text-stone-400 hover:text-stone-100 transition-colors flex items-center"
+        className="relative px-2 py-1.5 rounded-md text-stone-600 hover:text-stone-900 transition-colors flex items-center"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
           strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -81,10 +81,16 @@ function NotificationBell() {
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-xl border shadow-2xl z-50"
-            style={{ background: "#1b1613", borderColor: "#2e2723" }}
+            className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border z-50"
+            style={{
+              background: "rgba(255,255,255,0.85)",
+              borderColor: "rgba(0,0,0,0.06)",
+              backdropFilter: "blur(18px)",
+              WebkitBackdropFilter: "blur(18px)",
+              boxShadow: "0 16px 40px rgba(40,30,15,0.14)",
+            }}
           >
-            <div className="px-4 py-2.5 border-b text-sm font-semibold text-stone-200" style={{ borderColor: "#2e2723" }}>
+            <div className="px-4 py-2.5 border-b text-sm font-semibold text-stone-800" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
               Уведомления
             </div>
             {data.items.length === 0 ? (
@@ -94,8 +100,8 @@ function NotificationBell() {
                 <button
                   key={it.id}
                   onClick={() => go(it)}
-                  className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
-                  style={{ borderColor: "#2e2723" }}
+                  className="w-full text-left px-4 py-3 border-b hover:bg-black/5 transition-colors flex gap-2"
+                  style={{ borderColor: "rgba(0,0,0,0.08)" }}
                 >
                   <span className="text-base shrink-0">{
                     it.type === "reaction" ? "❤️"
@@ -106,9 +112,9 @@ function NotificationBell() {
                     : "💬"
                   }</span>
                   <div className="min-w-0">
-                    <p className="text-sm text-stone-300 leading-snug">{itemText(it)}</p>
+                    <p className="text-sm text-stone-700 leading-snug">{itemText(it)}</p>
                     {it.created_at && (
-                      <p className="text-[11px] text-stone-600 mt-0.5">
+                      <p className="text-[11px] text-stone-400 mt-0.5">
                         {new Date(it.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                       </p>
                     )}
@@ -135,8 +141,8 @@ export default function Header() {
         href={href}
         className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
           active
-            ? "text-amber-400 bg-amber-400/10"
-            : "text-stone-400 hover:text-stone-100"
+            ? "text-amber-600 bg-amber-400/10"
+            : "text-stone-600 hover:text-stone-900"
         }`}
       >
         {label}
@@ -151,17 +157,22 @@ export default function Header() {
 
   return (
     <header
-      className="sticky top-0 z-50 border-b"
-      style={{ background: "#100d0b", borderColor: "#2e2723" }}
+      className="sticky top-0 z-50"
+      style={{
+        background: "rgba(250,247,241,0.72)",
+        backdropFilter: "blur(16px)",
+        WebkitBackdropFilter: "blur(16px)",
+        borderBottom: "1px solid rgba(0,0,0,0.06)",
+      }}
     >
       <div className="max-w-6xl mx-auto px-2 sm:px-6 h-14 flex items-center justify-between gap-0.5 sm:gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="font-display text-lg sm:text-xl font-medium tracking-tight text-amber-400 shrink-0"
+          className="text-lg sm:text-xl font-extrabold tracking-tight text-amber-600 shrink-0"
         >
-          <span className="hidden sm:inline">🎬 What's Andrew Watching</span>
-          <span className="sm:hidden">🎬 WAW</span>
+          <span className="hidden sm:inline">What's Andrew Watching</span>
+          <span className="sm:hidden">WAW</span>
         </Link>
 
         {/* Nav */}
@@ -171,7 +182,7 @@ export default function Header() {
           <Link
             href="/giveaways"
             className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-              pathname === "/giveaways" ? "text-amber-400 bg-amber-400/10" : "text-stone-400 hover:text-stone-100"
+              pathname === "/giveaways" ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
             }`}
             title="Розыгрыши"
           >
@@ -182,7 +193,7 @@ export default function Header() {
             <Link
               href={`/profile/${user?.user_id}`}
               className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-                pathname === `/profile/${user?.user_id}` ? "text-amber-400 bg-amber-400/10" : "text-stone-400 hover:text-stone-100"
+                pathname === `/profile/${user?.user_id}` ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
               }`}
               title="Профиль"
             >
@@ -202,7 +213,7 @@ export default function Header() {
               </span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-stone-400 hover:text-red-400 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
+                className="text-sm text-stone-600 hover:text-rose-500 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Выйти
               </button>
@@ -211,13 +222,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="text-sm text-stone-400 hover:text-stone-100 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
+                className="text-sm text-stone-600 hover:text-stone-900 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
               >
                 Войти
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-medium text-amber-400 border border-amber-400/40 hover:bg-amber-400/10 transition-colors px-2.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
+                className="text-sm font-medium text-amber-600 border border-amber-400/40 hover:bg-amber-400/10 transition-colors px-2.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Регистрация
               </Link>

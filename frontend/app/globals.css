@@ -3,14 +3,13 @@
 @tailwind utilities;
 
 :root {
-  --bg: #100d0b;
-  --card: #1b1613;
-  --card-hover: #241d19;
-  --border: #2e2723;
-  --accent: #f5a623;
-  --accent-dim: #c47e0e;
-  --text: #f3ede3;
-  --muted: #9c9086;
+  --bg: #f5f2ec;
+  --card: rgba(255, 255, 255, 0.68);
+  --border: rgba(0, 0, 0, 0.07);
+  --accent: #d29a3c;
+  --accent-dim: #b6852c;
+  --text: #23201b;
+  --muted: #6b655c;
 }
 
 * {
@@ -18,10 +17,36 @@
 }
 
 body {
-  background-color: var(--bg);
+  background:
+    radial-gradient(110% 70% at 12% 0%, rgba(224, 169, 78, 0.12), transparent 46%),
+    radial-gradient(120% 90% at 96% 108%, rgba(150, 160, 175, 0.09), transparent 55%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   min-height: 100vh;
+}
+
+/* ── Frosted glass surfaces ── */
+.glass {
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 6px 22px rgba(40, 30, 15, 0.06);
+}
+.glass-flat {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+.glass-lift {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.glass-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 14px 32px rgba(40, 30, 15, 0.12);
 }
 
 /* ── Sliders ── */
@@ -31,7 +56,7 @@ input[type="range"] {
   width: 100%;
   height: 5px;
   border-radius: 3px;
-  background: var(--border);
+  background: rgba(0, 0, 0, 0.1);
   outline: none;
   cursor: pointer;
 }
@@ -62,15 +87,15 @@ input[type="range"]::-moz-range-thumb {
 
 /* ── Scrollbar ── */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 3px; }
 
 /* ── Hide scrollbar for horizontal sliders ── */
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
-/* ── Subtle thin scrollbar for recent reviews slider ── */
-.scrollbar-subtle { scrollbar-width: thin; scrollbar-color: #3a2f28 transparent; }
+/* ── Subtle thin scrollbar for horizontal rails ── */
+.scrollbar-subtle { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.2) transparent; }
 .scrollbar-subtle::-webkit-scrollbar { height: 3px; }
 .scrollbar-subtle::-webkit-scrollbar-track { background: transparent; }
-.scrollbar-subtle::-webkit-scrollbar-thumb { background: #3a2f28; border-radius: 2px; }
+.scrollbar-subtle::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 2px; }

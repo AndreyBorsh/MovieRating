@@ -63,7 +63,7 @@ function SearchContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-serif text-3xl sm:text-4xl font-medium text-stone-100 mb-1">Поиск</h1>
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900 mb-1">Поиск</h1>
         <p className="text-sm text-stone-500">
           Начните вводить название — фильмы и сериалы появятся сразу
         </p>
@@ -75,14 +75,14 @@ function SearchContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Название фильма или сериала..."
-          className="w-full rounded-xl px-5 py-3.5 pr-11 text-base text-stone-100 outline-none focus:ring-1 focus:ring-amber-400/50 transition"
-          style={{ background: "#1b1613", border: "1px solid #2e2723" }}
+          className="w-full rounded-xl px-5 py-3.5 pr-11 text-base text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 transition"
+          style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}
           autoFocus
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-200 transition"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800 transition"
             aria-label="Очистить"
           >
             ✕
@@ -92,7 +92,7 @@ function SearchContent() {
 
       {/* Filter chips (only when there are results) */}
       {results.length > 0 && (
-        <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#100d0b", border: "1px solid #2e2723" }}>
+        <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
           {FILTERS.map((f) => (
             <button
               key={f.key}
@@ -100,11 +100,11 @@ function SearchContent() {
               className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                 filter === f.key
                   ? "bg-amber-400 text-stone-900"
-                  : "text-stone-400 hover:text-stone-200"
+                  : "text-stone-600 hover:text-stone-800"
               }`}
             >
               {f.label}
-              <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-700" : "text-stone-600"}`}>
+              <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-700" : "text-stone-400"}`}>
                 {countFor(f.key)}
               </span>
             </button>
@@ -132,10 +132,9 @@ function SearchContent() {
               <Link
                 key={`${item.media_type}-${item.id}`}
                 href={href}
-                className="group rounded-xl overflow-hidden border transition-all hover:border-amber-400/40"
-                style={{ background: "#1b1613", borderColor: "#2e2723" }}
+                className="group glass glass-lift rounded-2xl overflow-hidden"
               >
-                <div className="relative h-52 bg-stone-800 overflow-hidden">
+                <div className="relative aspect-[2/3] bg-stone-200 overflow-hidden">
                   {POSTER(item.poster) ? (
                     <img
                       src={POSTER(item.poster)}
@@ -143,21 +142,21 @@ function SearchContent() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-600 text-4xl">
+                    <div className="w-full h-full flex items-center justify-center text-stone-400 text-4xl">
                       {item.media_type === "tv" ? "📺" : "🎬"}
                     </div>
                   )}
                   {item.year && (
-                    <div className="absolute top-2 left-2 bg-black/60 text-xs text-stone-300 px-1.5 py-0.5 rounded">
+                    <div className="absolute top-2 left-2 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.8)" }}>
                       {item.year}
                     </div>
                   )}
-                  <div className={`absolute top-2 right-2 bg-black/60 text-xs px-1.5 py-0.5 rounded font-medium ${item.media_type === "tv" ? "text-amber-400" : "text-sky-300"}`}>
+                  <div className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${item.media_type === "tv" ? "text-amber-700" : "text-sky-700"}`} style={{ background: "rgba(255,255,255,0.8)" }}>
                     {item.media_type === "tv" ? "сериал" : "фильм"}
                   </div>
                 </div>
                 <div className="p-3">
-                  <div className="font-serif text-sm font-medium text-stone-100 line-clamp-2 group-hover:text-amber-400 transition-colors">
+                  <div className="text-sm font-bold tracking-tight text-stone-900 line-clamp-2 group-hover:text-amber-600 transition-colors">
                     {item.title}
                   </div>
                   {item.overview && (

@@ -23,49 +23,46 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
 
   return (
     <div
-      className="rounded-2xl p-5 sm:p-6 border relative overflow-hidden"
-      style={{
-        background: "linear-gradient(110deg, #2a1f05 0%, #1a2b1a 55%, #1b1613 100%)",
-        borderColor: "#5a4a14",
-      }}
+      className="glass rounded-3xl p-5 sm:p-6 relative overflow-hidden"
+      style={{ background: "linear-gradient(120deg, rgba(245,196,81,0.22) 0%, rgba(255,255,255,0.7) 55%)" }}
     >
-      <div className="absolute -right-6 -top-6 text-[120px] opacity-10 select-none pointer-events-none">🎟</div>
+      <div className="absolute -right-4 -top-6 text-[120px] opacity-[0.08] select-none pointer-events-none">🎟</div>
       <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 justify-between">
         <div className="min-w-0">
-          <div className="text-xs font-semibold tracking-wider text-amber-400 uppercase mb-1">
-            🎬 Идёт розыгрыш билета в кино
+          <div className="text-[11px] font-bold tracking-[0.12em] text-amber-700 uppercase mb-1.5">
+            Идёт розыгрыш билета в кино
           </div>
-          <div className="text-xl sm:text-2xl font-bold text-stone-100 truncate">{g.title}</div>
-          {g.description && <p className="text-sm text-stone-400 mt-1 line-clamp-1">{g.description}</p>}
-          <p className="text-xs text-stone-500 mt-1">
+          <div className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 truncate">{g.title}</div>
+          {g.description && <p className="text-sm text-stone-600 mt-1 line-clamp-1">{g.description}</p>}
+          <p className="text-xs text-stone-500 mt-1.5">
             Участников: {g.entries}
             {more > 0 && <> · и ещё {more} {more === 1 ? "розыгрыш" : "розыгрыша"}</>}
           </p>
         </div>
 
-        <div className="shrink-0 flex flex-col items-stretch sm:items-end gap-1.5">
+        <div className="shrink-0 flex flex-col items-stretch sm:items-end gap-2">
           {!token ? (
-            <Link href="/login" className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition text-center">
+            <Link href="/login" className="px-5 py-2.5 rounded-full text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 shadow-[0_6px_18px_rgba(210,154,60,0.35)] hover:brightness-105 transition text-center">
               Войти и участвовать
             </Link>
           ) : g.entered ? (
-            <span className="text-sm text-emerald-400 font-medium text-center sm:text-right">
+            <span className="text-sm text-emerald-600 font-semibold text-center sm:text-right">
               ✓ Вы участвуете · {g.my_tickets ?? 0} 🎟
             </span>
           ) : (g.my_tickets || 0) > 0 ? (
             <button onClick={enter} disabled={busy}
-              className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
+              className="px-5 py-2.5 rounded-full text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 shadow-[0_6px_18px_rgba(210,154,60,0.35)] hover:brightness-105 disabled:opacity-50 transition">
               {busy ? "..." : `🎟 Участвовать · ${g.my_tickets}`}
             </button>
           ) : (
-            <span className="text-xs text-stone-400 text-center sm:text-right max-w-[220px]">
+            <span className="text-xs text-stone-600 text-center sm:text-right max-w-[220px]">
               Напишите рецензию от 100 слов после старта, чтобы получить билетик
             </span>
           )}
-          <Link href="/giveaways" className="text-xs text-amber-400/80 hover:text-amber-300 transition text-center sm:text-right">
+          <Link href="/giveaways" className="text-xs font-medium text-amber-700 hover:text-amber-600 transition text-center sm:text-right">
             Подробнее →
           </Link>
-          {err && <span className="text-xs text-red-400">{err}</span>}
+          {err && <span className="text-xs text-rose-500">{err}</span>}
         </div>
       </div>
     </div>
@@ -99,17 +96,17 @@ function CriteriaBar({ label, value, weight, main }) {
   const pct = ((value - 1) / 9) * 100;
   return (
     <div className="flex items-center gap-2 text-xs">
-      <div className={`w-20 shrink-0 ${main ? "text-amber-400 font-medium" : "text-stone-400"}`}>
+      <div className={`w-20 shrink-0 ${main ? "text-amber-600 font-medium" : "text-stone-600"}`}>
         {label}
       </div>
-      <div className="flex-1 h-1.5 bg-stone-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
         <div
-          className={`h-full rounded-full ${main ? "bg-amber-400" : "bg-stone-500"}`}
+          className={`h-full rounded-full ${main ? "bg-amber-400" : "bg-stone-400"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <div className="w-5 text-right text-stone-300 font-semibold">{value}</div>
-      <div className="w-7 text-right text-stone-600">{weight}</div>
+      <div className="w-5 text-right text-stone-700 font-semibold">{value}</div>
+      <div className="w-7 text-right text-stone-400">{weight}</div>
     </div>
   );
 }
@@ -140,8 +137,8 @@ function ReviewModal({ item, onClose }) {
       onClick={onClose}
     >
       <div
-        className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
-        style={{ background: "#1b1613", borderColor: "#2e2723" }}
+        className="relative w-full sm:max-w-lg rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
+        style={{ background: "rgba(255,255,255,0.9)", borderColor: "rgba(0,0,0,0.06)", backdropFilter: "blur(20px)", WebkitBackdropFilter: "blur(20px)", boxShadow: "0 20px 50px rgba(40,30,15,0.2)" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -154,7 +151,7 @@ function ReviewModal({ item, onClose }) {
                 className="w-10 h-14 rounded-lg object-cover shrink-0"
               />
             ) : (
-              <div className="w-10 h-14 rounded-lg bg-stone-800 flex items-center justify-center text-stone-600 shrink-0">
+              <div className="w-10 h-14 rounded-lg bg-stone-200 flex items-center justify-center text-stone-400 shrink-0">
                 {isTV ? "📺" : "🎬"}
               </div>
             )}
@@ -162,7 +159,7 @@ function ReviewModal({ item, onClose }) {
               <Link
                 href={mediaHref}
                 onClick={onClose}
-                className="text-sm font-semibold text-stone-100 hover:text-amber-400 transition-colors line-clamp-1"
+                className="text-sm font-semibold text-stone-900 hover:text-amber-600 transition-colors line-clamp-1"
               >
                 {item.movie_title}
               </Link>
@@ -170,7 +167,7 @@ function ReviewModal({ item, onClose }) {
                 <Link
                   href={`/profile/${item.user_id}`}
                   onClick={onClose}
-                  className="text-xs text-amber-400 hover:underline font-medium"
+                  className="text-xs text-amber-600 hover:underline font-medium"
                 >
                   {item.username}
                 </Link>
@@ -179,14 +176,14 @@ function ReviewModal({ item, onClose }) {
                   {item.score?.toFixed(1)}
                 </span>
                 {isTV && (
-                  <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
+                  <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
                 )}
               </div>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="text-stone-500 hover:text-stone-200 transition-colors text-lg leading-none shrink-0 mt-0.5"
+            className="text-stone-500 hover:text-stone-800 transition-colors text-lg leading-none shrink-0 mt-0.5"
           >
             ✕
           </button>
@@ -205,22 +202,22 @@ function ReviewModal({ item, onClose }) {
 
         {/* Review text */}
         {item.review && (
-          <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
+          <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
             <ReviewText text={item.review} />
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: "#2e2723" }}>
+        <div className="flex items-center justify-between border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
           {item.created_at && (
-            <span className="text-xs text-stone-600">
+            <span className="text-xs text-stone-400">
               {new Date(item.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
             </span>
           )}
           <Link
             href={mediaHref}
             onClick={onClose}
-            className="text-xs text-amber-400 hover:text-amber-300 transition-colors ml-auto"
+            className="text-xs text-amber-600 hover:text-amber-500 transition-colors ml-auto"
           >
             Перейти {isTV ? "к сериалу" : "к фильму"} →
           </Link>
@@ -234,30 +231,29 @@ function RecentCard({ item, onClick }) {
   const isTV = item.media_type === "tv";
   return (
     <div
-      className="flex gap-3 rounded-xl p-3 border cursor-pointer hover:border-amber-400/40 transition-colors"
-      style={{ background: "#1b1613", borderColor: "#2e2723" }}
+      className="glass glass-lift flex gap-3 rounded-2xl p-3 cursor-pointer"
       onClick={onClick}
     >
-      <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-stone-800 relative">
+      <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-stone-200 relative">
         {POSTER(item.poster) ? (
           <img src={POSTER(item.poster)} alt={item.movie_title} className="w-full h-full object-cover" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center text-stone-600 text-xl">
+          <div className="w-full h-full flex items-center justify-center text-stone-400 text-xl">
             {isTV ? "📺" : "🎬"}
           </div>
         )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-1">
-          <p className="text-sm font-semibold text-stone-100 line-clamp-1 flex-1">{item.movie_title}</p>
+          <p className="text-sm font-bold tracking-tight text-stone-900 line-clamp-1 flex-1">{item.movie_title}</p>
           {isTV && (
-            <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1 py-0.5 rounded shrink-0 mt-0.5">
+            <span className="text-[10px] text-amber-600 bg-amber-400/10 px-1 py-0.5 rounded shrink-0 mt-0.5">
               сериал
             </span>
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-amber-400 font-medium">{item.username}</span>
+          <span className="text-xs text-amber-600 font-medium">{item.username}</span>
           <span className="text-xs text-stone-500">·</span>
           <span className={`text-xs font-display font-medium ${scoreColor(item.score)}`}>{item.score?.toFixed(1)}</span>
         </div>
@@ -277,35 +273,31 @@ function MediaCard({ item }) {
   return (
     <Link href={href}>
       <div
-        className="rounded-xl overflow-hidden border transition-all hover:scale-[1.02] cursor-pointer"
-        style={{
-          background: legendary ? "linear-gradient(160deg, #1a1500 0%, #1b1613 60%)" : "#1b1613",
-          borderColor: legendary ? "#b8860b" : "#2e2723",
-          boxShadow: legendary ? "0 0 14px 2px rgba(212,175,55,0.18)" : "none",
-        }}
+        className="glass glass-lift rounded-2xl overflow-hidden cursor-pointer"
+        style={legendary ? { boxShadow: "0 8px 26px rgba(212,175,55,0.28)", borderColor: "rgba(210,154,60,0.45)" } : undefined}
       >
-        <div className="relative h-52 bg-stone-800 overflow-hidden">
+        <div className="relative aspect-[2/3] bg-stone-200 overflow-hidden">
           {POSTER(item.poster) ? (
             <img src={POSTER(item.poster)} alt={item.title} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-600 text-4xl">
+            <div className="w-full h-full flex items-center justify-center text-stone-400 text-4xl">
               {isTV ? "📺" : "🎬"}
             </div>
           )}
           {legendary && (
-            <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wide"
-                 style={{ background: "rgba(0,0,0,0.7)", color: "#d4af37", border: "1px solid #b8860b" }}>
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-sm"
+                 style={{ background: "rgba(255,255,255,0.85)", color: "#9a6a10" }}>
               ★ ШЕДЕВР
             </div>
           )}
           {isTV && !legendary && (
-            <div className="absolute top-2 right-2 bg-black/60 text-[10px] text-amber-400 px-1.5 py-0.5 rounded">
+            <div className="absolute top-2 right-2 text-[10px] font-medium text-amber-700 px-2 py-0.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.8)" }}>
               сериал
             </div>
           )}
         </div>
         <div className="p-3">
-          <div className={`font-serif text-sm font-medium line-clamp-1 ${legendary ? "text-amber-200" : "text-stone-100"}`}>
+          <div className="text-sm font-bold tracking-tight line-clamp-1 text-stone-900">
             {item.title}
           </div>
           <div className="flex items-center justify-between mt-1.5">
@@ -377,18 +369,18 @@ export default function HomePage() {
 
       {!token && (
         <div className="text-center py-12">
-          <h1 className="font-serif text-3xl sm:text-5xl font-medium text-stone-100 mb-3">
-            Оценивай фильмы и сериалы <span className="text-amber-400">объективно</span>
+          <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-stone-900 mb-4 leading-[1.05]">
+            Оценивай фильмы и сериалы <span className="text-amber-600">объективно</span>
           </h1>
-          <p className="text-stone-500 max-w-md mx-auto text-sm leading-relaxed">
+          <p className="text-stone-500 max-w-md mx-auto text-sm sm:text-base leading-relaxed">
             Шесть критериев оценки, умный алгоритм расчёта и полноценные рецензии —
             создай собственную критическую базу кинематографа.
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-6">
-            <Link href="/register" className="px-5 py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition">
+          <div className="flex flex-col sm:flex-row gap-3 justify-center items-center mt-7">
+            <Link href="/register" className="px-6 py-3 rounded-full text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 shadow-[0_6px_20px_rgba(210,154,60,0.4)] hover:brightness-105 transition">
               Начать
             </Link>
-            <Link href="/search" className="px-5 py-2.5 rounded-lg text-sm font-medium text-stone-300 border border-stone-700 hover:border-stone-500 transition">
+            <Link href="/search" className="glass px-6 py-3 rounded-full text-sm font-medium text-stone-700 hover:brightness-[0.98] transition">
               Поиск фильмов и сериалов
             </Link>
           </div>
@@ -401,7 +393,7 @@ export default function HomePage() {
         <>
           {recent.length > 0 && (
             <section>
-              <h2 className="font-serif text-xl font-medium text-stone-100 mb-4">Последние рецензии</h2>
+              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 mb-4">Последние рецензии</h2>
               <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-subtle">
                 {recent.slice(0, 9).map((item, i) => (
                   <div key={i} className="shrink-0 w-72 snap-start">
@@ -415,14 +407,13 @@ export default function HomePage() {
           {allItems.length > 0 && (
             <section>
               <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-                <h2 className="font-serif text-xl font-medium text-stone-100">Каталог оценённого</h2>
+                <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900">Каталог оценённого</h2>
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-stone-500 hidden sm:inline">Сортировка:</label>
                   <select
                     value={sort}
                     onChange={(e) => setSort(e.target.value)}
-                    className="text-sm text-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:ring-1 focus:ring-amber-400/50"
-                    style={{ background: "#100d0b", border: "1px solid #2e2723" }}
+                    className="glass text-sm text-stone-800 rounded-full px-3.5 py-2 outline-none focus:ring-1 focus:ring-amber-400/50"
                   >
                     <option value="count">По популярности</option>
                     <option value="score">По оценке</option>
@@ -433,19 +424,19 @@ export default function HomePage() {
               </div>
 
               {/* Filter tabs */}
-              <div className="flex gap-1 p-1 rounded-lg w-fit mb-4" style={{ background: "#100d0b", border: "1px solid #2e2723" }}>
+              <div className="glass flex gap-1 p-1 rounded-full w-fit mb-5">
                 {FILTER_TABS.map((f) => (
                   <button
                     key={f.key}
                     onClick={() => setFilter(f.key)}
-                    className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
+                    className={`px-3.5 sm:px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
                       filter === f.key
-                        ? "bg-amber-400 text-stone-900"
-                        : "text-stone-400 hover:text-stone-200"
+                        ? "bg-gradient-to-br from-amber-300 to-amber-500 text-stone-900 shadow-[0_3px_10px_rgba(210,154,60,0.3)]"
+                        : "text-stone-600 hover:text-stone-900"
                     }`}
                   >
                     {f.label}
-                    <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-700" : "text-stone-600"}`}>
+                    <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-800/70" : "text-stone-400"}`}>
                       {f.n}
                     </span>
                   </button>
@@ -471,7 +462,7 @@ export default function HomePage() {
               <div className="text-5xl mb-4">🎬</div>
               <p className="text-stone-500 text-sm">
                 Пока нет оценённых фильмов и сериалов.{" "}
-                <Link href="/search" className="text-amber-400 hover:underline">Найдите первый</Link>
+                <Link href="/search" className="text-amber-600 hover:underline">Найдите первый</Link>
               </p>
             </div>
           )}

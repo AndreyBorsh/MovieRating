@@ -49,11 +49,11 @@ function rankLabels(sorted) {
   return labels;
 }
 
-function Stat({ icon, value, label, color = "text-stone-100" }) {
+function Stat({ icon, value, label, color = "text-stone-900" }) {
   return (
     <div
       className="flex items-center gap-2.5 rounded-lg px-3 py-2 border"
-      style={{ background: "#100d0b", borderColor: "#2e2723" }}
+      style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
     >
       <span className="text-lg leading-none">{icon}</span>
       <div className="leading-tight">
@@ -84,7 +84,7 @@ function ProfileStats({ ratings, onOpen }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="font-serif text-xl font-medium text-stone-100">Статистика</h2>
+      <h2 className="text-xl font-bold tracking-tight text-stone-900">Статистика</h2>
 
       <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
         {/* Indicators — fixed, compact width */}
@@ -104,9 +104,9 @@ function ProfileStats({ ratings, onOpen }) {
         {/* Top by score — larger podium taking the rest */}
         <div
           className="rounded-xl px-4 py-3 border md:flex-1 flex flex-col"
-          style={{ background: "#100d0b", borderColor: "#2e2723" }}
+          style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
         >
-          <div className="text-xs text-stone-400 mb-3 text-center">🏆 Топ по оценке</div>
+          <div className="text-xs text-stone-600 mb-3 text-center">🏆 Топ по оценке</div>
           <div className="flex-1 flex flex-col sm:flex-row gap-3 sm:gap-5">
             <div className="flex items-end justify-center shrink-0">
               <Podium top={top} labels={topLabels} onOpen={onOpen} />
@@ -115,7 +115,7 @@ function ProfileStats({ ratings, onOpen }) {
             {top.length > 3 && (
               <div
                 className="flex-1 min-w-0 flex flex-col justify-center gap-1.5 border-t pt-3 sm:border-t-0 sm:pt-0 sm:border-l sm:pl-5"
-                style={{ borderColor: "#2e2723" }}
+                style={{ borderColor: "rgba(0,0,0,0.08)" }}
               >
                 {top.slice(3).map((r, i) => (
                   <button
@@ -129,11 +129,11 @@ function ProfileStats({ ratings, onOpen }) {
                       <img src={POSTER(r.poster)} alt={r.movie_title}
                         className="w-7 h-10 rounded object-cover shrink-0 group-hover:brightness-110 transition" />
                     ) : (
-                      <div className="w-7 h-10 rounded bg-stone-800 flex items-center justify-center text-xs shrink-0">
+                      <div className="w-7 h-10 rounded bg-stone-200 flex items-center justify-center text-xs shrink-0">
                         {r.media_type === "tv" ? "📺" : "🎬"}
                       </div>
                     )}
-                    <span className="flex-1 min-w-0 text-sm text-stone-300 truncate group-hover:text-amber-400 transition-colors">
+                    <span className="flex-1 min-w-0 text-sm text-stone-700 truncate group-hover:text-amber-600 transition-colors">
                       {r.movie_title}
                     </span>
                     <span className={`text-xs font-display font-medium shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
@@ -173,7 +173,7 @@ function Podium({ top, labels, onOpen }) {
             />
           ) : (
             <div
-              className={`${POSTER_CLS[rank]} rounded-lg bg-stone-800 flex items-center justify-center text-2xl`}
+              className={`${POSTER_CLS[rank]} rounded-lg bg-stone-200 flex items-center justify-center text-2xl`}
               style={{ border: `2px solid ${ACCENT[rank]}` }}
             >
               {r.media_type === "tv" ? "📺" : "🎬"}
@@ -210,14 +210,14 @@ function CriteriaBars({ rating }) {
         if (val == null) return null;
         return (
           <div key={k} className="flex items-center gap-2">
-            <span className="text-xs text-stone-600 w-20 shrink-0">{label}</span>
-            <div className="flex-1 h-1 bg-stone-800 rounded-full overflow-hidden">
+            <span className="text-xs text-stone-400 w-20 shrink-0">{label}</span>
+            <div className="flex-1 h-1 bg-stone-200 rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full ${k === "overall" ? "bg-amber-400" : "bg-stone-500"}`}
+                className={`h-full rounded-full ${k === "overall" ? "bg-amber-400" : "bg-stone-400"}`}
                 style={{ width: `${((val - 1) / 9) * 100}%` }}
               />
             </div>
-            <span className="text-xs text-stone-400 w-4 text-right">{val}</span>
+            <span className="text-xs text-stone-600 w-4 text-right">{val}</span>
           </div>
         );
       })}
@@ -237,7 +237,7 @@ function ReviewModal({ rating, onClose }) {
     >
       <div
         className="relative w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
-        style={{ background: "#1b1613", borderColor: "#2e2723" }}
+        style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-3">
@@ -245,45 +245,45 @@ function ReviewModal({ rating, onClose }) {
             {POSTER(rating.poster) ? (
               <img src={POSTER(rating.poster)} alt={rating.movie_title} className="w-14 h-20 rounded-lg object-cover shrink-0" />
             ) : (
-              <div className="w-14 h-20 rounded-lg bg-stone-800 flex items-center justify-center text-2xl shrink-0">
+              <div className="w-14 h-20 rounded-lg bg-stone-200 flex items-center justify-center text-2xl shrink-0">
                 {isTV ? "📺" : "🎬"}
               </div>
             )}
             <div className="min-w-0">
-              <div className="font-serif text-base font-medium text-stone-100 leading-tight">{rating.movie_title}</div>
+              <div className="text-base font-bold tracking-tight text-stone-900 leading-tight">{rating.movie_title}</div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {isTV && (
-                  <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
+                  <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
                 )}
                 {isTV && seasonLabel(rating.season_from, rating.season_to) && (
-                  <span className="text-xs text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded">📺 {seasonLabel(rating.season_from, rating.season_to)}</span>
+                  <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">📺 {seasonLabel(rating.season_from, rating.season_to)}</span>
                 )}
               </div>
               <div className="mt-1"><ScoreBadge score={rating.score} /></div>
             </div>
           </div>
-          <button onClick={onClose} className="text-stone-500 hover:text-stone-200 transition text-lg leading-none shrink-0">✕</button>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-800 transition text-lg leading-none shrink-0">✕</button>
         </div>
 
         <CriteriaBars rating={rating} />
 
         {rating.review ? (
-          <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
+          <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
             <ReviewText text={rating.review} />
           </div>
         ) : (
-          <div className="border-t pt-3 text-sm text-stone-600 italic" style={{ borderColor: "#2e2723" }}>
+          <div className="border-t pt-3 text-sm text-stone-400 italic" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
             Без текстовой рецензии
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "#2e2723" }}>
-          <span className="text-xs text-stone-600">
+        <div className="flex items-center justify-between gap-2 border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+          <span className="text-xs text-stone-400">
             {rating.created_at
               ? new Date(rating.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
               : ""}
           </span>
-          <Link href={href} className="text-xs text-amber-400 hover:text-amber-300 transition shrink-0">
+          <Link href={href} className="text-xs text-amber-600 hover:text-amber-500 transition shrink-0">
             Открыть страницу {isTV ? "сериала" : "фильма"} →
           </Link>
         </div>
@@ -356,16 +356,16 @@ export default function ProfilePage() {
       {/* Profile header */}
       <div
         className="rounded-xl p-6 border flex items-center gap-6"
-        style={{ background: "#1b1613", borderColor: "#2e2723" }}
+        style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
       >
-        <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center font-display text-2xl font-medium text-amber-400 shrink-0">
+        <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center font-display text-2xl font-medium text-amber-600 shrink-0">
           {profile.username.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="font-serif text-2xl font-medium text-stone-100">
+          <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">
             {profile.username}
             {isMe && (
-              <span className="ml-2 text-xs font-normal text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
+              <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-400/10 px-2 py-0.5 rounded-full">
                 вы
               </span>
             )}
@@ -375,16 +375,16 @@ export default function ProfilePage() {
               На платформе с {joined}
             </div>
           )}
-          <div className="flex flex-wrap gap-4 mt-2 text-sm text-stone-400">
+          <div className="flex flex-wrap gap-4 mt-2 text-sm text-stone-600">
             {movieCount > 0 && (
               <span>
-                <span className="text-stone-100 font-semibold">{movieCount}</span>{" "}
+                <span className="text-stone-900 font-semibold">{movieCount}</span>{" "}
                 {movieCount === 1 ? "фильм" : movieCount < 5 ? "фильма" : "фильмов"}
               </span>
             )}
             {tvCount > 0 && (
               <span>
-                <span className="text-stone-100 font-semibold">{tvCount}</span>{" "}
+                <span className="text-stone-900 font-semibold">{tvCount}</span>{" "}
                 {tvCount === 1 ? "сериал" : tvCount < 5 ? "сериала" : "сериалов"}
               </span>
             )}
@@ -398,9 +398,9 @@ export default function ProfilePage() {
       {/* My private notes (own profile only) */}
       {isMe && notes.length > 0 && (
         <div className="space-y-3">
-          <h2 className="font-serif text-xl font-medium text-stone-100 flex items-center gap-2">
+          <h2 className="text-xl font-bold tracking-tight text-stone-900 flex items-center gap-2">
             📝 Мои заметки
-            <span className="text-xs font-normal text-stone-600">только вы их видите</span>
+            <span className="text-xs font-normal text-stone-400">только вы их видите</span>
           </h2>
           <div className="grid sm:grid-cols-2 gap-3">
             {notes.map((n) => {
@@ -410,27 +410,27 @@ export default function ProfilePage() {
                   key={`${n.media_type}-${n.media_id}`}
                   href={href}
                   className="flex gap-3 rounded-xl p-3 border hover:border-amber-400/40 transition-colors min-w-0"
-                  style={{ background: "#1b1613", borderColor: "#2e2723" }}
+                  style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
                 >
                   {POSTER(n.poster) ? (
                     <img src={POSTER(n.poster)} alt={n.title || ""} className="w-12 h-16 rounded-lg object-cover shrink-0" />
                   ) : (
-                    <div className="w-12 h-16 rounded-lg bg-stone-800 flex items-center justify-center text-stone-600 shrink-0">
+                    <div className="w-12 h-16 rounded-lg bg-stone-200 flex items-center justify-center text-stone-400 shrink-0">
                       {n.media_type === "tv" ? "📺" : "🎬"}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-semibold text-stone-100 line-clamp-1">
+                      <p className="text-sm font-semibold text-stone-900 line-clamp-1">
                         {n.title || (n.media_type === "tv" ? "Сериал" : "Фильм")}
                       </p>
                       {n.media_type === "tv" && (
-                        <span className="text-[10px] text-amber-400/70 bg-amber-400/10 px-1 py-0.5 rounded shrink-0">сериал</span>
+                        <span className="text-[10px] text-amber-600 bg-amber-400/10 px-1 py-0.5 rounded shrink-0">сериал</span>
                       )}
                     </div>
-                    <p className="text-xs text-stone-400 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
+                    <p className="text-xs text-stone-600 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
                     {n.updated_at && (
-                      <p className="text-[10px] text-stone-600 mt-1">
+                      <p className="text-[10px] text-stone-400 mt-1">
                         {new Date(n.updated_at).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })}
                       </p>
                     )}
@@ -446,7 +446,7 @@ export default function ProfilePage() {
       {profile.ratings.length === 0 ? (
         <div
           className="rounded-xl p-8 border text-center text-stone-500 text-sm"
-          style={{ background: "#1b1613", borderColor: "#2e2723" }}
+          style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
         >
           {isMe
             ? "Вы ещё не оценивали фильмы и сериалы. Найдите что-нибудь в поиске!"
@@ -454,7 +454,7 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="font-serif text-xl font-medium text-stone-100">Рецензии</h2>
+          <h2 className="text-xl font-bold tracking-tight text-stone-900">Рецензии</h2>
           {profile.ratings.map((r, idx) => {
             const isTV = r.media_type === "tv";
             const href = isTV ? `/tv/${r.movie_id}` : `/movies/${r.movie_id}`;
@@ -462,7 +462,7 @@ export default function ProfilePage() {
               <div
                 key={idx}
                 className="rounded-xl border overflow-hidden"
-                style={{ background: "#1b1613", borderColor: "#2e2723" }}
+                style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
               >
                 <div className="flex gap-4 p-4">
                   {/* Poster */}
@@ -474,7 +474,7 @@ export default function ProfilePage() {
                         className="w-16 h-24 rounded-lg object-cover"
                       />
                     ) : (
-                      <div className="w-16 h-24 rounded-lg bg-stone-800 flex items-center justify-center text-stone-600 text-2xl">
+                      <div className="w-16 h-24 rounded-lg bg-stone-200 flex items-center justify-center text-stone-400 text-2xl">
                         {isTV ? "📺" : "🎬"}
                       </div>
                     )}
@@ -486,18 +486,18 @@ export default function ProfilePage() {
                       <div className="min-w-0">
                         <Link
                           href={href}
-                          className="font-serif text-base font-medium text-stone-100 hover:text-amber-400 transition-colors line-clamp-1"
+                          className="text-base font-bold tracking-tight text-stone-900 hover:text-amber-600 transition-colors line-clamp-1"
                         >
                           {r.movie_title}
                         </Link>
                         <div className="flex flex-wrap gap-1 mt-0.5">
                           {isTV && (
-                            <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                            <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">
                               сериал
                             </span>
                           )}
                           {isTV && seasonLabel(r.season_from, r.season_to) && (
-                            <span className="text-xs text-amber-400/80 bg-amber-400/10 px-1.5 py-0.5 rounded">
+                            <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">
                               📺 {seasonLabel(r.season_from, r.season_to)}
                             </span>
                           )}
@@ -509,13 +509,13 @@ export default function ProfilePage() {
                     <CriteriaBars rating={r} />
 
                     {r.review && (
-                      <p className="text-sm text-stone-400 mt-2 line-clamp-3">
+                      <p className="text-sm text-stone-600 mt-2 line-clamp-3">
                         {stripMarkers(r.review)}
                       </p>
                     )}
 
                     <div className="flex items-center justify-between gap-2 mt-2">
-                      <span className="text-xs text-stone-600">
+                      <span className="text-xs text-stone-400">
                         {r.created_at
                           ? new Date(r.created_at).toLocaleDateString("ru-RU", {
                               day: "numeric",
@@ -526,7 +526,7 @@ export default function ProfilePage() {
                       </span>
                       <button
                         onClick={() => setOpenReview(r)}
-                        className="text-xs text-amber-400 hover:text-amber-300 transition-colors shrink-0"
+                        className="text-xs text-amber-600 hover:text-amber-500 transition-colors shrink-0"
                       >
                         Открыть рецензию →
                       </button>

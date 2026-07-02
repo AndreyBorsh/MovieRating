@@ -49,8 +49,8 @@ function Tooltip({ tip, children }) {
     <div className="relative group/tip">
       {children}
       {tip && (
-        <div className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-stone-300 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
-             style={{ background: "#100d0b", border: "1px solid #2e2723" }}>
+        <div className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-stone-700 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
+             style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
           {tip}
         </div>
       )}
@@ -60,19 +60,19 @@ function Tooltip({ tip, children }) {
 
 function CriteriaBar({ label, value, weight, main, tip }) {
   const pct = ((value - 1) / 9) * 100;
-  const barColor = main ? "bg-amber-400" : "bg-stone-500";
+  const barColor = main ? "bg-amber-400" : "bg-stone-400";
   return (
     <div className="flex items-center gap-2 text-sm">
       <Tooltip tip={tip}>
-        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-400 font-medium" : "text-stone-400"}`}>
+        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-600 font-medium" : "text-stone-600"}`}>
           {label}
         </div>
       </Tooltip>
-      <div className="flex-1 h-1.5 bg-stone-800 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="w-6 text-right text-stone-300 font-semibold">{value}</div>
-      <div className="w-8 text-right text-stone-600 text-xs">{weight}</div>
+      <div className="w-6 text-right text-stone-700 font-semibold">{value}</div>
+      <div className="w-8 text-right text-stone-400 text-xs">{weight}</div>
     </div>
   );
 }
@@ -82,7 +82,7 @@ function Slider({ criterion, value, onChange }) {
     <div>
       <div className="flex justify-between items-center mb-1.5">
         <Tooltip tip={criterion.tip}>
-          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-400 font-semibold" : "text-stone-300"}`}>
+          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-600 font-semibold" : "text-stone-700"}`}>
             {criterion.label}
             {criterion.main && <span className="ml-1 text-xs text-stone-500">(главный)</span>}
           </span>
@@ -91,7 +91,7 @@ function Slider({ criterion, value, onChange }) {
           <span className="text-xs text-stone-500">{criterion.weight}</span>
           <span
             className={`text-lg font-bold w-8 text-right ${
-              criterion.main ? "text-amber-400" : "text-stone-100"
+              criterion.main ? "text-amber-600" : "text-stone-900"
             }`}
           >
             {value}
@@ -105,7 +105,7 @@ function Slider({ criterion, value, onChange }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <div className="flex justify-between text-xs text-stone-600 mt-0.5">
+      <div className="flex justify-between text-xs text-stone-400 mt-0.5">
         <span>1</span>
         <span>10</span>
       </div>
@@ -129,7 +129,7 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "#2e2723" }}>
+    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
       {EMOJIS.map((emoji) => {
         const count = reactions[emoji] || 0;
         const active = myReaction === emoji;
@@ -140,10 +140,10 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
             disabled={!token || pending}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm transition-all
               ${active
-                ? "bg-amber-400/20 border border-amber-400/50 text-amber-300"
-                : "border text-stone-400 hover:border-stone-500 hover:text-stone-200 disabled:opacity-40 disabled:cursor-default"
+                ? "bg-amber-400/20 border border-amber-400/50 text-amber-500"
+                : "border text-stone-600 hover:border-stone-400 hover:text-stone-800 disabled:opacity-40 disabled:cursor-default"
               }`}
-            style={{ borderColor: active ? undefined : "#2e2723" }}
+            style={{ borderColor: active ? undefined : "rgba(0,0,0,0.08)" }}
             title={!token ? "Войдите чтобы реагировать" : undefined}
           >
             <span>{emoji}</span>
@@ -180,10 +180,10 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
   };
 
   return (
-    <div className="pt-2 border-t space-y-2" style={{ borderColor: "#2e2723" }}>
+    <div className="pt-2 border-t space-y-2" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-stone-500 hover:text-stone-300 transition-colors"
+        className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
       >
         {open ? "Скрыть комментарии ▲" : `Комментарии${comments.length > 0 ? ` (${comments.length})` : ""} ▼`}
       </button>
@@ -191,12 +191,12 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
       {open && (
         <div className="space-y-2">
           {comments.length === 0 && (
-            <p className="text-xs text-stone-600">Комментариев пока нет</p>
+            <p className="text-xs text-stone-400">Комментариев пока нет</p>
           )}
           {comments.map((c, i) => (
             <div key={c.id ?? i} className="text-xs overflow-hidden">
-              <span className="text-amber-400 font-medium mr-2">{c.username}</span>
-              <span className="text-stone-400 break-all">{c.text}</span>
+              <span className="text-amber-600 font-medium mr-2">{c.username}</span>
+              <span className="text-stone-600 break-all">{c.text}</span>
             </div>
           ))}
 
@@ -208,8 +208,8 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
                 maxLength={500}
                 placeholder="Написать комментарий..."
-                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-stone-100 outline-none focus:ring-1 focus:ring-amber-400/50"
-                style={{ background: "#100d0b", border: "1px solid #2e2723" }}
+                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
+                style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}
               />
               <button
                 onClick={submit}
@@ -220,9 +220,9 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
               </button>
             </div>
           )}
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-rose-500">{error}</p>}
           {!token && (
-            <p className="text-xs text-stone-600">Войдите чтобы оставить комментарий</p>
+            <p className="text-xs text-stone-400">Войдите чтобы оставить комментарий</p>
           )}
         </div>
       )}
@@ -394,7 +394,7 @@ export default function MoviePage() {
   return (
     <div className="space-y-8">
       {/* ── Movie header ── */}
-      <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: "#2e2723" }}>
+      <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
         {heroBackdrop && (
           <>
             <img
@@ -402,13 +402,10 @@ export default function MoviePage() {
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0" style={{ background: "rgba(16,13,11,0.35)" }} />
+            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.12)" }} />
           </>
         )}
-        <div
-          className="relative z-10 flex flex-col sm:flex-row gap-5 p-4 sm:p-7"
-          style={!heroBackdrop ? { background: "#1b1613" } : undefined}
-        >
+        <div className="relative z-10 flex flex-col sm:flex-row gap-5 p-4 sm:p-7">
           {POSTER_LG(movie.poster) ? (
             <img
               src={POSTER_LG(movie.poster)}
@@ -417,21 +414,21 @@ export default function MoviePage() {
             />
           ) : (
             <div
-              className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-600 text-5xl"
-              style={{ background: "#1b1613" }}
+              className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-400 text-5xl"
+              style={{ background: "rgba(255,255,255,0.72)" }}
             >
               🎬
             </div>
           )}
 
           <div
-            className={`flex-1 min-w-0 py-1 ${heroBackdrop ? "rounded-xl p-3 sm:p-4 backdrop-blur-sm" : ""}`}
-            style={heroBackdrop ? { background: "rgba(16,13,11,0.6)" } : undefined}
+            className="flex-1 min-w-0 rounded-2xl p-4 sm:p-5"
+            style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(0,0,0,0.05)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
           >
-            <h1 className="font-serif text-2xl sm:text-3xl font-medium text-stone-100">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900">
               {movie.title}
               {movie.year && (
-                <span className="ml-2 text-base font-normal text-stone-400">
+                <span className="ml-2 text-base font-medium text-stone-500">
                   ({movie.year})
                 </span>
               )}
@@ -439,12 +436,12 @@ export default function MoviePage() {
 
             {movie.overview && (
               <div className="mt-2">
-                <p className={`text-sm text-stone-300 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
+                <p className={`text-sm text-stone-600 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
                   {movie.overview}
                 </p>
                 <button
                   onClick={() => setOverviewExpanded((v) => !v)}
-                  className="text-xs text-amber-400 hover:text-amber-300 mt-1 transition-colors"
+                  className="text-xs text-amber-600 hover:text-amber-500 mt-1 transition-colors"
                 >
                   {overviewExpanded ? "Скрыть ▲" : "Читать далее ▼"}
                 </button>
@@ -454,11 +451,11 @@ export default function MoviePage() {
             <div className="flex items-center gap-3 mt-4">
               <div
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 flex items-center justify-center shrink-0"
-                style={{ borderColor: "rgba(251,191,36,0.35)", background: "rgba(16,13,11,0.55)" }}
+                style={{ borderColor: "rgba(210,154,60,0.5)", background: "rgba(255,255,255,0.9)", boxShadow: "0 4px 16px rgba(40,30,15,0.1)" }}
               >
                 <ScoreBadge score={communityScore} size="lg" />
               </div>
-              <span className="text-stone-400 text-sm">
+              <span className="text-stone-600 text-sm">
                 средняя оценка · {ratingCount}{" "}
                 {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
               </span>
@@ -472,14 +469,14 @@ export default function MoviePage() {
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
         <div className="space-y-4 order-2 lg:order-1 min-w-0">
-          <h2 className="text-lg font-semibold text-stone-100">
+          <h2 className="text-lg font-semibold text-stone-900">
             Рецензии ({reviews.length})
           </h2>
 
           {reviews.length === 0 && (
             <div
               className="rounded-xl p-6 text-center text-stone-500 text-sm border"
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
               Пока нет рецензий. Будьте первым!
             </div>
@@ -492,12 +489,12 @@ export default function MoviePage() {
               className={`rounded-xl p-4 border space-y-3 scroll-mt-20 transition-all ${
                 highlightUser === r.user_id ? "ring-2 ring-amber-400" : ""
               }`}
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
               <div className="flex items-center justify-between">
                 <Link
                   href={`/profile/${r.user_id}`}
-                  className="text-sm font-semibold text-amber-400 hover:underline"
+                  className="text-sm font-semibold text-amber-600 hover:underline"
                 >
                   {r.username}
                 </Link>
@@ -518,13 +515,13 @@ export default function MoviePage() {
               </div>
 
               {r.review && (
-                <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
+                <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
                   <ReviewText text={r.review} />
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <div className="text-xs text-stone-600">
+                <div className="text-xs text-stone-400">
                   {r.created_at
                     ? new Date(r.created_at).toLocaleDateString("ru-RU", {
                         day: "numeric",
@@ -558,14 +555,14 @@ export default function MoviePage() {
           {!token ? (
             <div
               className="rounded-xl p-6 border text-center"
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
               {sessionExpired && (
-                <p className="text-sm text-amber-400 mb-3">
+                <p className="text-sm text-amber-600 mb-3">
                   Сессия истекла. Войдите заново, чтобы оценить.
                 </p>
               )}
-              <p className="text-sm text-stone-400 mb-4">
+              <p className="text-sm text-stone-600 mb-4">
                 Войдите, чтобы оставить оценку
               </p>
               <Link
@@ -578,10 +575,10 @@ export default function MoviePage() {
           ) : myRating && !editing ? (
             <div
               className="rounded-xl p-5 border space-y-3"
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-stone-300">Ваша оценка</span>
+                <span className="text-sm font-semibold text-stone-700">Ваша оценка</span>
                 <ScoreBadge score={myRating.score} size="sm" />
               </div>
               <div className="space-y-1.5">
@@ -591,20 +588,20 @@ export default function MoviePage() {
                 ))}
               </div>
               {myRating.review && (
-                <div className="border-t pt-3" style={{ borderColor: "#2e2723" }}>
+                <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
                   <ReviewText text={myRating.review} muted />
                 </div>
               )}
               <div className="flex gap-2">
                 <button
                   onClick={startEditing}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium text-stone-300 border border-stone-700 hover:border-amber-400/50 hover:text-amber-400 transition"
+                  className="flex-1 py-2 rounded-lg text-sm font-medium text-stone-700 border border-stone-300 hover:border-amber-400/50 hover:text-amber-600 transition"
                 >
                   ✏️ Редактировать
                 </button>
                 <button
                   onClick={removeRating}
-                  className="px-3 py-2 rounded-lg text-sm text-stone-500 border border-stone-700 hover:border-red-400/50 hover:text-red-400 transition"
+                  className="px-3 py-2 rounded-lg text-sm text-stone-500 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition"
                   aria-label="Удалить оценку"
                 >
                   🗑
@@ -614,18 +611,18 @@ export default function MoviePage() {
           ) : success && !editing ? (
             <div
               className="rounded-xl p-6 border text-center"
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
               <div className="text-3xl mb-2">✅</div>
-              <p className="text-sm text-stone-300 font-medium">Оценка сохранена!</p>
+              <p className="text-sm text-stone-700 font-medium">Оценка сохранена!</p>
               <p className="text-xs text-stone-500 mt-1">Ваша рецензия добавлена</p>
             </div>
           ) : (editing || (!myRating && !success)) && (
             <div
               className="rounded-xl p-5 border space-y-5"
-              style={{ background: "#1b1613", borderColor: "#2e2723" }}
+              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
             >
-              <h3 className="text-base font-semibold text-stone-100">
+              <h3 className="text-base font-semibold text-stone-900">
                 {editing ? "Редактировать оценку" : "Оценить фильм"}
               </h3>
 
@@ -643,9 +640,9 @@ export default function MoviePage() {
               {/* Live score */}
               <div
                 className="flex items-center justify-between rounded-lg px-4 py-3 border"
-                style={{ background: "#100d0b", borderColor: "#2e2723" }}
+                style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
               >
-                <span className="text-sm text-stone-400">Итоговая оценка</span>
+                <span className="text-sm text-stone-600">Итоговая оценка</span>
                 <span className={`font-display text-2xl font-medium ${scoreColor(parseFloat(preview))}`}>
                   {preview}
                 </span>
@@ -656,9 +653,9 @@ export default function MoviePage() {
 
               {/* Review editor */}
               <div>
-                <label className="block text-xs font-medium text-stone-400 mb-1.5">
+                <label className="block text-xs font-medium text-stone-600 mb-1.5">
                   Рецензия{" "}
-                  <span className="text-stone-600">(необязательно)</span>
+                  <span className="text-stone-400">(необязательно)</span>
                 </label>
                 <ReviewEditor
                   value={reviewText}
@@ -668,7 +665,7 @@ export default function MoviePage() {
               </div>
 
               {error && (
-                <div className="text-sm text-red-400 bg-red-400/10 rounded-lg px-3 py-2">
+                <div className="text-sm text-rose-500 bg-red-400/10 rounded-lg px-3 py-2">
                   {error}
                 </div>
               )}
@@ -683,7 +680,7 @@ export default function MoviePage() {
               {editing && (
                 <button
                   onClick={cancelEditing}
-                  className="w-full py-2 rounded-lg text-sm text-stone-500 hover:text-stone-300 transition"
+                  className="w-full py-2 rounded-lg text-sm text-stone-500 hover:text-stone-700 transition"
                 >
                   Отмена
                 </button>
@@ -704,7 +701,7 @@ export default function MoviePage() {
       {/* Similar Movies */}
       {similar.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-stone-100 mb-4">Похожие фильмы</h2>
+          <h2 className="text-lg font-semibold text-stone-900 mb-4">Похожие фильмы</h2>
           <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
             {similar.map((item) => (
               <Link
@@ -720,16 +717,16 @@ export default function MoviePage() {
                       className="w-28 h-40 object-cover"
                     />
                   ) : (
-                    <div className="w-28 h-40 bg-stone-800 flex items-center justify-center text-3xl text-stone-600">
+                    <div className="w-28 h-40 bg-stone-200 flex items-center justify-center text-3xl text-stone-400">
                       🎬
                     </div>
                   )}
-                  <div className="px-1.5 py-1.5" style={{ background: "#1b1613" }}>
-                    <p className="text-xs text-stone-300 leading-tight line-clamp-2 group-hover:text-amber-400 transition-colors">
+                  <div className="px-1.5 py-1.5" style={{ background: "rgba(255,255,255,0.72)" }}>
+                    <p className="text-xs text-stone-700 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">
                       {item.title}
                     </p>
                     {item.year && (
-                      <p className="text-[10px] text-stone-600 mt-0.5">{item.year}</p>
+                      <p className="text-[10px] text-stone-400 mt-0.5">{item.year}</p>
                     )}
                   </div>
                 </div>

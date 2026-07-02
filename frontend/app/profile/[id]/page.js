@@ -84,7 +84,7 @@ function ProfileStats({ ratings, onOpen }) {
 
   return (
     <div className="space-y-3">
-      <h2 className="text-lg font-semibold text-stone-100">Статистика</h2>
+      <h2 className="font-serif text-xl font-medium text-stone-100">Статистика</h2>
 
       <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
         {/* Indicators — fixed, compact width */}
@@ -250,7 +250,7 @@ function ReviewModal({ rating, onClose }) {
               </div>
             )}
             <div className="min-w-0">
-              <div className="text-base font-semibold text-stone-100 leading-tight">{rating.movie_title}</div>
+              <div className="font-serif text-base font-medium text-stone-100 leading-tight">{rating.movie_title}</div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {isTV && (
                   <span className="text-xs text-amber-400/60 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
@@ -358,11 +358,11 @@ export default function ProfilePage() {
         className="rounded-xl p-6 border flex items-center gap-6"
         style={{ background: "#1b1613", borderColor: "#2e2723" }}
       >
-        <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl text-amber-400 font-bold shrink-0">
+        <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center font-display text-2xl font-medium text-amber-400 shrink-0">
           {profile.username.charAt(0).toUpperCase()}
         </div>
         <div>
-          <h1 className="text-xl font-bold text-stone-100">
+          <h1 className="font-serif text-2xl font-medium text-stone-100">
             {profile.username}
             {isMe && (
               <span className="ml-2 text-xs font-normal text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-full">
@@ -398,7 +398,7 @@ export default function ProfilePage() {
       {/* My private notes (own profile only) */}
       {isMe && notes.length > 0 && (
         <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-stone-100 flex items-center gap-2">
+          <h2 className="font-serif text-xl font-medium text-stone-100 flex items-center gap-2">
             📝 Мои заметки
             <span className="text-xs font-normal text-stone-600">только вы их видите</span>
           </h2>
@@ -454,7 +454,7 @@ export default function ProfilePage() {
         </div>
       ) : (
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-stone-100">Рецензии</h2>
+          <h2 className="font-serif text-xl font-medium text-stone-100">Рецензии</h2>
           {profile.ratings.map((r, idx) => {
             const isTV = r.media_type === "tv";
             const href = isTV ? `/tv/${r.movie_id}` : `/movies/${r.movie_id}`;
@@ -486,7 +486,7 @@ export default function ProfilePage() {
                       <div className="min-w-0">
                         <Link
                           href={href}
-                          className="text-base font-semibold text-stone-100 hover:text-amber-400 transition-colors line-clamp-1"
+                          className="font-serif text-base font-medium text-stone-100 hover:text-amber-400 transition-colors line-clamp-1"
                         >
                           {r.movie_title}
                         </Link>

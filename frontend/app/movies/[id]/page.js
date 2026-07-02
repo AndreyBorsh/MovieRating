@@ -402,10 +402,7 @@ export default function MoviePage() {
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(180deg, rgba(16,13,11,0.35) 0%, rgba(16,13,11,0.6) 45%, #100d0b 100%)" }}
-            />
+            <div className="absolute inset-0" style={{ background: "rgba(16,13,11,0.35)" }} />
           </>
         )}
         <div
@@ -427,7 +424,10 @@ export default function MoviePage() {
             </div>
           )}
 
-          <div className="flex-1 min-w-0 py-1">
+          <div
+            className={`flex-1 min-w-0 py-1 ${heroBackdrop ? "rounded-xl p-3 sm:p-4 backdrop-blur-sm" : ""}`}
+            style={heroBackdrop ? { background: "rgba(16,13,11,0.6)" } : undefined}
+          >
             <h1 className="font-serif text-2xl sm:text-3xl font-medium text-stone-100">
               {movie.title}
               {movie.year && (

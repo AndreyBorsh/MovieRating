@@ -363,7 +363,7 @@ export default function GiveawaysPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-100 mb-1">🎟 Розыгрыш билета</h1>
+        <h1 className="font-serif text-3xl font-medium text-stone-100 mb-1">🎟 Розыгрыш билета</h1>
         <p className="text-sm text-stone-500">
           Пиши развёрнутые рецензии после старта розыгрыша — и участвуй в розыгрыше билета в кино.
         </p>
@@ -418,7 +418,7 @@ export default function GiveawaysPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-semibold text-stone-100">🎬 {g.title}</h2>
+                      <h2 className="font-serif text-lg font-medium text-stone-100">🎬 {g.title}</h2>
                       {closed
                         ? <span className="text-xs text-stone-400 bg-stone-700/40 px-2 py-0.5 rounded">завершён</span>
                         : <span className="text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}

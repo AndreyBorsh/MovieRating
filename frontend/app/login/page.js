@@ -43,7 +43,7 @@ function LoginForm() {
             Аккаунт создан! Теперь войдите.
           </div>
         )}
-        <h1 className="text-2xl font-bold text-stone-100 mb-1">Вход</h1>
+        <h1 className="font-serif text-3xl font-medium text-stone-100 mb-1">Вход</h1>
         <p className="text-sm text-stone-500 mb-6">
           Нет аккаунта?{" "}
           <Link href="/register" className="text-amber-400 hover:underline">

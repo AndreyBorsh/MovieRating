@@ -231,37 +231,81 @@ function RecentCard({ item, onClick }) {
   const isTV = item.media_type === "tv";
   return (
     <div
-      className="glass glass-lift flex gap-3 rounded-2xl p-3 cursor-pointer"
+      className="glass glass-lift rounded-2xl p-3.5 cursor-pointer h-full flex flex-col"
       onClick={onClick}
     >
-      <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 bg-stone-200 relative">
-        {POSTER(item.poster) ? (
-          <img src={POSTER(item.poster)} alt={item.movie_title} className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-stone-400 text-xl">
-            {isTV ? "📺" : "🎬"}
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-start gap-1">
-          <p className="text-sm font-bold tracking-tight text-stone-900 line-clamp-1 flex-1">{item.movie_title}</p>
-          {isTV && (
-            <span className="text-[10px] text-amber-600 bg-amber-400/10 px-1 py-0.5 rounded shrink-0 mt-0.5">
-              сериал
-            </span>
+      <div className="flex gap-3">
+        <div className="w-14 h-20 rounded-lg overflow-hidden shrink-0 bg-stone-200 relative">
+          {POSTER(item.poster) ? (
+            <img src={POSTER(item.poster)} alt={item.movie_title} className="w-full h-full object-cover" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-stone-400 text-xl">
+              {isTV ? "📺" : "🎬"}
+            </div>
           )}
         </div>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className="text-xs text-amber-600 font-medium">{item.username}</span>
-          <span className="text-xs text-stone-500">·</span>
-          <span className={`text-xs font-display font-medium ${scoreColor(item.score)}`}>{item.score?.toFixed(1)}</span>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-1.5">
+            <p className="text-sm font-bold tracking-tight text-stone-900 line-clamp-2 flex-1">{item.movie_title}</p>
+            <span className={`text-lg font-bold shrink-0 ${scoreColor(item.score)}`}>{item.score?.toFixed(1)}</span>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1">
+            <span className="text-xs text-amber-700 font-semibold">{item.username}</span>
+            {isTV && (
+              <span className="text-[10px] text-amber-700 bg-amber-400/15 px-1.5 py-0.5 rounded-full">сериал</span>
+            )}
+          </div>
         </div>
-        {item.review && (
-          <p className="text-xs text-stone-500 mt-1 line-clamp-2">{stripMarkers(item.review)}</p>
-        )}
       </div>
+      {item.review && (
+        <p className="text-xs text-stone-500 mt-2.5 line-clamp-3 leading-relaxed">{stripMarkers(item.review)}</p>
+      )}
     </div>
+  );
+}
+
+function FeaturedSpotlight({ item }) {
+  const isTV = item.media_type === "tv";
+  const href = isTV ? `/tv/${item.id}` : `/movies/${item.id}`;
+  return (
+    <Link href={href} className="block">
+      <div
+        className="glass glass-lift rounded-3xl overflow-hidden p-4 sm:p-7 flex flex-col sm:flex-row gap-5 sm:gap-7 items-center"
+        style={{ background: "linear-gradient(120deg, rgba(245,196,81,0.16) 0%, rgba(255,255,255,0.72) 62%)" }}
+      >
+        <div className="w-36 sm:w-48 shrink-0">
+          {POSTER(item.poster) ? (
+            <img src={POSTER(item.poster)} alt={item.title} className="w-full aspect-[2/3] object-cover rounded-2xl shadow-xl" />
+          ) : (
+            <div className="w-full aspect-[2/3] rounded-2xl bg-stone-200 flex items-center justify-center text-4xl text-stone-400">
+              {isTV ? "📺" : "🎬"}
+            </div>
+          )}
+        </div>
+        <div className="flex-1 min-w-0 text-center sm:text-left">
+          <div className="text-[11px] font-bold tracking-[0.14em] text-amber-700 uppercase mb-2">
+            ★ Лучшее по оценке
+          </div>
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-stone-900 leading-[1.08]">
+            {item.title}
+          </h2>
+          <div className="text-sm text-stone-500 mt-2">
+            {item.year ? `${item.year} · ` : ""}{isTV ? "Сериал" : "Фильм"} · {item.count} оценок
+          </div>
+          <div className="flex items-center gap-4 mt-5 justify-center sm:justify-start">
+            <div
+              className="w-16 h-16 sm:w-20 sm:h-20 rounded-full border-2 flex items-center justify-center shrink-0"
+              style={{ borderColor: "rgba(210,154,60,0.5)", background: "rgba(255,255,255,0.9)", boxShadow: "0 4px 16px rgba(40,30,15,0.1)" }}
+            >
+              <ScoreBadge score={item.score} size="lg" />
+            </div>
+            <span className="px-6 py-3 rounded-full text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 shadow-[0_6px_18px_rgba(210,154,60,0.35)]">
+              Открыть →
+            </span>
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
@@ -285,25 +329,25 @@ function MediaCard({ item }) {
             </div>
           )}
           {legendary && (
-            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-sm"
+            <div className="absolute top-2 left-2 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide backdrop-blur-md"
                  style={{ background: "rgba(255,255,255,0.85)", color: "#9a6a10" }}>
               ★ ШЕДЕВР
             </div>
           )}
           {isTV && !legendary && (
-            <div className="absolute top-2 right-2 text-[10px] font-medium text-amber-700 px-2 py-0.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.8)" }}>
+            <div className="absolute top-2 right-2 text-[10px] font-medium text-amber-700 px-2 py-0.5 rounded-full backdrop-blur-md" style={{ background: "rgba(255,255,255,0.8)" }}>
               сериал
             </div>
           )}
+          <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full backdrop-blur-md" style={{ background: "rgba(255,255,255,0.85)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
+            <span className={`text-sm font-bold ${scoreColor(item.score)}`}>{item.score > 0 ? item.score.toFixed(1) : "—"}</span>
+          </div>
         </div>
         <div className="p-3">
           <div className="text-sm font-bold tracking-tight line-clamp-1 text-stone-900">
             {item.title}
           </div>
-          <div className="flex items-center justify-between mt-1.5">
-            <ScoreBadge score={item.score} />
-            <span className="text-xs text-stone-500">{item.count} оценок</span>
-          </div>
+          <div className="text-xs text-stone-400 mt-0.5">{item.count} оценок</div>
         </div>
       </div>
     </Link>
@@ -359,6 +403,10 @@ export default function HomePage() {
     { key: "tv",    label: "📺 Сериалы", n: tvShows.length },
   ];
 
+  const featured = [...allItems]
+    .filter((i) => (i.count || 0) > 0)
+    .sort((a, b) => (b.score || 0) - (a.score || 0) || (b.count || 0) - (a.count || 0))[0];
+
   return (
     <div className="space-y-10">
       {modalItem && (
@@ -391,14 +439,14 @@ export default function HomePage() {
         <div className="text-center text-stone-500 text-sm py-12">Загрузка...</div>
       ) : (
         <>
+          {featured && <FeaturedSpotlight item={featured} />}
+
           {recent.length > 0 && (
             <section>
               <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 mb-4">Последние рецензии</h2>
-              <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-subtle">
-                {recent.slice(0, 9).map((item, i) => (
-                  <div key={i} className="shrink-0 w-72 snap-start">
-                    <RecentCard item={item} onClick={() => setModalItem(item)} />
-                  </div>
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {recent.slice(0, 6).map((item, i) => (
+                  <RecentCard key={i} item={item} onClick={() => setModalItem(item)} />
                 ))}
               </div>
             </section>

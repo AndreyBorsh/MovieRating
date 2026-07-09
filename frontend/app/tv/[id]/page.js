@@ -13,6 +13,7 @@ import ReviewEditor from "@/app/components/ReviewEditor";
 import MediaExtras from "@/app/components/MediaExtras";
 import PrivateNote from "@/app/components/PrivateNote";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
+import ExpandableText from "@/app/components/ExpandableText";
 
 const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
 const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
@@ -247,7 +248,6 @@ export default function TvPage() {
   const [loading,  setLoading]  = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error,    setError]    = useState("");
-  const [overviewExpanded, setOverviewExpanded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null); // rating_id when editing, null when new
   const [similar,  setSimilar]  = useState([]);
@@ -510,17 +510,7 @@ export default function TvPage() {
             </h1>
 
             {show.overview && (
-              <div className="mt-2">
-                <p className={`text-sm text-stone-600 leading-relaxed ${overviewExpanded ? "" : "line-clamp-4"}`}>
-                  {show.overview}
-                </p>
-                <button
-                  onClick={() => setOverviewExpanded((v) => !v)}
-                  className="text-xs text-amber-600 hover:text-amber-500 mt-1 transition-colors"
-                >
-                  {overviewExpanded ? "Скрыть ▲" : "Читать далее ▼"}
-                </button>
-              </div>
+              <ExpandableText text={show.overview} className="text-sm text-stone-600 leading-relaxed" />
             )}
 
             <div className="flex items-center gap-3 mt-4">

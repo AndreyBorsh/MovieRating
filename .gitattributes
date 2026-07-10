@@ -1,3 +1,7 @@
 # Shell scripts must stay LF so they run on the Linux server.
 *.sh text eol=lf
 Caddyfile text eol=lf
+
+# build_server.sh sits at the TAR ROOT (beside waw/), not inside it — keep it out
+# of `git archive` so it isn't duplicated under waw/.
+build_server.sh export-ignore

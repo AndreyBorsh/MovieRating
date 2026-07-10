@@ -1,6 +1,10 @@
+// Where TMDB images are fetched from. Override with a proxy (e.g. a Cloudflare
+// Worker) when the server can't reach image.tmdb.org directly.
+const IMAGE_BASE = process.env.TMDB_IMAGE_BASE || "https://image.tmdb.org";
+
 export async function GET(request, context) {
   const { path } = await context.params;
-  const tmdbUrl = `https://image.tmdb.org/t/p/${path.join("/")}`;
+  const tmdbUrl = `${IMAGE_BASE}/t/p/${path.join("/")}`;
 
   try {
     const res = await fetch(tmdbUrl);

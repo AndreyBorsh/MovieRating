@@ -42,6 +42,23 @@ docker compose up -d --build
 | `BREVO_SENDER`      | нет         | Email отправителя для Brevo.                                     |
 | `WEB_PORT`          | нет         | Порт сайта на хосте (по умолчанию `3000`).                       |
 | `NEXT_PUBLIC_BASE_PATH` | нет     | Сабпас сайта (по умолчанию `/waw-movie`). Меняется — пересобрать. |
+| `TMDB_BASE`         | нет         | Адрес TMDB API. Меняется, если TMDB заблокирован (см. ниже).     |
+| `TMDB_IMAGE_BASE`   | нет         | Адрес картинок TMDB. То же самое.                                |
+
+## TMDB заблокирован? (прокси через Cloudflare Worker)
+
+Если сервер не может достучаться до TMDB (поиск даёт 500, постеры не грузятся —
+частый случай в РФ), запросы к TMDB нужно пустить через прокси вне блокировки.
+В комплекте есть готовый воркер `cloudflare-tmdb-proxy.js`.
+
+1. Задеплой воркер (бесплатно) — инструкция в шапке файла `cloudflare-tmdb-proxy.js`.
+   Получишь URL вида `https://tmdb.твой-сабдомен.workers.dev`.
+2. Пропиши в `.env` проекта (файл `waw/.env`; compose подхватывает его автоматически):
+   ```
+   TMDB_BASE=https://tmdb.твой-сабдомен.workers.dev/3
+   TMDB_IMAGE_BASE=https://tmdb.твой-сабдомен.workers.dev
+   ```
+3. Перезапусти стек (`docker compose up -d` — пересборка не нужна, это runtime-переменные).
 
 ## Сабпас `/waw-movie`
 

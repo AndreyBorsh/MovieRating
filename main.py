@@ -17,7 +17,9 @@ BREVO_API_KEY  = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER   = os.environ.get("BREVO_SENDER", "")
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
-TMDB_BASE = "https://api.themoviedb.org/3"
+# Where TMDB is reached. Override with a proxy (e.g. a Cloudflare Worker) when the
+# server can't reach api.themoviedb.org directly — see cloudflare-tmdb-proxy.js.
+TMDB_BASE = os.environ.get("TMDB_BASE", "https://api.themoviedb.org/3")
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
@@ -2315,11 +2317,15 @@ def search_multi(query: str):
     q = (query or "").strip()
     if not q:
         return []
-    res = requests.get(
-        f"{TMDB_BASE}/search/multi",
-        params={"api_key": TMDB_API_KEY, "query": q, "language": "ru-RU"},
-        timeout=5,
-    )
+    try:
+        res = requests.get(
+            f"{TMDB_BASE}/search/multi",
+            params={"api_key": TMDB_API_KEY, "query": q, "language": "ru-RU"},
+            timeout=8,
+        )
+    except requests.RequestException:
+        # TMDB unreachable (e.g. blocked network) — degrade to empty instead of 500.
+        return []
     if res.status_code != 200:
         return []
     out = []

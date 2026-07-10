@@ -1,4 +1,6 @@
-const RAILWAY = "https://movierating-47ez.onrender.com";
+// Backend base URL. In Docker Compose the backend service is reachable at
+// http://backend:8000 on the internal network; override with BACKEND_URL.
+const BACKEND_URL = process.env.BACKEND_URL || "http://backend:8000";
 
 async function handler(request, context) {
   const { params } = context;
@@ -18,7 +20,7 @@ async function handler(request, context) {
   }
 
   try {
-    const res = await fetch(`${RAILWAY}/${path}${url.search}`, options);
+    const res = await fetch(`${BACKEND_URL}/${path}${url.search}`, options);
     const text = await res.text();
     return new Response(text, {
       status: res.status,

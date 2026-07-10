@@ -1,0 +1,49 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-waw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me-please}
+      POSTGRES_DB: ${POSTGRES_DB:-waw}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-waw} -d ${POSTGRES_DB:-waw}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    # Uncomment to reach the DB from the host (e.g. for pg_dump/restore):
+    # ports:
+    #   - "5432:5432"
+
+  backend:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-waw}:${POSTGRES_PASSWORD:-change-me-please}@db:5432/${POSTGRES_DB:-waw}
+      ADMIN_USER_IDS: ${ADMIN_USER_IDS:-1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      BREVO_API_KEY: ${BREVO_API_KEY:-}
+      BREVO_SENDER: ${BREVO_SENDER:-}
+    expose:
+      - "8000"
+    # Uncomment to hit the API directly from the host for debugging:
+    # ports:
+    #   - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+
+volumes:
+  db_data:

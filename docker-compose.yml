@@ -29,8 +29,9 @@ services:
       LLM_API_KEY: ${LLM_API_KEY:-}
       BREVO_API_KEY: ${BREVO_API_KEY:-}
       BREVO_SENDER: ${BREVO_SENDER:-}
-      # TMDB API endpoint; set to a proxy when TMDB is blocked from the server.
-      TMDB_BASE: ${TMDB_BASE:-https://api.themoviedb.org/3}
+      # TMDB API endpoint; defaults to the Cloudflare Worker proxy (server can't
+      # reach TMDB directly). Override via .env if the worker URL changes.
+      TMDB_BASE: ${TMDB_BASE:-https://tmdb.andreykuzn19.workers.dev/3}
     expose:
       - "8000"
     # Uncomment to hit the API directly from the host for debugging:
@@ -48,8 +49,9 @@ services:
       - backend
     environment:
       BACKEND_URL: http://backend:8000
-      # TMDB image host; set to a proxy when image.tmdb.org is blocked from the server.
-      TMDB_IMAGE_BASE: ${TMDB_IMAGE_BASE:-https://image.tmdb.org}
+      # TMDB image host; defaults to the Cloudflare Worker proxy (server can't
+      # reach image.tmdb.org directly). Override via .env if the worker URL changes.
+      TMDB_IMAGE_BASE: ${TMDB_IMAGE_BASE:-https://tmdb.andreykuzn19.workers.dev}
     ports:
       - "${WEB_PORT:-3000}:3000"
 

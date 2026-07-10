@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { img } from "@/lib/base";
 
-const BACKDROP = (p) => p && `/api/tmdb-image/w780${p}`;
-const BACKDROP_LG = (p) => p && `/api/tmdb-image/w1280${p}`;
-const PROFILE = (p) => p && `/api/tmdb-image/w185${p}`;
+const BACKDROP = (p) => img("w780", p);
+const BACKDROP_LG = (p) => img("w1280", p);
+const PROFILE = (p) => img("w185", p);
 
 function Chip({ children }) {
   return (

@@ -4,9 +4,9 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { searchMulti } from "@/lib/api";
+import { img } from "@/lib/base";
 
-const POSTER = (path) =>
-  path ? `/api/tmdb-image/w342${path}` : null;
+const POSTER = (path) => img("w342", path);
 
 const FILTERS = [
   { key: "all",   label: "Все" },

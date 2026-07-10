@@ -8,13 +8,14 @@ import {
   getGiveawayEntries, recheckGiveaway,
   getMyGiveawayReviews, requestManualReview, getManualReviews, decideManualReview,
 } from "@/lib/api";
+import { img } from "@/lib/base";
 
 function fmtDate(s) {
   if (!s) return null;
   return new Date(s).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
 }
 
-const POSTER = (path) => (path ? `/api/tmdb-image/w92${path}` : null);
+const POSTER = (path) => img("w92", path);
 
 // Search-as-you-type film/TV picker for the admin create form.
 function FilmPicker({ value, onPick }) {

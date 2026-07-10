@@ -12,6 +12,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+# Sub-path the site is served under. Inlined into the client bundle at build time,
+# so it must be provided here (not at runtime). Overridable via compose build args.
+ARG NEXT_PUBLIC_BASE_PATH=/waw-movie
+ENV NEXT_PUBLIC_BASE_PATH=$NEXT_PUBLIC_BASE_PATH
 RUN npm run build
 
 # 3) runtime (minimal standalone server)

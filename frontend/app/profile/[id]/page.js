@@ -7,8 +7,9 @@ import { getProfile, getMyNotes } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
+import { img } from "@/lib/base";
 
-const POSTER = (p) => p && `/api/tmdb-image/w185${p}`;
+const POSTER = (p) => img("w185", p);
 
 const MOVIE_CRITERIA_LABELS = {
   overall:   "Общее",

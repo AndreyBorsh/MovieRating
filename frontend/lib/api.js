@@ -1,4 +1,6 @@
-const API = "/api";
+import { BASE_PATH } from "@/lib/base";
+
+const API = `${BASE_PATH}/api`;
 
 const authHeader = (token) => ({
   "Content-Type": "application/json",

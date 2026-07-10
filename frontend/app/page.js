@@ -6,6 +6,7 @@ import { getMovies, getTvShows, getRecent, getReviews, getTvReviews, getGiveaway
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
+import { img } from "@/lib/base";
 
 function GiveawayBanner({ giveaways, token, onEntered }) {
   const [busy, setBusy] = useState(false);
@@ -69,8 +70,7 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
   );
 }
 
-const POSTER = (path) =>
-  path ? `/api/tmdb-image/w342${path}` : null;
+const POSTER = (path) => img("w342", path);
 
 // Movie criteria for modal
 const MOVIE_CRITERIA = [

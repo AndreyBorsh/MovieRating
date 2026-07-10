@@ -36,7 +36,11 @@ services:
     #   - "8000:8000"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        # Sub-path the site is served under; baked into the bundle at build time.
+        NEXT_PUBLIC_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/waw-movie}
     restart: unless-stopped
     depends_on:
       - backend

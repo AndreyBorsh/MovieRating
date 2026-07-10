@@ -11,10 +11,11 @@ import MediaExtras from "@/app/components/MediaExtras";
 import PrivateNote from "@/app/components/PrivateNote";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
 import ExpandableText from "@/app/components/ExpandableText";
+import { img } from "@/lib/base";
 
-const POSTER_LG = (p) => p && `/api/tmdb-image/w500${p}`;
-const POSTER_SM = (p) => p && `/api/tmdb-image/w185${p}`;
-const BACKDROP_HERO = (p) => p && `/api/tmdb-image/w1280${p}`;
+const POSTER_LG = (p) => img("w500", p);
+const POSTER_SM = (p) => img("w185", p);
+const BACKDROP_HERO = (p) => img("w1280", p);
 
 const CRITERIA = [
   { key: "overall",   label: "Общее впечатление", weight: "35%", main: true,
@@ -702,7 +703,7 @@ export default function MoviePage() {
                 <div className="w-28 rounded-lg overflow-hidden border border-transparent group-hover:border-amber-400/40 transition-all">
                   {item.poster ? (
                     <img
-                      src={`/api/tmdb-image/w185${item.poster}`}
+                      src={POSTER_SM(item.poster)}
                       alt={item.title}
                       className="w-28 h-40 object-cover"
                     />

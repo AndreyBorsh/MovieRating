@@ -41,6 +41,37 @@ docker compose up -d --build
 | `BREVO_API_KEY`     | нет         | Ключ Brevo для писем-подтверждений. Пусто — письма выключены.    |
 | `BREVO_SENDER`      | нет         | Email отправителя для Brevo.                                     |
 | `WEB_PORT`          | нет         | Порт сайта на хосте (по умолчанию `3000`).                       |
+| `NEXT_PUBLIC_BASE_PATH` | нет     | Сабпас сайта (по умолчанию `/waw-movie`). Меняется — пересобрать. |
+
+## Сабпас и обратный прокси (Nginx)
+
+Сайт собран под сабпас **`/waw-movie`** (например `https://makuku.ddns.net/waw-movie`),
+это задаётся переменной `NEXT_PUBLIC_BASE_PATH`. Значение «зашивается» в сборку,
+поэтому при его изменении нужно пересобрать: `docker compose up -d --build`.
+
+⚠️ **Главное правило для Nginx: префикс `/waw-movie` НЕ срезать** — Next ждёт запросы
+вместе с ним. То есть `proxy_pass` должен идти на контейнер **без** завершающего слэша
+в пути:
+
+```nginx
+server {
+    listen 80;
+    server_name makuku.ddns.net;
+
+    location /waw-movie/ {
+        proxy_pass http://127.0.0.1:3000;   # без /waw-movie на конце — префикс сохраняется
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Открывать сайт по адресу `http://makuku.ddns.net/waw-movie` (корень `/` вернёт 404 —
+это норма, приложение живёт под сабпасом).
+
+Если поднимаешь HTTPS через Certbot — та же `location /waw-movie/` в 443-серверблоке.
 
 ## Обновление сборки (деплой новой версии)
 

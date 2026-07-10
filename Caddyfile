@@ -1,0 +1,11 @@
+# Public domain — must resolve to this server; 80/443 must be reachable.
+# Caddy auto-provisions and renews a Let's Encrypt certificate for it.
+{$SITE_DOMAIN:makuku.ddns.net} {
+	# App lives under the /waw-movie sub-path; KEEP the prefix (Next expects it,
+	# basePath does not tolerate it being stripped).
+	@app path {$SITE_BASE_PATH:/waw-movie} {$SITE_BASE_PATH:/waw-movie}/*
+	reverse_proxy @app frontend:3000
+
+	# Convenience: bare domain -> the app.
+	redir / {$SITE_BASE_PATH:/waw-movie}/ 302
+}

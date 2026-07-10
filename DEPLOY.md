@@ -43,35 +43,59 @@ docker compose up -d --build
 | `WEB_PORT`          | нет         | Порт сайта на хосте (по умолчанию `3000`).                       |
 | `NEXT_PUBLIC_BASE_PATH` | нет     | Сабпас сайта (по умолчанию `/waw-movie`). Меняется — пересобрать. |
 
-## Сабпас и обратный прокси (Nginx)
+## Сабпас `/waw-movie`
 
 Сайт собран под сабпас **`/waw-movie`** (например `https://makuku.ddns.net/waw-movie`),
 это задаётся переменной `NEXT_PUBLIC_BASE_PATH`. Значение «зашивается» в сборку,
 поэтому при его изменении нужно пересобрать: `docker compose up -d --build`.
 
-⚠️ **Главное правило для Nginx: префикс `/waw-movie` НЕ срезать** — Next ждёт запросы
-вместе с ним. То есть `proxy_pass` должен идти на контейнер **без** завершающего слэша
-в пути:
+Открывать сайт по адресу с префиксом — корень `/` вернёт 404, это норма (приложение
+живёт под сабпасом). Прокси перед приложением **не должен срезать `/waw-movie`** —
+Next ждёт запросы вместе с ним.
 
-```nginx
-server {
-    listen 80;
-    server_name makuku.ddns.net;
+## HTTPS одной командой (Caddy) — рекомендуется
 
-    location /waw-movie/ {
-        proxy_pass http://127.0.0.1:3000;   # без /waw-movie на конце — префикс сохраняется
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-    }
-}
+В комплекте есть overlay `docker-compose.https.yml` с контейнером **Caddy**: он сам
+получает и продлевает сертификат Let's Encrypt, поднимает 80/443 и проксирует на
+приложение. Ручной Nginx/Certbot не нужен.
+
+**Перед запуском:**
+1. Домен `SITE_DOMAIN` (в `.env`) должен резолвиться на IP этого сервера
+   (для DDNS — `makuku.ddns.net` → твой публичный IP).
+2. Порты **80 и 443** открыты в файрволе сервера и в панели хостинга.
+
+**Запуск (вместо обычной команды):**
+```bash
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+```
+Первый старт: Caddy за ~10–30 сек выпустит сертификат. Сайт откроется по
+**`https://makuku.ddns.net/waw-movie`** (http автоматически редиректит на https,
+а голый домен `/` — на сабпас).
+
+**Обновление** в этом режиме — та же пара `-f`:
+```bash
+git pull
+docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
 ```
 
-Открывать сайт по адресу `http://makuku.ddns.net/waw-movie` (корень `/` вернёт 404 —
-это норма, приложение живёт под сабпасом).
+> Порт `WEB_PORT` (3000) в HTTPS-режиме наружу не публикуется — весь трафик идёт
+> через Caddy по 80/443.
 
-Если поднимаешь HTTPS через Certbot — та же `location /waw-movie/` в 443-серверблоке.
+### Альтернатива: свой внешний Nginx
+
+Если HTTPS уже терминирует твой отдельный Nginx, проксируй с сохранением префикса
+(`proxy_pass` без `/waw-movie` на конце):
+
+```nginx
+location /waw-movie/ {
+    proxy_pass http://127.0.0.1:3000;   # префикс сохраняется
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+В этом случае оставь публикацию `WEB_PORT` (обычный `docker compose up`, без overlay).
 
 ## Обновление сборки (деплой новой версии)
 

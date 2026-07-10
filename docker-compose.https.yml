@@ -1,0 +1,34 @@
+# ── HTTPS overlay ──
+# Puts Caddy in front of the app and auto-provisions/renews Let's Encrypt certs.
+# Requires: SITE_DOMAIN resolves to this server, ports 80 and 443 open.
+#
+# Start (instead of the plain command):
+#   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build
+#
+services:
+  frontend:
+    # Behind Caddy now — no need to publish 3000 to the host.
+    ports: !reset []
+    expose:
+      - "3000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:-makuku.ddns.net}
+      # Kept in sync with the frontend build so proxy path == app basePath.
+      SITE_BASE_PATH: ${NEXT_PUBLIC_BASE_PATH:-/waw-movie}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

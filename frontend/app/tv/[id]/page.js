@@ -721,7 +721,7 @@ export default function TvPage() {
               {show?.seasons > 1 && (
                 <div className="rounded-lg p-3 border" style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
                   <div className="text-xs font-medium text-stone-600 mb-2">Что оцениваешь</div>
-                  <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#0b1426", border: "1px solid rgba(0,0,0,0.08)" }}>
+                  <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
                     <button type="button" onClick={() => setSeasonMode("all")}
                       className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-stone-900" : "text-stone-600 hover:text-stone-800"}`}>
                       Все сезоны
@@ -737,14 +737,14 @@ export default function TvPage() {
                       <select value={seasonFrom}
                         onChange={(e) => { const v = +e.target.value; setSeasonFrom(v); if (v > seasonTo) setSeasonTo(v); }}
                         className="rounded-md px-2 py-1 text-stone-900 outline-none"
-                        style={{ background: "#0b1426", border: "1px solid rgba(0,0,0,0.08)" }}>
+                        style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
                         {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                       <span className="text-stone-500">по</span>
                       <select value={seasonTo}
                         onChange={(e) => { const v = +e.target.value; setSeasonTo(v); if (v < seasonFrom) setSeasonFrom(v); }}
                         className="rounded-md px-2 py-1 text-stone-900 outline-none"
-                        style={{ background: "#0b1426", border: "1px solid rgba(0,0,0,0.08)" }}>
+                        style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
                         {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
                       </select>
                       <span className="text-xs text-amber-600 ml-auto">{seasonLabel(seasonFrom, seasonTo)}</span>

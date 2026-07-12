@@ -70,6 +70,35 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
   );
 }
 
+function DataNotice() {
+  const [hidden, setHidden] = useState(false);
+  useEffect(() => {
+    if (localStorage.getItem("waw_data_notice_hidden") === "1") setHidden(true);
+  }, []);
+  if (hidden) return null;
+  return (
+    <div
+      className="flex items-center gap-3 rounded-2xl px-4 py-3"
+      style={{ background: "rgba(245,196,81,0.16)", border: "1px solid rgba(210,154,60,0.28)" }}
+    >
+      <span className="text-lg shrink-0" aria-hidden>🛠️</span>
+      <p className="text-sm text-stone-700 leading-snug flex-1">
+        Мы восстанавливаем старые данные — извините за неудобства. Пока можно{" "}
+        <Link href="/register" className="font-semibold text-amber-700 hover:underline">
+          зарегистрироваться заново
+        </Link>.
+      </p>
+      <button
+        onClick={() => { localStorage.setItem("waw_data_notice_hidden", "1"); setHidden(true); }}
+        className="shrink-0 text-stone-400 hover:text-stone-700 transition text-base leading-none"
+        aria-label="Скрыть"
+      >
+        ✕
+      </button>
+    </div>
+  );
+}
+
 const POSTER = (path) => img("w342", path);
 
 // Movie criteria for modal
@@ -364,6 +393,8 @@ export default function HomePage() {
       {modalItem && (
         <ReviewModal item={modalItem} onClose={() => setModalItem(null)} />
       )}
+
+      <DataNotice />
 
       <GiveawayBanner giveaways={giveaways} token={token} onEntered={loadGiveaways} />
 

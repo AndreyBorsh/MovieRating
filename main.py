@@ -28,7 +28,7 @@ DATABASE_URL = os.environ.get(
 
 # Admin user ids (manage giveaways). Override via ADMIN_USER_IDS="1,5".
 ADMIN_IDS = {int(x) for x in os.environ.get("ADMIN_USER_IDS", "1").split(",") if x.strip().isdigit()}
-GIVEAWAY_MIN_WORDS = 100         # min words for a review to count toward tickets
+GIVEAWAY_MIN_WORDS = 200         # min words for a review to count toward tickets
 
 # Free LLM for review relevance/quality check (giveaways).
 # OpenAI-compatible chat-completions API — works with OpenRouter, Groq, Mistral,
@@ -545,7 +545,7 @@ def _too_similar(tokens_a, text_b):
 
 def qualifying_review(cur, user_id, since, until=None):
     """Return (rating_id, review_text) of the user's first ORIGINAL genuine
-    quality review (>=100 words) written AFTER `since` and (if `until` is given)
+    quality review (>=GIVEAWAY_MIN_WORDS words) written AFTER `since` and (if `until` is given)
     no later than `until` (the giveaway deadline), else None.
     Genuine = review_genuine IS TRUE (relevance verified). Near-duplicates of an
     earlier review (own or others') are excluded (anti-plagiarism)."""
@@ -2304,6 +2304,72 @@ def get_tv_details(tmdb_id: int):
         "creators": creators,
         "backdrops": backdrops,
         "cast": _extract_cast(credits),
+    }
+
+
+@app.get("/person/{person_id}")
+def get_person(person_id: int):
+    """Actor/person page: details + acting filmography (from TMDB)."""
+    try:
+        res = requests.get(
+            f"{TMDB_BASE}/person/{person_id}",
+            params={
+                "api_key": TMDB_API_KEY,
+                "language": "ru-RU",
+                "append_to_response": "combined_credits",
+            },
+            timeout=6,
+        )
+    except requests.RequestException:
+        return {}
+    if res.status_code != 200:
+        return {}
+    d = res.json()
+
+    # Russian biography is often empty — fall back to English.
+    bio = (d.get("biography") or "").strip()
+    if not bio:
+        try:
+            en = requests.get(
+                f"{TMDB_BASE}/person/{person_id}",
+                params={"api_key": TMDB_API_KEY, "language": "en-US"},
+                timeout=6,
+            )
+            if en.status_code == 200:
+                bio = (en.json().get("biography") or "").strip()
+        except requests.RequestException:
+            pass
+
+    seen = set()
+    filmography = []
+    for c in d.get("combined_credits", {}).get("cast", []):
+        mt = c.get("media_type")
+        cid = c.get("id")
+        if mt not in ("movie", "tv") or cid is None or (mt, cid) in seen:
+            continue
+        seen.add((mt, cid))
+        date = c.get("release_date") if mt == "movie" else c.get("first_air_date")
+        filmography.append({
+            "id": cid,
+            "media_type": mt,
+            "title": c.get("title") if mt == "movie" else c.get("name", ""),
+            "character": c.get("character", ""),
+            "poster": c.get("poster_path"),
+            "year": date[:4] if date else None,
+            "popularity": c.get("popularity") or 0,
+        })
+    filmography.sort(key=lambda x: x["popularity"], reverse=True)
+
+    return {
+        "id": d.get("id"),
+        "name": d.get("name", ""),
+        "photo": d.get("profile_path"),
+        "biography": bio,
+        "birthday": d.get("birthday"),
+        "deathday": d.get("deathday"),
+        "place_of_birth": d.get("place_of_birth"),
+        "known_for": d.get("known_for_department"),
+        "filmography": filmography[:40],
     }
 
 

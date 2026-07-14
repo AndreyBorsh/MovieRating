@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { img } from "@/lib/base";
 
 const BACKDROP = (p) => img("w780", p);
@@ -154,28 +155,37 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
         <div>
           <h2 className="text-base font-semibold text-stone-900 mb-2">В ролях</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {cast.map((c, i) => (
-              <div key={c.id ?? i} className="shrink-0 w-20 text-center">
-                {c.photo ? (
-                  <img
-                    src={PROFILE(c.photo)}
-                    alt={c.name}
-                    loading="lazy"
-                    className="w-20 h-28 rounded-lg object-cover mb-1"
-                  />
-                ) : (
-                  <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-400 mb-1">
-                    👤
-                  </div>
-                )}
-                <p className="text-xs text-stone-800 leading-tight line-clamp-2">{c.name}</p>
-                {c.character && (
-                  <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">
-                    {c.character}
-                  </p>
-                )}
-              </div>
-            ))}
+            {cast.map((c, i) => {
+              const inner = (
+                <>
+                  {c.photo ? (
+                    <img
+                      src={PROFILE(c.photo)}
+                      alt={c.name}
+                      loading="lazy"
+                      className="w-20 h-28 rounded-lg object-cover mb-1 group-hover:brightness-95 transition"
+                    />
+                  ) : (
+                    <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-400 mb-1">
+                      👤
+                    </div>
+                  )}
+                  <p className="text-xs text-stone-800 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">{c.name}</p>
+                  {c.character && (
+                    <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">
+                      {c.character}
+                    </p>
+                  )}
+                </>
+              );
+              return c.id ? (
+                <Link key={c.id} href={`/person/${c.id}`} className="shrink-0 w-20 text-center group">
+                  {inner}
+                </Link>
+              ) : (
+                <div key={i} className="shrink-0 w-20 text-center">{inner}</div>
+              );
+            })}
           </div>
         </div>
       )}

@@ -218,6 +218,11 @@ export async function getTvDetails(id) {
   return res.json();
 }
 
+export async function getPerson(id) {
+  const res = await fetch(`${API}/person/${id}`);
+  return res.json();
+}
+
 // =========================
 // SEARCH
 // =========================

@@ -318,15 +318,32 @@ export default function TvPage() {
     }));
   };
 
+  // Seasons the user has already rated, optionally excluding one rating (the one
+  // being edited so its own seasons stay selectable).
+  const coveredExcluding = (excludeId) => {
+    const cov = new Set();
+    let all = false;
+    myRatings.forEach((r) => {
+      if (excludeId != null && r.rating_id === excludeId) return;
+      if (r.season_from == null) all = true;
+      else for (let s = r.season_from; s <= (r.season_to || r.season_from); s++) cov.add(s);
+    });
+    return { cov, all };
+  };
+
   const openNew = () => {
     setForm(DEFAULT_FORM);
     setReviewText("");
     const total = show?.seasons || 1;
     if (myRatings.length > 0 && total > 1) {
-      // a follow-up rating: default to the latest season
+      // a follow-up rating: default to the first season not rated yet
+      const { cov } = coveredExcluding(null);
+      let firstFree = 1;
+      while (firstFree <= total && cov.has(firstFree)) firstFree++;
+      if (firstFree > total) firstFree = total;
       setSeasonMode("range");
-      setSeasonFrom(total);
-      setSeasonTo(total);
+      setSeasonFrom(firstFree);
+      setSeasonTo(firstFree);
     } else {
       setSeasonMode("all");
       setSeasonFrom(1);
@@ -373,6 +390,20 @@ export default function TvPage() {
 
   const submit = async () => {
     setError("");
+    // Block rating seasons that are already covered by another of the user's ratings.
+    const { cov, all } = coveredExcluding(editingId);
+    if (seasonMode === "all") {
+      if (all) { setError("Вы уже оценивали сериал целиком."); return; }
+      if (cov.size > 0) { setError("Вы уже оценивали отдельные сезоны — выберите конкретные, а не «Все сезоны»."); return; }
+    } else {
+      if (all) { setError("Вы уже оценивали сериал целиком — отдельные сезоны оценить нельзя."); return; }
+      const dup = [];
+      for (let s = seasonFrom; s <= seasonTo; s++) if (cov.has(s)) dup.push(s);
+      if (dup.length) {
+        setError(`Эти сезоны вы уже оценивали: ${dup.join(", ")}. Выберите другие.`);
+        return;
+      }
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -453,6 +484,10 @@ export default function TvPage() {
   const addLabel = myRatings.length === 0
     ? "Оценить сериал"
     : (allCovered && newSeasonOut ? "Оценить новый сезон" : "Оценить ещё сезоны");
+
+  // Seasons already rated (excluding the one being edited) — disabled in the picker.
+  const { cov: formCov, all: formHasAll } = coveredExcluding(editingId);
+  const coveredList = Array.from(formCov).sort((a, b) => a - b);
 
   const heroBackdrop = details?.backdrops?.[0];
 
@@ -723,7 +758,8 @@ export default function TvPage() {
                   <div className="text-xs font-medium text-stone-600 mb-2">Что оцениваешь</div>
                   <div className="flex gap-1 p-1 rounded-lg" style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
                     <button type="button" onClick={() => setSeasonMode("all")}
-                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-stone-900" : "text-stone-600 hover:text-stone-800"}`}>
+                      disabled={formHasAll || formCov.size > 0}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition ${seasonMode === "all" ? "bg-amber-400 text-stone-900" : "text-stone-600 hover:text-stone-800"} disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:text-stone-600`}>
                       Все сезоны
                     </button>
                     <button type="button" onClick={() => setSeasonMode("range")}
@@ -731,6 +767,11 @@ export default function TvPage() {
                       Выбрать
                     </button>
                   </div>
+                  {coveredList.length > 0 && (
+                    <p className="text-[11px] text-stone-500 mt-1.5">
+                      Уже оценены: {coveredList.join(", ")} — их выбрать нельзя.
+                    </p>
+                  )}
                   {seasonMode === "range" && (
                     <div className="flex flex-wrap items-center gap-2 text-sm text-stone-700 mt-2">
                       <span className="text-stone-500">с</span>
@@ -738,14 +779,18 @@ export default function TvPage() {
                         onChange={(e) => { const v = +e.target.value; setSeasonFrom(v); if (v > seasonTo) setSeasonTo(v); }}
                         className="rounded-md px-2 py-1 text-stone-900 outline-none"
                         style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
-                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n} disabled={formCov.has(n)}>{n}{formCov.has(n) ? " ✓" : ""}</option>
+                        ))}
                       </select>
                       <span className="text-stone-500">по</span>
                       <select value={seasonTo}
                         onChange={(e) => { const v = +e.target.value; setSeasonTo(v); if (v < seasonFrom) setSeasonFrom(v); }}
                         className="rounded-md px-2 py-1 text-stone-900 outline-none"
                         style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}>
-                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}
+                        {Array.from({ length: show.seasons }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n} disabled={formCov.has(n)}>{n}{formCov.has(n) ? " ✓" : ""}</option>
+                        ))}
                       </select>
                       <span className="text-xs text-amber-600 ml-auto">{seasonLabel(seasonFrom, seasonTo)}</span>
                     </div>

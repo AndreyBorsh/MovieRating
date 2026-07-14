@@ -57,7 +57,7 @@ function GiveawayBanner({ giveaways, token, onEntered }) {
             </button>
           ) : (
             <span className="text-xs text-stone-600 text-center sm:text-right max-w-[220px]">
-              Напишите рецензию от 100 слов после старта, чтобы получить билетик
+              Напишите рецензию от 200 слов после старта, чтобы получить билетик
             </span>
           )}
           <Link href="/giveaways" className="text-xs font-medium text-amber-700 hover:text-amber-600 transition text-center sm:text-right">

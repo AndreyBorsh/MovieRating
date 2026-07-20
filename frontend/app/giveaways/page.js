@@ -235,7 +235,7 @@ function MyReviewsSummary({ token }) {
               <div className="text-sm text-stone-800 truncate">🎬 {it.title || "—"}</div>
               <div className={`text-xs mt-0.5 ${ui.cls}`}>{ui.label}</div>
             </div>
-            {it.status === "failed" && (
+            {(it.status === "failed" || it.status === "duplicate") && (
               <button onClick={() => ask(it.rating_id)} disabled={busy === it.rating_id}
                 className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition disabled:opacity-50">
                 {busy === it.rating_id ? "…" : "Запросить ручную проверку"}

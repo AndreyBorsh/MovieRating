@@ -564,27 +564,31 @@ def qualifying_review(cur, user_id, since, until=None):
     quality review (>=GIVEAWAY_MIN_WORDS words) written AFTER `since` and (if `until` is given)
     no later than `until` (the giveaway deadline), else None.
     Genuine = review_genuine IS TRUE (relevance verified). Near-duplicates of an
-    earlier review (own or others') are excluded (anti-plagiarism)."""
+    earlier review (own or others') are excluded (anti-plagiarism) — unless an
+    admin manually approved the review (manual_status='approved'), which overrides
+    the anti-plagiarism gate (appeal for false positives)."""
     if until is not None:
         cur.execute(
-            """SELECT id, review, created_at FROM ratings
+            """SELECT id, review, created_at, manual_status FROM ratings
                WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
                  AND created_at <= %s AND review_genuine IS TRUE""",
             (user_id, since, until),
         )
     else:
         cur.execute(
-            """SELECT id, review, created_at FROM ratings
+            """SELECT id, review, created_at, manual_status FROM ratings
                WHERE user_id=%s AND review IS NOT NULL AND created_at > %s
                  AND review_genuine IS TRUE""",
             (user_id, since),
         )
-    candidates = [(rid, rv, ca) for rid, rv, ca in cur.fetchall() if is_quality_review(rv)]
+    candidates = [(rid, rv, ca, ms) for rid, rv, ca, ms in cur.fetchall() if is_quality_review(rv)]
     if not candidates:
         return None
     cur.execute("SELECT id, review, created_at FROM ratings WHERE review IS NOT NULL")
     corpus = cur.fetchall()
-    for rid, rv, ca in candidates:
+    for rid, rv, ca, ms in candidates:
+        if ms == "approved":
+            return (rid, rv)  # admin override — bypasses anti-plagiarism
         toks = set(_words(rv))
         original = True
         for oid, orv, oca in corpus:
@@ -1904,17 +1908,19 @@ def request_manual_review(rating_id: int, authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""SELECT user_id, review, review_genuine, manual_status, media_type,
-                          COALESCE(tmdb_id, tv_tmdb_id)
+                          COALESCE(tmdb_id, tv_tmdb_id), created_at
                    FROM ratings WHERE id=%s""", (rating_id,))
     r = cur.fetchone()
     if not r or r[0] != uid:
         cur.close(); conn.close()
         raise HTTPException(status_code=404, detail="Рецензия не найдена")
-    owner, review, genuine, manual, mtype, media_id = r
+    owner, review, genuine, manual, mtype, media_id, created = r
     if not is_quality_review(review):
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail=f"Рецензия должна быть от {GIVEAWAY_MIN_WORDS} слов")
-    if genuine is True or manual == "approved":
+    # "already counted" only if it truly earns a ticket — a near-duplicate that
+    # passed the AI check does NOT, so allow appealing it (possible false positive).
+    if manual == "approved" or (genuine is True and not is_near_duplicate(cur, rating_id, review, created)):
         cur.close(); conn.close()
         raise HTTPException(status_code=400, detail="Эта рецензия уже засчитана")
     if manual == "pending":

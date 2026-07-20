@@ -36,15 +36,13 @@ GIVEAWAY_MIN_WORDS = 200         # min words for a review to count toward ticket
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 LLM_API_URL = os.environ.get("LLM_API_URL", "https://openrouter.ai/api/v1/chat/completions")
 # Comma-separated; tried in order until one responds (free models get rate-limited).
+# Only instruction-tuned models that answer YES/NO directly — reasoning models
+# (gpt-oss, nemotron-nano/super) burn the token budget "thinking" and return no
+# verdict, so they're excluded. Verified free & working on OpenRouter 2026-07.
 LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
-    "google/gemma-4-31b-it:free",
-    "qwen/qwen3-next-80b-a3b-instruct:free",
-    "openai/gpt-oss-120b:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
     "google/gemma-4-26b-a4b-it:free",
-    "nousresearch/hermes-3-llama-3.1-405b:free",
-    "openai/gpt-oss-20b:free",
-    "cognitivecomputations/dolphin-mistral-24b-venice-edition:free",
+    "tencent/hy3:free",
+    "google/gemma-4-31b-it:free",
 ]))
 
 

@@ -2374,6 +2374,36 @@ def get_person(person_id: int):
 
 
 # =========================
+# DEBUG (temporary — remove after checking the LLM review bot)
+# =========================
+
+@app.get("/debug/llm-check")
+def debug_llm_check(t: str = ""):
+    if t != "wawllm2026":
+        raise HTTPException(status_code=404, detail="Not Found")
+    out = {
+        "key_set": bool(LLM_API_KEY),
+        "url": LLM_API_URL,
+        "models": [m.strip() for m in LLM_MODEL.split(",") if m.strip()][:8],
+    }
+    if not LLM_API_KEY:
+        out["note"] = "LLM_API_KEY is empty — AI review check is disabled"
+        return out
+    # 1) connectivity/auth probe against the free models
+    probe_txt, probe_info = _llm_classify("Это тест соединения. Ответь строго одним словом: YES.")
+    out["probe_answer"] = probe_txt
+    out["probe_info"] = probe_info
+    # 2) a real relevance verdict on a genuine sample review
+    out["sample_verdict"] = check_review_genuine(
+        "Матрица",
+        "Хакер узнаёт правду о реальности",
+        "Потрясающий фильм: сильная режиссура, глубокая философия про выбор и реальность, "
+        "отличный экшн, Киану Ривз великолепен, атмосфера захватывает от начала до конца.",
+    )
+    return out
+
+
+# =========================
 # SEARCH
 # =========================
 

@@ -2401,6 +2401,54 @@ def debug_llm_check(t: str = ""):
     return out
 
 
+@app.get("/debug/giveaway")
+def debug_giveaway(t: str = ""):
+    if t != "wawllm2026":
+        raise HTTPException(status_code=404, detail="Not Found")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, review, created_at, user_id FROM ratings WHERE review IS NOT NULL")
+    corpus = cur.fetchall()
+    cur.execute("SELECT id, title, created_at, deadline, status FROM giveaways ORDER BY created_at DESC LIMIT 5")
+    giveaways = cur.fetchall()
+    out = {"now_utc": datetime.utcnow().isoformat(), "giveaways": []}
+    for gid, title, gcreated, deadline, status in giveaways:
+        reviews = []
+        for rid, rv, ca, uid in corpus:
+            words = len(_words(rv or ""))
+            after_start = ca is not None and gcreated is not None and ca > gcreated
+            before_deadline = (deadline is None) or (ca is not None and ca <= deadline)
+            quality = is_quality_review(rv or "")
+            toks = set(_words(rv or ""))
+            dup_of = None
+            for oid, orv, oca, ouid in corpus:
+                if oid == rid:
+                    continue
+                if oca is not None and ca is not None and oca > ca:
+                    continue
+                if _too_similar(toks, orv):
+                    dup_of = oid
+                    break
+            # read genuine flag
+            cur.execute("SELECT review_genuine FROM ratings WHERE id=%s", (rid,))
+            genuine = cur.fetchone()[0]
+            reviews.append({
+                "rating_id": rid, "user_id": uid, "words": words,
+                "genuine": genuine, "after_start": after_start,
+                "before_deadline": before_deadline, "is_quality": quality,
+                "dup_of": dup_of, "created_at": ca.isoformat() if ca else None,
+                "counts": bool(after_start and before_deadline and genuine is True and quality and dup_of is None),
+            })
+        out["giveaways"].append({
+            "id": gid, "title": title, "status": status,
+            "created_at": gcreated.isoformat() if gcreated else None,
+            "deadline": deadline.isoformat() if deadline else None,
+            "reviews": reviews,
+        })
+    cur.close(); conn.close()
+    return out
+
+
 # =========================
 # SEARCH
 # =========================

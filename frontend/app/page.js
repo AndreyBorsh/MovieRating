@@ -204,9 +204,7 @@ function ReviewModal({ item, onClose }) {
                 <span className={`text-sm font-display font-medium ${scoreColor(item.score)}`}>
                   {item.score?.toFixed(1)}
                 </span>
-                {isTV && (
-                  <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
-                )}
+                <span className={`text-xs px-1.5 py-0.5 rounded ${isTV ? "text-amber-600 bg-amber-400/10" : "text-sky-600 bg-sky-400/10"}`}>{isTV ? "сериал" : "фильм"}</span>
               </div>
             </div>
           </div>
@@ -275,11 +273,9 @@ function RecentCard({ item, onClick }) {
       <div className="flex-1 min-w-0">
         <div className="flex items-start gap-1">
           <p className="text-sm font-bold tracking-tight text-stone-900 line-clamp-1 flex-1">{item.movie_title}</p>
-          {isTV && (
-            <span className="text-[10px] text-amber-700 bg-amber-400/15 px-1.5 py-0.5 rounded-full shrink-0 mt-0.5">
-              сериал
-            </span>
-          )}
+          <span className={`text-[10px] px-1.5 py-0.5 rounded-full shrink-0 mt-0.5 ${isTV ? "text-amber-700 bg-amber-400/15" : "text-sky-700 bg-sky-400/15"}`}>
+            {isTV ? "сериал" : "фильм"}
+          </span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-amber-700 font-semibold">{item.username}</span>
@@ -319,9 +315,9 @@ function MediaCard({ item }) {
               ★ ШЕДЕВР
             </div>
           )}
-          {isTV && !legendary && (
-            <div className="absolute top-2 right-2 text-[10px] font-medium text-amber-700 px-2 py-0.5 rounded-full backdrop-blur-md" style={{ background: "rgba(255,255,255,0.8)" }}>
-              сериал
+          {!legendary && (
+            <div className={`absolute top-2 right-2 text-[10px] font-medium px-2 py-0.5 rounded-full backdrop-blur-md ${isTV ? "text-amber-700" : "text-sky-700"}`} style={{ background: "rgba(255,255,255,0.8)" }}>
+              {isTV ? "сериал" : "фильм"}
             </div>
           )}
           <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full backdrop-blur-md" style={{ background: "rgba(255,255,255,0.85)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>

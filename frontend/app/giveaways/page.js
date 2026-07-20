@@ -196,6 +196,7 @@ function EntriesPanel({ token, giveawayId }) {
 
 const STATUS_UI = {
   passed:          { label: "✓ зачтена",                cls: "text-emerald-600" },
+  duplicate:       { label: "♻️ дубликат — не засчитана", cls: "text-rose-500" },
   failed:          { label: "❌ не прошла ИИ-проверку",   cls: "text-rose-500" },
   checking:        { label: "⏳ проверяется",            cls: "text-stone-600" },
   manual_pending:  { label: "🔎 на ручной проверке",     cls: "text-amber-600" },

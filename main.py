@@ -541,6 +541,24 @@ def _too_similar(tokens_a, text_b):
     return union > 0 and inter / union >= 0.8
 
 
+def is_near_duplicate(cur, rating_id, review_text, created_at):
+    """True if this review is a near-duplicate of an earlier (or simultaneous)
+    review by anyone — i.e. it's the copy, not the original. Same rule as the
+    anti-plagiarism gate in qualifying_review, so the UI status matches ticketing."""
+    toks = set(_words(review_text or ""))
+    if not toks:
+        return False
+    cur.execute("SELECT id, review, created_at FROM ratings WHERE review IS NOT NULL")
+    for oid, orv, oca in cur.fetchall():
+        if oid == rating_id:
+            continue
+        if oca is not None and created_at is not None and oca > created_at:
+            continue  # created after this one → not the earlier original
+        if _too_similar(toks, orv):
+            return True
+    return False
+
+
 def qualifying_review(cur, user_id, since, until=None):
     """Return (rating_id, review_text) of the user's first ORIGINAL genuine
     quality review (>=GIVEAWAY_MIN_WORDS words) written AFTER `since` and (if `until` is given)
@@ -1844,23 +1862,27 @@ def my_giveaway_reviews(authorization: str = Header(None)):
     cur.execute("""
         SELECT r.id, r.review, r.review_genuine, r.manual_status, r.media_type,
                COALESCE(r.tmdb_id, r.tv_tmdb_id) AS media_id,
-               COALESCE(m.title, t.title) AS title
+               COALESCE(m.title, t.title) AS title, r.created_at
         FROM ratings r
         LEFT JOIN movies   m ON r.media_type = 'movie' AND m.tmdb_id = r.tmdb_id
         LEFT JOIN tv_shows t ON r.media_type = 'tv'    AND t.tmdb_id = r.tv_tmdb_id
         WHERE r.user_id = %s AND r.review IS NOT NULL AND r.created_at > %s
         ORDER BY r.created_at DESC
     """, (uid, since))
+    rows = cur.fetchall()
     items = []
-    for rid, review, genuine, manual, mtype, media_id, title in cur.fetchall():
+    for rid, review, genuine, manual, mtype, media_id, title, created in rows:
         if not is_quality_review(review):
             continue
         if manual == "pending":
             status = "manual_pending"
         elif manual == "rejected":
             status = "manual_rejected"
-        elif manual == "approved" or genuine is True:
-            status = "passed"
+        elif manual == "approved":
+            status = "passed"  # admin override wins
+        elif genuine is True:
+            # passed the AI relevance check — but a plagiarised copy earns no ticket
+            status = "duplicate" if is_near_duplicate(cur, rid, review, created) else "passed"
         elif genuine is False:
             status = "failed"
         else:

@@ -2250,7 +2250,7 @@ def get_similar_tv(tmdb_id: int):
 # DETAILS (cast, images, country, genres)
 # =========================
 
-def _extract_cast(credits: dict, limit: int = 14) -> list:
+def _extract_cast(credits: dict, limit: int = 40) -> list:
     cast = credits.get("cast", []) if credits else []
     return [
         {
@@ -2382,9 +2382,10 @@ def get_person(person_id: int):
             "character": c.get("character", ""),
             "poster": c.get("poster_path"),
             "year": date[:4] if date else None,
-            "popularity": c.get("popularity") or 0,
+            "date": date or "",
         })
-    filmography.sort(key=lambda x: x["popularity"], reverse=True)
+    # newest first; undated projects go last
+    filmography.sort(key=lambda x: x["date"], reverse=True)
 
     return {
         "id": d.get("id"),
@@ -2480,6 +2481,42 @@ def debug_giveaway(t: str = ""):
 # =========================
 # SEARCH
 # =========================
+
+def _tmdb_media_item(m):
+    """Normalise a TMDB movie/tv result to our shape; None for other types."""
+    mt = m.get("media_type")
+    if mt == "movie":
+        date = m.get("release_date")
+        return {"id": m["id"], "title": m.get("title", ""), "overview": m.get("overview", ""),
+                "poster": m.get("poster_path"), "year": date[:4] if date else None, "media_type": "movie"}
+    if mt == "tv":
+        date = m.get("first_air_date")
+        return {"id": m["id"], "title": m.get("name", ""), "overview": m.get("overview", ""),
+                "poster": m.get("poster_path"), "year": date[:4] if date else None, "media_type": "tv"}
+    return None
+
+
+@app.get("/trending")
+def trending():
+    """Popular movies + TV this week (most popular first) — the default search
+    view shown before the user types anything."""
+    try:
+        res = requests.get(
+            f"{TMDB_BASE}/trending/all/week",
+            params={"api_key": TMDB_API_KEY, "language": "ru-RU"},
+            timeout=8,
+        )
+    except requests.RequestException:
+        return []
+    if res.status_code != 200:
+        return []
+    out = []
+    for m in res.json().get("results", []):
+        item = _tmdb_media_item(m)
+        if item:
+            out.append(item)
+    return out
+
 
 @app.get("/search/multi")
 def search_multi(query: str):

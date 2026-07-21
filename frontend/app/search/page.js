@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { searchMulti } from "@/lib/api";
+import { searchMulti, getTrending } from "@/lib/api";
 import { img } from "@/lib/base";
 
 const POSTER = (path) => img("w342", path);
@@ -21,9 +21,17 @@ function SearchContent() {
   const [query,   setQuery]   = useState(initialQ);
   const [filter,  setFilter]  = useState("all");
   const [results, setResults] = useState([]);
+  const [popular, setPopular] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
   const reqId = useRef(0);
+
+  const isSearching = query.trim().length >= 2;
+
+  // Popular projects (shown by default, before typing)
+  useEffect(() => {
+    getTrending().then((d) => setPopular(Array.isArray(d) ? d : [])).catch(() => {});
+  }, []);
 
   // Live search with debounce
   useEffect(() => {
@@ -53,12 +61,14 @@ function SearchContent() {
     return () => clearTimeout(t);
   }, [query]);
 
-  const shown = results.filter((r) => filter === "all" || r.media_type === filter);
-  const movieCount = results.filter((r) => r.media_type === "movie").length;
-  const tvCount = results.filter((r) => r.media_type === "tv").length;
+  // What we display: search results while typing, otherwise popular
+  const active = isSearching ? results : popular;
+  const shown = active.filter((r) => filter === "all" || r.media_type === filter);
+  const movieCount = active.filter((r) => r.media_type === "movie").length;
+  const tvCount = active.filter((r) => r.media_type === "tv").length;
 
   const countFor = (key) =>
-    key === "all" ? results.length : key === "movie" ? movieCount : tvCount;
+    key === "all" ? active.length : key === "movie" ? movieCount : tvCount;
 
   return (
     <div className="space-y-6">
@@ -90,8 +100,8 @@ function SearchContent() {
         )}
       </div>
 
-      {/* Filter chips (only when there are results) */}
-      {results.length > 0 && (
+      {/* Filter chips — always visible when there's something to show */}
+      {active.length > 0 && (
         <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
           {FILTERS.map((f) => (
             <button
@@ -120,6 +130,10 @@ function SearchContent() {
         <div className="text-center text-stone-500 text-sm py-8">
           Ничего не найдено по запросу «{query.trim()}»
         </div>
+      )}
+
+      {!isSearching && shown.length > 0 && (
+        <h2 className="text-lg font-extrabold tracking-tight text-stone-900">🔥 Популярное сейчас</h2>
       )}
 
       {shown.length > 0 && (

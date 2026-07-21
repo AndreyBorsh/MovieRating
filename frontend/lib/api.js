@@ -239,6 +239,13 @@ export async function searchMulti(query) {
   return res.json();
 }
 
+// Popular movies + TV (default search view before the user types)
+export async function getTrending() {
+  const res = await fetch(`${API}/trending`);
+  if (!res.ok) return [];
+  return res.json();
+}
+
 // =========================
 // PRIVATE NOTES (owner-only)
 // =========================

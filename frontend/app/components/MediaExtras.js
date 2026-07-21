@@ -8,6 +8,36 @@ const BACKDROP = (p) => img("w780", p);
 const BACKDROP_LG = (p) => img("w1280", p);
 const PROFILE = (p) => img("w185", p);
 
+function CastCard({ c, onClick }) {
+  const inner = (
+    <>
+      {c.photo ? (
+        <img
+          src={PROFILE(c.photo)}
+          alt={c.name}
+          loading="lazy"
+          className="w-20 h-28 rounded-lg object-cover mb-1 group-hover:brightness-95 transition"
+        />
+      ) : (
+        <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-400 mb-1">
+          👤
+        </div>
+      )}
+      <p className="text-xs text-stone-800 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">{c.name}</p>
+      {c.character && (
+        <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">{c.character}</p>
+      )}
+    </>
+  );
+  return c.id ? (
+    <Link href={`/person/${c.id}`} onClick={onClick} className="shrink-0 w-20 text-center group">
+      {inner}
+    </Link>
+  ) : (
+    <div className="shrink-0 w-20 text-center">{inner}</div>
+  );
+}
+
 function Chip({ children }) {
   return (
     <span
@@ -30,6 +60,7 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
   const backdrops = details?.backdrops || [];
   const [lbIndex, setLbIndex] = useState(null);
   const open = lbIndex !== null;
+  const [castOpen, setCastOpen] = useState(false);
 
   const close = useCallback(() => setLbIndex(null), []);
   const prev = useCallback(
@@ -155,37 +186,51 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
         <div>
           <h2 className="text-base font-semibold text-stone-900 mb-2">В ролях</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
-            {cast.map((c, i) => {
-              const inner = (
-                <>
-                  {c.photo ? (
-                    <img
-                      src={PROFILE(c.photo)}
-                      alt={c.name}
-                      loading="lazy"
-                      className="w-20 h-28 rounded-lg object-cover mb-1 group-hover:brightness-95 transition"
-                    />
-                  ) : (
-                    <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-400 mb-1">
-                      👤
-                    </div>
-                  )}
-                  <p className="text-xs text-stone-800 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">{c.name}</p>
-                  {c.character && (
-                    <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">
-                      {c.character}
-                    </p>
-                  )}
-                </>
-              );
-              return c.id ? (
-                <Link key={c.id} href={`/person/${c.id}`} className="shrink-0 w-20 text-center group">
-                  {inner}
-                </Link>
-              ) : (
-                <div key={i} className="shrink-0 w-20 text-center">{inner}</div>
-              );
-            })}
+            {cast.slice(0, 12).map((c, i) => (
+              <CastCard key={c.id ?? i} c={c} />
+            ))}
+            {cast.length > 12 && (
+              <button
+                onClick={() => setCastOpen(true)}
+                className="shrink-0 w-20 flex flex-col items-center justify-center gap-1 text-center group"
+              >
+                <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-500 group-hover:bg-stone-300 transition">
+                  +{cast.length - 12}
+                </div>
+                <span className="text-xs text-amber-600 group-hover:text-amber-500 transition-colors leading-tight">Все актёры</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* All-cast dialog */}
+      {castOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+          style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+          onClick={() => setCastOpen(false)}
+        >
+          <div
+            className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[85vh] p-5"
+            style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-extrabold tracking-tight text-stone-900">В ролях · {cast.length}</h3>
+              <button
+                onClick={() => setCastOpen(false)}
+                className="text-stone-500 hover:text-stone-800 transition-colors text-lg leading-none"
+                aria-label="Закрыть"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center sm:justify-start">
+              {cast.map((c, i) => (
+                <CastCard key={c.id ?? i} c={c} onClick={() => setCastOpen(false)} />
+              ))}
+            </div>
           </div>
         </div>
       )}

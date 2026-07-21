@@ -253,9 +253,9 @@ function ReviewModal({ rating, onClose }) {
             <div className="min-w-0">
               <div className="text-base font-bold tracking-tight text-stone-900 leading-tight">{rating.movie_title}</div>
               <div className="flex flex-wrap gap-1 mt-1">
-                {isTV && (
-                  <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">сериал</span>
-                )}
+                <span className={`text-xs px-1.5 py-0.5 rounded ${isTV ? "text-amber-600 bg-amber-400/10" : "text-sky-600 bg-sky-400/10"}`}>
+                  {isTV ? "сериал" : "фильм"}
+                </span>
                 {isTV && seasonLabel(rating.season_from, rating.season_to) && (
                   <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">📺 {seasonLabel(rating.season_from, rating.season_to)}</span>
                 )}
@@ -425,9 +425,9 @@ export default function ProfilePage() {
                       <p className="text-sm font-semibold text-stone-900 line-clamp-1">
                         {n.title || (n.media_type === "tv" ? "Сериал" : "Фильм")}
                       </p>
-                      {n.media_type === "tv" && (
-                        <span className="text-[10px] text-amber-600 bg-amber-400/10 px-1 py-0.5 rounded shrink-0">сериал</span>
-                      )}
+                      <span className={`text-[10px] px-1 py-0.5 rounded shrink-0 ${n.media_type === "tv" ? "text-amber-600 bg-amber-400/10" : "text-sky-600 bg-sky-400/10"}`}>
+                        {n.media_type === "tv" ? "сериал" : "фильм"}
+                      </span>
                     </div>
                     <p className="text-xs text-stone-600 mt-1 line-clamp-2 whitespace-pre-wrap">{n.content}</p>
                     {n.updated_at && (
@@ -492,11 +492,9 @@ export default function ProfilePage() {
                           {r.movie_title}
                         </Link>
                         <div className="flex flex-wrap gap-1 mt-0.5">
-                          {isTV && (
-                            <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">
-                              сериал
-                            </span>
-                          )}
+                          <span className={`text-xs px-1.5 py-0.5 rounded ${isTV ? "text-amber-600 bg-amber-400/10" : "text-sky-600 bg-sky-400/10"}`}>
+                            {isTV ? "сериал" : "фильм"}
+                          </span>
                           {isTV && seasonLabel(r.season_from, r.season_to) && (
                             <span className="text-xs text-amber-600 bg-amber-400/10 px-1.5 py-0.5 rounded">
                               📺 {seasonLabel(r.season_from, r.season_to)}

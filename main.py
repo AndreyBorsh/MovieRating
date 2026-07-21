@@ -2400,7 +2400,7 @@ def get_person(person_id: int):
         "deathday": d.get("deathday"),
         "place_of_birth": d.get("place_of_birth"),
         "known_for": d.get("known_for_department"),
-        "filmography": filmography[:40],
+        "filmography": filmography,
     }
 
 

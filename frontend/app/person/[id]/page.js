@@ -51,6 +51,8 @@ export default function PersonPage() {
   const { id } = useParams();
   const [person, setPerson] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [sort, setSort] = useState("new");
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     setLoading(true);
@@ -68,6 +70,20 @@ export default function PersonPage() {
   }
 
   const dept = DEPT[person.known_for] || person.known_for;
+
+  const query = q.trim().toLowerCase();
+  const films = (person.filmography || [])
+    .filter((f) => !query || (f.title || "").toLowerCase().includes(query))
+    .slice()
+    .sort((a, b) => {
+      if (sort === "title") return (a.title || "").localeCompare(b.title || "", "ru");
+      const da = a.date || "", db = b.date || "";
+      // undated always last, regardless of direction
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return sort === "old" ? da.localeCompare(db) : db.localeCompare(da);
+    });
   const liveAge = ageBetween(person.birthday, null);
   const deathAge = ageBetween(person.birthday, person.deathday);
 
@@ -122,11 +138,35 @@ export default function PersonPage() {
       {/* ── Filmography ── */}
       {person.filmography?.length > 0 && (
         <section>
-          <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900 mb-4">
-            Фильмография
-          </h2>
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900">
+              Фильмография <span className="text-stone-400 font-semibold text-base">{person.filmography.length}</span>
+            </h2>
+            <div className="flex items-center gap-2 ml-auto">
+              <input
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Поиск по проектам…"
+                className="rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 w-40 sm:w-56"
+                style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.1)" }}
+              />
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value)}
+                className="rounded-lg px-2 py-1.5 text-sm text-stone-900 outline-none cursor-pointer"
+                style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+              >
+                <option value="new">Сначала новые</option>
+                <option value="old">Сначала старые</option>
+                <option value="title">По названию</option>
+              </select>
+            </div>
+          </div>
+          {films.length === 0 ? (
+            <p className="text-sm text-stone-500 py-6">Ничего не найдено по запросу «{q.trim()}».</p>
+          ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-            {person.filmography.map((f) => (
+            {films.map((f) => (
               <Link
                 key={`${f.media_type}-${f.id}`}
                 href={`/${f.media_type === "tv" ? "tv" : "movies"}/${f.id}`}
@@ -156,6 +196,7 @@ export default function PersonPage() {
               </Link>
             ))}
           </div>
+          )}
         </section>
       )}
     </div>

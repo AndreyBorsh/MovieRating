@@ -434,6 +434,9 @@ export default function MoviePage() {
                 </span>
               )}
             </h1>
+            {details?.original_title && details.original_title !== movie.title && (
+              <p className="text-sm text-stone-400 mt-0.5">{details.original_title}</p>
+            )}
 
             {movie.overview && (
               <ExpandableText text={movie.overview} className="text-sm text-stone-600 leading-relaxed" />

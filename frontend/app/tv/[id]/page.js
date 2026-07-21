@@ -544,6 +544,9 @@ export default function TvPage() {
                 </span>
               )}
             </h1>
+            {details?.original_title && details.original_title !== show.title && (
+              <p className="text-sm text-stone-400 mt-0.5">{details.original_title}</p>
+            )}
 
             {show.overview && (
               <ExpandableText text={show.overview} className="text-sm text-stone-600 leading-relaxed" />

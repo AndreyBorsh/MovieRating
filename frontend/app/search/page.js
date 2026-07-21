@@ -173,6 +173,9 @@ function SearchContent() {
                   <div className="text-sm font-bold tracking-tight text-stone-900 line-clamp-2 group-hover:text-amber-600 transition-colors">
                     {item.title}
                   </div>
+                  {item.original && item.original !== item.title && (
+                    <div className="text-[11px] text-stone-400 line-clamp-1 mt-0.5">{item.original}</div>
+                  )}
                   {item.overview && (
                     <p className="text-xs text-stone-500 mt-1 line-clamp-2">
                       {item.overview}

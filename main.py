@@ -2250,8 +2250,10 @@ def get_similar_tv(tmdb_id: int):
 # DETAILS (cast, images, country, genres)
 # =========================
 
-def _extract_cast(credits: dict, limit: int = 40) -> list:
+def _extract_cast(credits: dict, limit: int = None) -> list:
     cast = credits.get("cast", []) if credits else []
+    if limit:
+        cast = cast[:limit]
     return [
         {
             "id": c.get("id"),
@@ -2259,7 +2261,7 @@ def _extract_cast(credits: dict, limit: int = 40) -> list:
             "character": c.get("character", ""),
             "photo": c.get("profile_path"),
         }
-        for c in cast[:limit]
+        for c in cast
     ]
 
 
@@ -2286,6 +2288,7 @@ def get_movie_details(tmdb_id: int):
         "countries": [c["name"] for c in d.get("production_countries", [])],
         "runtime": d.get("runtime"),
         "tagline": d.get("tagline") or None,
+        "original_title": d.get("original_title") or None,
         "directors": directors,
         "backdrops": backdrops,
         "cast": _extract_cast(credits),
@@ -2327,6 +2330,7 @@ def get_tv_details(tmdb_id: int):
         "episodes": d.get("number_of_episodes"),
         "latest_season_air": latest_season_air,
         "tagline": d.get("tagline") or None,
+        "original_title": d.get("original_name") or None,
         "creators": creators,
         "backdrops": backdrops,
         "cast": _extract_cast(credits),
@@ -2487,12 +2491,16 @@ def _tmdb_media_item(m):
     mt = m.get("media_type")
     if mt == "movie":
         date = m.get("release_date")
-        return {"id": m["id"], "title": m.get("title", ""), "overview": m.get("overview", ""),
-                "poster": m.get("poster_path"), "year": date[:4] if date else None, "media_type": "movie"}
+        return {"id": m["id"], "title": m.get("title", ""), "original": m.get("original_title", ""),
+                "overview": m.get("overview", ""), "poster": m.get("poster_path"),
+                "year": date[:4] if date else None, "media_type": "movie",
+                "popularity": m.get("popularity") or 0}
     if mt == "tv":
         date = m.get("first_air_date")
-        return {"id": m["id"], "title": m.get("name", ""), "overview": m.get("overview", ""),
-                "poster": m.get("poster_path"), "year": date[:4] if date else None, "media_type": "tv"}
+        return {"id": m["id"], "title": m.get("name", ""), "original": m.get("original_name", ""),
+                "overview": m.get("overview", ""), "poster": m.get("poster_path"),
+                "year": date[:4] if date else None, "media_type": "tv",
+                "popularity": m.get("popularity") or 0}
     return None
 
 
@@ -2515,6 +2523,7 @@ def trending():
         item = _tmdb_media_item(m)
         if item:
             out.append(item)
+    out.sort(key=lambda x: x["popularity"], reverse=True)
     return out
 
 
@@ -2535,28 +2544,9 @@ def search_multi(query: str):
         return []
     if res.status_code != 200:
         return []
-    out = []
-    for m in res.json().get("results", []):
-        mt = m.get("media_type")
-        if mt == "movie":
-            out.append({
-                "id": m["id"],
-                "title": m.get("title", ""),
-                "overview": m.get("overview", ""),
-                "poster": m.get("poster_path"),
-                "year": m["release_date"][:4] if m.get("release_date") else None,
-                "media_type": "movie",
-            })
-        elif mt == "tv":
-            out.append({
-                "id": m["id"],
-                "title": m.get("name", ""),
-                "overview": m.get("overview", ""),
-                "poster": m.get("poster_path"),
-                "year": m["first_air_date"][:4] if m.get("first_air_date") else None,
-                "media_type": "tv",
-            })
-        # ignore "person" results
+    out = [it for it in (_tmdb_media_item(m) for m in res.json().get("results", [])) if it]
+    # most popular first (TMDB relevance often buries the obvious hits)
+    out.sort(key=lambda x: x["popularity"], reverse=True)
     return out
 
 

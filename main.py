@@ -238,6 +238,9 @@ def ensure_season_columns():
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_from INT")
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS season_to INT")
     cur.execute("ALTER TABLE ratings ADD COLUMN IF NOT EXISTS review_genuine BOOLEAN")
+    # profile customisation
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar TEXT")
+    cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio TEXT")
     # one TV rating per (user, show, season-scope) — NULLs normalized to 0
     cur.execute("ALTER TABLE ratings DROP CONSTRAINT IF EXISTS ratings_user_tv_unique")
     cur.execute("""
@@ -2197,7 +2200,7 @@ def get_profile(user_id: int):
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("SELECT id, username, created_at FROM users WHERE id=%s", (user_id,))
+    cur.execute("SELECT id, username, created_at, avatar, bio FROM users WHERE id=%s", (user_id,))
     user = cur.fetchone()
     if not user:
         cur.close(); conn.close()
@@ -2233,6 +2236,8 @@ def get_profile(user_id: int):
         "user_id": user[0],
         "username": user[1],
         "joined": user[2].isoformat() if user[2] else None,
+        "avatar": user[3],
+        "bio": user[4],
         "ratings": [
             {
                 "score": r[0], "review": r[1],
@@ -2247,6 +2252,35 @@ def get_profile(user_id: int):
             for r in ratings
         ],
     }
+
+
+@app.put("/profile")
+def update_profile(data: dict, authorization: str = Header(None)):
+    """Update the logged-in user's avatar + bio. Avatar is a small image data URI
+    (resized client-side); pass null/"" to remove it."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+
+    bio = (data.get("bio") or "").strip()
+    if len(bio) > 1000:
+        raise HTTPException(status_code=400, detail="«О себе»: не больше 1000 символов")
+    bio = bio or None
+
+    avatar = data.get("avatar")
+    if avatar is not None:
+        avatar = str(avatar).strip()
+        if avatar == "":
+            avatar = None
+        elif not avatar.startswith("data:image/"):
+            raise HTTPException(status_code=400, detail="Аватар должен быть изображением")
+        elif len(avatar) > 500_000:
+            raise HTTPException(status_code=400, detail="Изображение слишком большое — уменьшите")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("UPDATE users SET bio=%s, avatar=%s WHERE id=%s", (bio, avatar, uid))
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True}
 
 
 # =========================

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getProfile, getMyNotes } from "@/lib/api";
+import { getProfile, getMyNotes, updateProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
@@ -293,6 +293,110 @@ function ReviewModal({ rating, onClose }) {
   );
 }
 
+function EditProfileModal({ profile, token, onClose, onSaved }) {
+  const [bio, setBio] = useState(profile.bio || "");
+  const [avatar, setAvatar] = useState(profile.avatar || null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const onFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) { setErr("Выберите изображение"); return; }
+    setErr("");
+    const reader = new FileReader();
+    reader.onload = () => {
+      const im = document.createElement("img");
+      im.onload = () => {
+        const size = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = size; canvas.height = size;
+        const ctx = canvas.getContext("2d");
+        const min = Math.min(im.width, im.height);      // center-crop to square
+        const sx = (im.width - min) / 2, sy = (im.height - min) / 2;
+        ctx.drawImage(im, sx, sy, min, min, 0, 0, size, size);
+        setAvatar(canvas.toDataURL("image/jpeg", 0.85));
+      };
+      im.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const save = async () => {
+    setBusy(true); setErr("");
+    try {
+      await updateProfile(token, { bio: bio.trim(), avatar });
+      onSaved();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
+        style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-extrabold tracking-tight text-stone-900">Редактировать профиль</h3>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-800 text-lg leading-none" aria-label="Закрыть">✕</button>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {avatar ? (
+            <img src={avatar} alt="" className="w-20 h-20 rounded-full object-cover border border-amber-400/30" />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center text-2xl text-amber-600">
+              {profile.username.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition cursor-pointer w-fit">
+              Загрузить фото
+              <input type="file" accept="image/*" onChange={onFile} className="hidden" />
+            </label>
+            {avatar && (
+              <button onClick={() => setAvatar(null)} className="text-xs text-rose-500 hover:text-rose-400 w-fit">Убрать</button>
+            )}
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1.5">О себе</label>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={1000}
+            rows={4}
+            placeholder="Расскажите о себе, любимые жанры, фильмы…"
+            className="w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 resize-none"
+            style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+          />
+          <div className="text-[10px] text-stone-400 text-right mt-0.5">{bio.length}/1000</div>
+        </div>
+
+        {err && <p className="text-xs text-rose-500">{err}</p>}
+
+        <div className="flex gap-2 justify-end">
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 transition">Отмена</button>
+          <button
+            onClick={save}
+            disabled={busy}
+            className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition"
+          >
+            {busy ? "Сохранение…" : "Сохранить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { id } = useParams();
   const { user, token } = useAuth();
@@ -300,6 +404,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState([]);
+  const [editOpen, setEditOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -308,6 +413,8 @@ export default function ProfilePage() {
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [id]);
+
+  const reloadProfile = () => getProfile(id).then(setProfile).catch(console.error);
 
   // Load own private notes only when viewing own profile
   const viewingOwn = user && profile && user.user_id === profile.user_id;
@@ -354,23 +461,50 @@ export default function ProfilePage() {
     <div className="space-y-8">
       {openReview && <ReviewModal rating={openReview} onClose={() => setOpenReview(null)} />}
 
+      {editOpen && (
+        <EditProfileModal
+          profile={profile}
+          token={token}
+          onClose={() => setEditOpen(false)}
+          onSaved={() => { setEditOpen(false); reloadProfile(); }}
+        />
+      )}
+
       {/* Profile header */}
       <div
-        className="rounded-xl p-6 border flex items-center gap-6"
+        className="rounded-xl p-6 border flex items-start gap-6"
         style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
       >
-        <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center font-display text-2xl font-medium text-amber-600 shrink-0">
-          {profile.username.charAt(0).toUpperCase()}
-        </div>
-        <div>
-          <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">
-            {profile.username}
+        {profile.avatar ? (
+          <img
+            src={profile.avatar}
+            alt={profile.username}
+            className="w-16 h-16 rounded-full object-cover shrink-0 border border-amber-400/30"
+          />
+        ) : (
+          <div className="w-16 h-16 rounded-full bg-amber-400/10 border border-amber-400/30 flex items-center justify-center font-display text-2xl font-medium text-amber-600 shrink-0">
+            {profile.username.charAt(0).toUpperCase()}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-2xl font-extrabold tracking-tight text-stone-900">
+              {profile.username}
+              {isMe && (
+                <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-400/10 px-2 py-0.5 rounded-full">
+                  вы
+                </span>
+              )}
+            </h1>
             {isMe && (
-              <span className="ml-2 text-xs font-normal text-amber-600 bg-amber-400/10 px-2 py-0.5 rounded-full">
-                вы
-              </span>
+              <button
+                onClick={() => setEditOpen(true)}
+                className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition"
+              >
+                Редактировать
+              </button>
             )}
-          </h1>
+          </div>
           {joined && (
             <div className="text-sm text-stone-500 mt-0.5">
               На платформе с {joined}
@@ -390,6 +524,11 @@ export default function ProfilePage() {
               </span>
             )}
           </div>
+          {profile.bio && (
+            <p className="text-sm text-stone-700 mt-3 whitespace-pre-line leading-relaxed">
+              {profile.bio}
+            </p>
+          )}
         </div>
       </div>
 

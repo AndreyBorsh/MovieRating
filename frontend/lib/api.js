@@ -192,6 +192,19 @@ export async function getProfile(userId) {
   return res.json();
 }
 
+export async function updateProfile(token, { bio, avatar }) {
+  const res = await fetch(`${API}/profile`, {
+    method: "PUT",
+    headers: authHeader(token),
+    body: JSON.stringify({ bio, avatar }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || "Не удалось сохранить профиль");
+  }
+  return res.json();
+}
+
 // =========================
 // SIMILAR
 // =========================

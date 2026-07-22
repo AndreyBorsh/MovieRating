@@ -790,6 +790,53 @@ def send_verification_email(to_email: str, code: str):
         raise Exception(f"Brevo error {res.status_code}: {res.text}")
 
 
+def send_giveaway_announcement(giveaway_id, title, description):
+    """Email every registered user about a new giveaway. Best-effort, runs in a
+    background thread; no-op (logs) if Brevo isn't configured."""
+    if not BREVO_API_KEY or not BREVO_SENDER:
+        print(f"[DEV] New giveaway '{title}' — email blast skipped (Brevo not configured)")
+        return
+    try:
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT email FROM users WHERE email IS NOT NULL AND email <> ''")
+        emails = [r[0] for r in cur.fetchall()]
+        cur.close(); conn.close()
+    except Exception as e:
+        print(f"giveaway announcement db error: {e}")
+        return
+    link = "https://makuku.ddns.net/waw-movie/giveaways"
+    subject = f"🎟 Новый розыгрыш на WAW: {title}"
+    body = (
+        f"Привет!\n\nНа WAW стартовал новый розыгрыш — «{title}».\n"
+        + (f"\n{description}\n" if description else "")
+        + f"\nНапишите рецензию (от {GIVEAWAY_MIN_WORDS} слов) на любой фильм или сериал, "
+          "чтобы получить билет и участвовать.\n\n"
+        + f"Подробнее: {link}\n"
+    )
+    sent = 0
+    for em in emails:
+        try:
+            res = requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+                json={
+                    "sender": {"name": "WAW Cinema", "email": BREVO_SENDER},
+                    "to": [{"email": em}],
+                    "subject": subject,
+                    "textContent": body,
+                },
+                timeout=10,
+            )
+            if res.status_code >= 400:
+                print(f"giveaway email to {em} failed: {res.status_code} {res.text[:120]}")
+            else:
+                sent += 1
+        except Exception as e:
+            print(f"giveaway email to {em} error: {e}")
+    print(f"giveaway announcement '{title}': sent {sent}/{len(emails)}")
+
+
 @app.post("/auth/register")
 def register(data: dict):
     username = (data.get("username") or "").strip()
@@ -1715,6 +1762,8 @@ def create_giveaway(data: dict, authorization: str = Header(None)):
                 (title, desc, dl))
     gid = cur.fetchone()[0]
     conn.commit(); cur.close(); conn.close()
+    # notify all users by email (best-effort, non-blocking)
+    threading.Thread(target=send_giveaway_announcement, args=(gid, title, desc), daemon=True).start()
     return {"id": gid}
 
 

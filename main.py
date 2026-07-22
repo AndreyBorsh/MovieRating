@@ -2387,6 +2387,7 @@ def get_person(person_id: int):
             "poster": c.get("poster_path"),
             "year": date[:4] if date else None,
             "date": date or "",
+            "popularity": c.get("popularity") or 0,
         })
     # newest first; undated projects go last
     filmography.sort(key=lambda x: x["date"], reverse=True)

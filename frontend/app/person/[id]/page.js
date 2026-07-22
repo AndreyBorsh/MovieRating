@@ -76,6 +76,7 @@ export default function PersonPage() {
     .filter((f) => !query || (f.title || "").toLowerCase().includes(query))
     .slice()
     .sort((a, b) => {
+      if (sort === "popular") return (b.popularity || 0) - (a.popularity || 0);
       if (sort === "title") return (a.title || "").localeCompare(b.title || "", "ru");
       const da = a.date || "", db = b.date || "";
       // undated always last, regardless of direction
@@ -158,6 +159,7 @@ export default function PersonPage() {
               >
                 <option value="new">Сначала новые</option>
                 <option value="old">Сначала старые</option>
+                <option value="popular">По популярности</option>
                 <option value="title">По названию</option>
               </select>
             </div>

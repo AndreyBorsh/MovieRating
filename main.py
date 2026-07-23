@@ -2500,6 +2500,8 @@ def debug_llm_check(t: str = ""):
         "key_set": bool(LLM_API_KEY),
         "url": LLM_API_URL,
         "models": [m.strip() for m in LLM_MODEL.split(",") if m.strip()][:8],
+        "brevo_key_set": bool(BREVO_API_KEY),
+        "brevo_sender": BREVO_SENDER or None,
     }
     if not LLM_API_KEY:
         out["note"] = "LLM_API_KEY is empty — AI review check is disabled"

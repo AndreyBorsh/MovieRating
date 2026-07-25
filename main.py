@@ -776,8 +776,7 @@ def validate_email_domain(email: str):
 
 def send_verification_email(to_email: str, code: str):
     if not BREVO_API_KEY or not BREVO_SENDER:
-        print(f"[DEV] Verification code for {to_email}: {code}")
-        return
+        raise Exception("Brevo is not configured")
     res = requests.post(
         "https://api.brevo.com/v3/smtp/email",
         headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
@@ -879,14 +878,18 @@ def register(data: dict):
     conn.commit()
     cur.close(); conn.close()
 
-    if BREVO_API_KEY and BREVO_SENDER:
-        try:
-            send_verification_email(email, code)
-            return {"pending": True, "message": "Код отправлен на почту"}
-        except Exception as e:
-            print(f"Email send error: {e}")
+    try:
+        send_verification_email(email, code)
+    except Exception as e:
+        print(f"Email send error: {e}")
+        # roll back the pending row so the user can retry; never leak the code
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=502, detail="Не удалось отправить письмо с кодом. Попробуйте позже.")
 
-    return {"pending": True, "code": code}
+    return {"pending": True, "message": "Код отправлен на почту"}
 
 
 @app.post("/auth/verify")

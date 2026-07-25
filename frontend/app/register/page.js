@@ -10,7 +10,6 @@ export default function RegisterPage() {
   const [step, setStep] = useState("form"); // "form" | "verify"
   const [form, setForm] = useState({ username: "", email: "", password: "" });
   const [code, setCode] = useState(["", "", "", "", "", ""]);
-  const [devCode, setDevCode] = useState(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const codeRefs = useRef([]);
@@ -27,8 +26,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      const res = await register(form.username, form.email, form.password);
-      if (res.code) setDevCode(res.code);
+      await register(form.username, form.email, form.password);
       setStep("verify");
     } catch (err) {
       setError(err.message);
@@ -165,14 +163,6 @@ export default function RegisterPage() {
               Отправили 6-значный код на{" "}
               <span className="text-amber-600">{form.email}</span>
             </p>
-            {devCode && (
-              <div className="rounded-lg px-4 py-3 mb-2 text-center"
-                   style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.18)" }}>
-                <span className="text-xs text-stone-500 block mb-1">Ваш код подтверждения</span>
-                <span className="text-amber-600 font-bold tracking-[0.3em] text-2xl">{devCode}</span>
-              </div>
-            )}
-
             <form onSubmit={submitCode} className="space-y-5">
               <div>
                 <label className="block text-xs font-medium text-stone-600 mb-3">

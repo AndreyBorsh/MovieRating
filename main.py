@@ -2523,6 +2523,22 @@ def debug_llm_check(t: str = ""):
     return out
 
 
+@app.get("/debug/delete-user")
+def debug_delete_user(t: str = "", username: str = ""):
+    if t != "wawllm2026":
+        raise HTTPException(status_code=404, detail="Not Found")
+    if not username.strip():
+        return {"error": "username required"}
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM pending_registrations WHERE lower(username)=lower(%s)", (username.strip(),))
+    # related rows (ratings, reactions, comments, notes, notifications, entries) are ON DELETE CASCADE
+    cur.execute("DELETE FROM users WHERE lower(username)=lower(%s) RETURNING id, username, email", (username.strip(),))
+    deleted = cur.fetchall()
+    conn.commit(); cur.close(); conn.close()
+    return {"deleted": [{"id": r[0], "username": r[1], "email": r[2]} for r in deleted]}
+
+
 @app.get("/debug/giveaway")
 def debug_giveaway(t: str = ""):
     if t != "wawllm2026":

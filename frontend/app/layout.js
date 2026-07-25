@@ -2,6 +2,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import Header from "./components/Header";
+import Footer from "./components/Footer";
 
 // Single modern grotesk for the whole UI — glossy/streaming look uses one
 // clean sans, heavy weights for display, no serif.
@@ -21,6 +22,7 @@ export default function RootLayout({ children }) {
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 overflow-x-hidden">
             {children}
           </main>
+          <Footer />
         </AuthProvider>
       </body>
     </html>

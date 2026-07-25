@@ -887,7 +887,7 @@ def register(data: dict):
         cur = conn.cursor()
         cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
         conn.commit(); cur.close(); conn.close()
-        raise HTTPException(status_code=502, detail="Не удалось отправить письмо с кодом. Попробуйте позже.")
+        raise HTTPException(status_code=502, detail=f"[debug] {str(e)[:300]}")
 
     return {"pending": True, "message": "Код отправлен на почту"}
 

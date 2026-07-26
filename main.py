@@ -887,7 +887,7 @@ def register(data: dict):
         cur = conn.cursor()
         cur.execute("DELETE FROM pending_registrations WHERE email=%s", (email,))
         conn.commit(); cur.close(); conn.close()
-        raise HTTPException(status_code=502, detail=f"[debug] {str(e)[:300]}")
+        raise HTTPException(status_code=502, detail="Не удалось отправить письмо с кодом. Попробуйте позже.")
 
     return {"pending": True, "message": "Код отправлен на почту"}
 
@@ -2489,102 +2489,6 @@ def get_person(person_id: int):
         "known_for": d.get("known_for_department"),
         "filmography": filmography,
     }
-
-
-# =========================
-# DEBUG (temporary — remove after checking the LLM review bot)
-# =========================
-
-@app.get("/debug/llm-check")
-def debug_llm_check(t: str = ""):
-    if t != "wawllm2026":
-        raise HTTPException(status_code=404, detail="Not Found")
-    out = {
-        "key_set": bool(LLM_API_KEY),
-        "url": LLM_API_URL,
-        "models": [m.strip() for m in LLM_MODEL.split(",") if m.strip()][:8],
-        "brevo_key_set": bool(BREVO_API_KEY),
-        "brevo_sender": BREVO_SENDER or None,
-    }
-    if not LLM_API_KEY:
-        out["note"] = "LLM_API_KEY is empty — AI review check is disabled"
-        return out
-    # 1) connectivity/auth probe against the free models
-    probe_txt, probe_info = _llm_classify("Это тест соединения. Ответь строго одним словом: YES.")
-    out["probe_answer"] = probe_txt
-    out["probe_info"] = probe_info
-    # 2) a real relevance verdict on a genuine sample review
-    out["sample_verdict"] = check_review_genuine(
-        "Матрица",
-        "Хакер узнаёт правду о реальности",
-        "Потрясающий фильм: сильная режиссура, глубокая философия про выбор и реальность, "
-        "отличный экшн, Киану Ривз великолепен, атмосфера захватывает от начала до конца.",
-    )
-    return out
-
-
-@app.get("/debug/delete-user")
-def debug_delete_user(t: str = "", username: str = ""):
-    if t != "wawllm2026":
-        raise HTTPException(status_code=404, detail="Not Found")
-    if not username.strip():
-        return {"error": "username required"}
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("DELETE FROM pending_registrations WHERE lower(username)=lower(%s)", (username.strip(),))
-    # related rows (ratings, reactions, comments, notes, notifications, entries) are ON DELETE CASCADE
-    cur.execute("DELETE FROM users WHERE lower(username)=lower(%s) RETURNING id, username, email", (username.strip(),))
-    deleted = cur.fetchall()
-    conn.commit(); cur.close(); conn.close()
-    return {"deleted": [{"id": r[0], "username": r[1], "email": r[2]} for r in deleted]}
-
-
-@app.get("/debug/giveaway")
-def debug_giveaway(t: str = ""):
-    if t != "wawllm2026":
-        raise HTTPException(status_code=404, detail="Not Found")
-    conn = get_db()
-    cur = conn.cursor()
-    cur.execute("SELECT id, review, created_at, user_id FROM ratings WHERE review IS NOT NULL")
-    corpus = cur.fetchall()
-    cur.execute("SELECT id, title, created_at, deadline, status FROM giveaways ORDER BY created_at DESC LIMIT 5")
-    giveaways = cur.fetchall()
-    out = {"now_utc": datetime.utcnow().isoformat(), "giveaways": []}
-    for gid, title, gcreated, deadline, status in giveaways:
-        reviews = []
-        for rid, rv, ca, uid in corpus:
-            words = len(_words(rv or ""))
-            after_start = ca is not None and gcreated is not None and ca > gcreated
-            before_deadline = (deadline is None) or (ca is not None and ca <= deadline)
-            quality = is_quality_review(rv or "")
-            toks = set(_words(rv or ""))
-            dup_of = None
-            for oid, orv, oca, ouid in corpus:
-                if oid == rid:
-                    continue
-                if oca is not None and ca is not None and oca > ca:
-                    continue
-                if _too_similar(toks, orv):
-                    dup_of = oid
-                    break
-            # read genuine flag
-            cur.execute("SELECT review_genuine FROM ratings WHERE id=%s", (rid,))
-            genuine = cur.fetchone()[0]
-            reviews.append({
-                "rating_id": rid, "user_id": uid, "words": words,
-                "genuine": genuine, "after_start": after_start,
-                "before_deadline": before_deadline, "is_quality": quality,
-                "dup_of": dup_of, "created_at": ca.isoformat() if ca else None,
-                "counts": bool(after_start and before_deadline and genuine is True and quality and dup_of is None),
-            })
-        out["giveaways"].append({
-            "id": gid, "title": title, "status": status,
-            "created_at": gcreated.isoformat() if gcreated else None,
-            "deadline": deadline.isoformat() if deadline else None,
-            "reviews": reviews,
-        })
-    cur.close(); conn.close()
-    return out
 
 
 # =========================

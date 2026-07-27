@@ -297,7 +297,7 @@ function ClaimPrizeModal({ token, giveawayId, onClose, onDone }) {
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const submit = async () => {
-    if (!form.city.trim() || !form.cinema.trim()) { setErr("Укажите город и кинотеатр"); return; }
+    if (!form.city.trim() || !form.cinema.trim() || !form.session.trim()) { setErr("Укажите город, кинотеатр и сеанс"); return; }
     setBusy(true); setErr("");
     try {
       await claimPrize(token, giveawayId, form);
@@ -337,7 +337,7 @@ function ClaimPrizeModal({ token, giveawayId, onClose, onDone }) {
           <input value={form.cinema} onChange={set("cinema")} placeholder="Кинотеатр «Октябрь» / ссылка на сайт" className={field} style={fieldStyle} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Сеанс (дата и время)</label>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Сеанс (дата и время) <span className="text-rose-400">*</span></label>
           <input value={form.session} onChange={set("session")} placeholder="30 июля, 19:30" className={field} style={fieldStyle} />
         </div>
         <div>

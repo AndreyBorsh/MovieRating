@@ -1897,9 +1897,9 @@ def claim_prize(gid: int, data: dict, authorization: str = Header(None)):
     session = (data.get("session") or "").strip()
     seat    = (data.get("seat") or "").strip()
     comment = (data.get("comment") or "").strip()
-    if not city or not cinema:
+    if not city or not cinema or not session:
         cur.close(); conn.close()
-        raise HTTPException(status_code=400, detail="Укажите хотя бы город и кинотеатр")
+        raise HTTPException(status_code=400, detail="Укажите город, кинотеатр и сеанс")
 
     cur.execute("""
         INSERT INTO prize_claims (giveaway_id, user_id, city, cinema, session, seat, comment)

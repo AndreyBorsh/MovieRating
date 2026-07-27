@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { getProfile, getMyNotes, updateProfile } from "@/lib/api";
+import { getProfile, getMyNotes, updateProfile, requestEmailChange, confirmEmailChange } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import ReviewText, { stripMarkers } from "@/app/components/ReviewText";
 import ScoreBadge, { scoreColor } from "@/app/components/Score";
@@ -397,6 +397,105 @@ function EditProfileModal({ profile, token, onClose, onSaved }) {
   );
 }
 
+function ChangeEmailModal({ token, onClose, onSaved }) {
+  const [step, setStep] = useState("email"); // "email" | "code"
+  const [email, setEmail] = useState("");
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [done, setDone] = useState(false);
+
+  const sendCode = async () => {
+    if (!email.trim()) return;
+    setBusy(true); setErr("");
+    try {
+      await requestEmailChange(token, email.trim());
+      setStep("code");
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const confirm = async () => {
+    if (code.trim().length < 4) return;
+    setBusy(true); setErr("");
+    try {
+      await confirmEmailChange(token, code.trim());
+      setDone(true);
+      setTimeout(() => onSaved(), 1300);
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-4"
+        style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-extrabold tracking-tight text-stone-900">Сменить почту</h3>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-800 text-lg leading-none" aria-label="Закрыть">✕</button>
+        </div>
+
+        {done ? (
+          <p className="text-emerald-600 font-semibold py-4 text-center">✓ Почта изменена</p>
+        ) : step === "email" ? (
+          <>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1.5">Новая почта</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="new@example.com"
+                className="w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
+                style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+              />
+              <p className="text-xs text-stone-500 mt-1.5">Отправим код подтверждения на новый адрес.</p>
+            </div>
+            {err && <p className="text-xs text-rose-500">{err}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 transition">Отмена</button>
+              <button onClick={sendCode} disabled={busy || !email.trim()}
+                className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition">
+                {busy ? "Отправка…" : "Отправить код"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <p className="text-sm text-stone-600">
+              Код отправлен на <span className="text-amber-600">{email}</span>. Введите его:
+            </p>
+            <input
+              inputMode="numeric"
+              maxLength={6}
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+              placeholder="______"
+              className="w-full rounded-lg px-3 py-2 text-center text-xl tracking-[0.4em] text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
+              style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+            />
+            {err && <p className="text-xs text-rose-500">{err}</p>}
+            <div className="flex gap-2 justify-between items-center">
+              <button onClick={() => { setStep("email"); setErr(""); setCode(""); }} className="text-sm text-stone-500 hover:text-stone-800 transition">← Назад</button>
+              <button onClick={confirm} disabled={busy || code.trim().length < 4}
+                className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition">
+                {busy ? "Проверка…" : "Подтвердить"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function ProfilePage() {
   const { id } = useParams();
   const { user, token } = useAuth();
@@ -405,6 +504,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState([]);
   const [editOpen, setEditOpen] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -470,6 +570,14 @@ export default function ProfilePage() {
         />
       )}
 
+      {emailOpen && (
+        <ChangeEmailModal
+          token={token}
+          onClose={() => setEmailOpen(false)}
+          onSaved={() => setEmailOpen(false)}
+        />
+      )}
+
       {/* Profile header */}
       <div
         className="rounded-xl p-6 border flex items-start gap-6"
@@ -497,12 +605,20 @@ export default function ProfilePage() {
               )}
             </h1>
             {isMe && (
-              <button
-                onClick={() => setEditOpen(true)}
-                className="shrink-0 text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition"
-              >
-                Редактировать
-              </button>
+              <div className="shrink-0 flex flex-wrap gap-2 justify-end">
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition"
+                >
+                  Редактировать
+                </button>
+                <button
+                  onClick={() => setEmailOpen(true)}
+                  className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition"
+                >
+                  Сменить почту
+                </button>
+              </div>
             )}
           </div>
           {joined && (

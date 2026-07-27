@@ -205,6 +205,32 @@ export async function updateProfile(token, { bio, avatar }) {
   return res.json();
 }
 
+export async function requestEmailChange(token, email) {
+  const res = await fetch(`${API}/profile/email/request`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || "Не удалось отправить код");
+  }
+  return res.json();
+}
+
+export async function confirmEmailChange(token, code) {
+  const res = await fetch(`${API}/profile/email/confirm`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify({ code }),
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || "Не удалось подтвердить смену почты");
+  }
+  return res.json();
+}
+
 // =========================
 // SIMILAR
 // =========================

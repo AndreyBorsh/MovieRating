@@ -191,6 +191,16 @@ def ensure_tables():
         )
     """)
 
+    # --- pending email changes (one per user; confirmed with a code) ---
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pending_email_changes (
+            user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            new_email TEXT NOT NULL,
+            code TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL
+        )
+    """)
+
     # --- private notes (one per user per title; owner-only) ---
     cur.execute("""
         CREATE TABLE IF NOT EXISTS notes (
@@ -2284,6 +2294,88 @@ def update_profile(data: dict, authorization: str = Header(None)):
     cur.execute("UPDATE users SET bio=%s, avatar=%s WHERE id=%s", (bio, avatar, uid))
     conn.commit(); cur.close(); conn.close()
     return {"ok": True}
+
+
+@app.post("/profile/email/request")
+def request_email_change(data: dict, authorization: str = Header(None)):
+    """Logged-in user requests an email change: send a verification code to the
+    NEW address. The change is applied only after /profile/email/confirm."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    new_email = (data.get("email") or "").strip().lower()
+    if not new_email:
+        raise HTTPException(status_code=400, detail="Введите новую почту")
+    validate_email_domain(new_email)
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT email FROM users WHERE id=%s", (uid,))
+    row = cur.fetchone()
+    if row and (row[0] or "").lower() == new_email:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Это уже ваша текущая почта")
+    cur.execute("SELECT id FROM users WHERE lower(email)=lower(%s) AND id<>%s", (new_email, uid))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Эта почта уже занята")
+
+    code = str(random.randint(100000, 999999))
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    cur.execute("""
+        INSERT INTO pending_email_changes (user_id, new_email, code, expires_at)
+        VALUES (%s, %s, %s, %s)
+        ON CONFLICT (user_id) DO UPDATE
+          SET new_email=EXCLUDED.new_email, code=EXCLUDED.code, expires_at=EXCLUDED.expires_at
+    """, (uid, new_email, code, expires_at))
+    conn.commit()
+
+    try:
+        send_verification_email(new_email, code)
+    except Exception as e:
+        print(f"Email change send error: {e}")
+        cur.execute("DELETE FROM pending_email_changes WHERE user_id=%s", (uid,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=502, detail="Не удалось отправить письмо с кодом. Попробуйте позже.")
+
+    cur.close(); conn.close()
+    return {"pending": True, "message": "Код отправлен на новую почту"}
+
+
+@app.post("/profile/email/confirm")
+def confirm_email_change(data: dict, authorization: str = Header(None)):
+    """Confirm the email change with the code sent to the new address."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    code = (data.get("code") or "").strip()
+    if not code:
+        raise HTTPException(status_code=400, detail="Введите код")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT new_email, code, expires_at FROM pending_email_changes WHERE user_id=%s", (uid,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Запрос на смену почты не найден")
+    new_email, stored_code, expires_at = row
+    if datetime.utcnow() > expires_at:
+        cur.execute("DELETE FROM pending_email_changes WHERE user_id=%s", (uid,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Код устарел. Запросите смену почты снова")
+    if code != stored_code:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Неверный код")
+    # guard against the email being taken since the request
+    cur.execute("SELECT id FROM users WHERE lower(email)=lower(%s) AND id<>%s", (new_email, uid))
+    if cur.fetchone():
+        cur.execute("DELETE FROM pending_email_changes WHERE user_id=%s", (uid,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Эта почта уже занята")
+
+    cur.execute("UPDATE users SET email=%s WHERE id=%s", (new_email, uid))
+    cur.execute("DELETE FROM pending_email_changes WHERE user_id=%s", (uid,))
+    conn.commit(); cur.close(); conn.close()
+    return {"message": "Почта изменена", "email": new_email}
 
 
 # =========================

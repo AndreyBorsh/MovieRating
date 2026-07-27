@@ -420,19 +420,21 @@ export default function GiveawaysPage() {
           {items.map((g) => {
             const closed = g.status !== "open";
             return (
-              <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: closed ? "rgba(0,0,0,0.08)" : "#3a4d2a" }}>
+              <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: (closed || g.expired) ? "rgba(0,0,0,0.08)" : "#3a4d2a" }}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="text-lg font-bold tracking-tight text-stone-900">🎬 {g.title}</h2>
                       {closed
                         ? <span className="text-xs text-stone-600 bg-stone-700/40 px-2 py-0.5 rounded">завершён</span>
-                        : <span className="text-xs text-emerald-600 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
+                        : g.expired
+                          ? <span className="text-xs text-amber-700 bg-amber-400/15 px-2 py-0.5 rounded">приём завершён</span>
+                          : <span className="text-xs text-emerald-600 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
                     </div>
                     {g.description && <p className="text-sm text-stone-600 mt-1">{g.description}</p>}
                     <div className="text-xs text-stone-400 mt-2 flex flex-wrap gap-x-4 gap-y-1">
                       <span>Участников: {g.entries}</span>
-                      {g.deadline && !closed && <span>До: {fmtDate(g.deadline)}</span>}
+                      {g.deadline && !closed && <span>{g.expired ? "Приём был до" : "До"}: {fmtDate(g.deadline)}</span>}
                     </div>
                   </div>
                   {isAdmin && (

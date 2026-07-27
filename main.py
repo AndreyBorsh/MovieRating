@@ -2209,11 +2209,19 @@ def get_recent():
 # =========================
 
 @app.get("/profile/{user_id}")
-def get_profile(user_id: int):
+def get_profile(user_id: int, authorization: str = Header(None)):
+    # the email is returned only to the profile's owner
+    viewer_id = None
+    if authorization and authorization.startswith("Bearer "):
+        try:
+            viewer_id = decode_token(authorization.split(" ", 1)[1]).get("user_id")
+        except Exception:
+            viewer_id = None
+
     conn = get_db()
     cur = conn.cursor()
 
-    cur.execute("SELECT id, username, created_at, avatar, bio FROM users WHERE id=%s", (user_id,))
+    cur.execute("SELECT id, username, created_at, avatar, bio, email FROM users WHERE id=%s", (user_id,))
     user = cur.fetchone()
     if not user:
         cur.close(); conn.close()
@@ -2251,6 +2259,7 @@ def get_profile(user_id: int):
         "joined": user[2].isoformat() if user[2] else None,
         "avatar": user[3],
         "bio": user[4],
+        "email": user[5] if viewer_id == user[0] else None,
         "ratings": [
             {
                 "score": r[0], "review": r[1],

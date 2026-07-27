@@ -508,13 +508,13 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!id) return;
-    getProfile(id)
+    getProfile(id, token)
       .then(setProfile)
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
 
-  const reloadProfile = () => getProfile(id).then(setProfile).catch(console.error);
+  const reloadProfile = () => getProfile(id, token).then(setProfile).catch(console.error);
 
   // Load own private notes only when viewing own profile
   const viewingOwn = user && profile && user.user_id === profile.user_id;
@@ -574,7 +574,7 @@ export default function ProfilePage() {
         <ChangeEmailModal
           token={token}
           onClose={() => setEmailOpen(false)}
-          onSaved={() => setEmailOpen(false)}
+          onSaved={() => { setEmailOpen(false); reloadProfile(); }}
         />
       )}
 
@@ -624,6 +624,11 @@ export default function ProfilePage() {
           {joined && (
             <div className="text-sm text-stone-500 mt-0.5">
               На платформе с {joined}
+            </div>
+          )}
+          {profile.email && (
+            <div className="text-sm text-stone-500 mt-0.5">
+              📧 {profile.email} <span className="text-xs text-stone-400">(видно только вам)</span>
             </div>
           )}
           <div className="flex flex-wrap gap-4 mt-2 text-sm text-stone-600">

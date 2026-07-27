@@ -186,8 +186,8 @@ export async function getRecent() {
   return res.json();
 }
 
-export async function getProfile(userId) {
-  const res = await fetch(`${API}/profile/${userId}`);
+export async function getProfile(userId, token) {
+  const res = await fetch(`${API}/profile/${userId}`, token ? { headers: authHeader(token) } : {});
   if (!res.ok) throw new Error("Профиль не найден");
   return res.json();
 }

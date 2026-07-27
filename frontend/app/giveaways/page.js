@@ -379,6 +379,15 @@ export default function GiveawaysPage() {
         Не согласен с проверкой — можно запросить ручную проверку ниже. Удалишь рецензию — билетик пропадёт.
       </div>
 
+      <div className="rounded-xl px-4 py-3 border text-sm flex items-start gap-2"
+           style={{ background: "rgba(245,196,81,0.16)", borderColor: "rgba(210,154,60,0.28)" }}>
+        <span className="text-base shrink-0" aria-hidden>📧</span>
+        <p className="text-stone-700 leading-snug">
+          <span className="font-semibold">Выдача приза осуществляется через почту.</span>{" "}
+          Приз победителю отправляется на электронную почту, привязанную к аккаунту, — держите её актуальной.
+        </p>
+      </div>
+
       {error && (
         <div className="text-sm text-rose-500 bg-red-400/10 rounded-lg px-3 py-2">{error}</div>
       )}

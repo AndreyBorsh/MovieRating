@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import {
   getGiveaways, enterGiveaway, createGiveaway, drawGiveaway, deleteGiveaway, searchMulti,
-  getGiveawayEntries, recheckGiveaway,
+  getGiveawayEntries, recheckGiveaway, claimPrize,
   getMyGiveawayReviews, requestManualReview, getManualReviews, decideManualReview,
 } from "@/lib/api";
 import { img } from "@/lib/base";
@@ -290,6 +290,79 @@ function ManualQueue({ token, onChange }) {
   );
 }
 
+function ClaimPrizeModal({ token, giveawayId, onClose, onDone }) {
+  const [form, setForm] = useState({ city: "", cinema: "", session: "", seat: "", comment: "" });
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const submit = async () => {
+    if (!form.city.trim() || !form.cinema.trim()) { setErr("Укажите город и кинотеатр"); return; }
+    setBusy(true); setErr("");
+    try {
+      await claimPrize(token, giveawayId, form);
+      onDone();
+    } catch (e) { setErr(e.message); }
+    finally { setBusy(false); }
+  };
+
+  const field = "w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50";
+  const fieldStyle = { background: "#fff", border: "1px solid rgba(0,0,0,0.12)" };
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-3"
+        style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-extrabold tracking-tight text-stone-900">🎁 Получить приз</h3>
+          <button onClick={onClose} className="text-stone-500 hover:text-stone-800 text-lg leading-none" aria-label="Закрыть">✕</button>
+        </div>
+        <p className="text-xs text-stone-500">
+          Заполните данные — админ их получит и пришлёт билет вам на почту.
+        </p>
+
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Город <span className="text-rose-400">*</span></label>
+          <input value={form.city} onChange={set("city")} placeholder="Москва" className={field} style={fieldStyle} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Кинотеатр — название или ссылка <span className="text-rose-400">*</span></label>
+          <input value={form.cinema} onChange={set("cinema")} placeholder="Кинотеатр «Октябрь» / ссылка на сайт" className={field} style={fieldStyle} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Сеанс (дата и время)</label>
+          <input value={form.session} onChange={set("session")} placeholder="30 июля, 19:30" className={field} style={fieldStyle} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Ряд и место</label>
+          <input value={form.seat} onChange={set("seat")} placeholder="ряд 5, место 12" className={field} style={fieldStyle} />
+        </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-600 mb-1">Комментарий</label>
+          <textarea value={form.comment} onChange={set("comment")} rows={2} placeholder="Необязательно" className={`${field} resize-none`} style={fieldStyle} />
+        </div>
+
+        {err && <p className="text-xs text-rose-500">{err}</p>}
+
+        <div className="flex gap-2 justify-end pt-1">
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 transition">Отмена</button>
+          <button onClick={submit} disabled={busy}
+            className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition">
+            {busy ? "Отправка…" : "Отправить"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GiveawaysPage() {
   const { token, ready } = useAuth();
   const [data, setData] = useState(null);
@@ -297,6 +370,7 @@ export default function GiveawaysPage() {
   const [busyId, setBusyId] = useState(null);
   const [error, setError] = useState("");
   const [openEntries, setOpenEntries] = useState(null);
+  const [claimId, setClaimId] = useState(null);
 
   // admin create form
   const [title, setTitle] = useState("");
@@ -364,6 +438,15 @@ export default function GiveawaysPage() {
 
   return (
     <div className="space-y-6">
+      {claimId != null && (
+        <ClaimPrizeModal
+          token={token}
+          giveawayId={claimId}
+          onClose={() => setClaimId(null)}
+          onDone={() => { setClaimId(null); load(); }}
+        />
+      )}
+
       <div>
         <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 mb-1">🎟 Розыгрыш билета</h1>
         <p className="text-sm text-stone-500">
@@ -450,6 +533,24 @@ export default function GiveawaysPage() {
                     🏆 Победитель: <span className="text-amber-600 font-semibold">{g.winner_name}</span>
                     {isAdmin && g.winner_email && (
                       <span className="text-stone-500"> · почта: <span className="font-mono text-stone-700">{g.winner_email}</span></span>
+                    )}
+                  </div>
+                )}
+
+                {g.is_winner && (
+                  <div className="mt-3">
+                    {g.claimed ? (
+                      <div className="rounded-lg px-3 py-2 text-sm text-emerald-700"
+                           style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
+                        🎟 Данные отправлены — ожидайте билет на почте.
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setClaimId(g.id)}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 transition"
+                      >
+                        🎁 Получить приз
+                      </button>
                     )}
                   </div>
                 )}

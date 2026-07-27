@@ -347,6 +347,17 @@ export async function enterGiveaway(token, id) {
   return data;
 }
 
+export async function claimPrize(token, id, details) {
+  const res = await fetch(`${API}/giveaways/${id}/claim`, {
+    method: "POST",
+    headers: authHeader(token),
+    body: JSON.stringify(details),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось отправить данные");
+  return data;
+}
+
 export async function createGiveaway(token, payload) {
   const res = await fetch(`${API}/admin/giveaways`, {
     method: "POST", headers: authHeader(token), body: JSON.stringify(payload),

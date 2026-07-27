@@ -333,6 +333,19 @@ def ensure_giveaways_tables():
             UNIQUE(giveaway_id, user_id)
         )
     """)
+    # winner's prize-claim details (one per giveaway)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS prize_claims (
+            giveaway_id INT PRIMARY KEY REFERENCES giveaways(id) ON DELETE CASCADE,
+            user_id INT REFERENCES users(id) ON DELETE CASCADE,
+            city TEXT,
+            cinema TEXT,
+            session TEXT,
+            seat TEXT,
+            comment TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_code TEXT")
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_email TEXT")
     # manual review of a ticket: NULL | 'pending' | 'approved' | 'rejected'
@@ -1672,15 +1685,18 @@ def list_giveaways(authorization: str = Header(None)):
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT id, title, description, deadline, status, winner_name, created_at, winner_email
+        SELECT id, title, description, deadline, status, winner_name, created_at, winner_email, winner_user_id
         FROM giveaways ORDER BY (status='open') DESC, created_at DESC
     """)
     rows = cur.fetchall()
 
     entered = set()
+    claimed_gids = set()
     if viewer_id:
         cur.execute("SELECT giveaway_id FROM giveaway_entries WHERE user_id=%s", (viewer_id,))
         entered = {r[0] for r in cur.fetchall()}
+        cur.execute("SELECT giveaway_id FROM prize_claims WHERE user_id=%s", (viewer_id,))
+        claimed_gids = {r[0] for r in cur.fetchall()}
 
     now = datetime.utcnow()
     items = []
@@ -1705,6 +1721,7 @@ def list_giveaways(authorization: str = Header(None)):
             )
             status, winner_name = "closed", None
 
+        is_winner = viewer_id is not None and viewer_id == r[8]
         items.append({
             "id": gid, "title": r[1], "description": r[2],
             "deadline": (r[3].isoformat() + "Z") if r[3] else None,
@@ -1715,6 +1732,8 @@ def list_giveaways(authorization: str = Header(None)):
             "my_tickets": my_tickets,
             "expired": bool(deadline and now > deadline),
             "winner_email": r[7] if is_admin else None,
+            "is_winner": is_winner,
+            "claimed": gid in claimed_gids,
         })
     conn.commit(); cur.close(); conn.close()
 
@@ -1825,14 +1844,103 @@ def draw_giveaway(gid: int, authorization: str = Header(None)):
     winner_email = erow[0] if erow else None
     cur.execute("UPDATE giveaways SET status='closed', winner_user_id=%s, winner_name=%s, winner_email=%s WHERE id=%s",
                 (winner[0], winner[1], winner_email, gid))
-    # notify the winner — owner will reach out by email
+    # notify the winner — they claim the prize on the site, ticket arrives by email
     cur.execute(
         """INSERT INTO notifications (user_id, actor_id, actor_name, type, detail)
            VALUES (%s,%s,%s,'giveaway',%s)""",
         (winner[0], winner[0], title, None),
     )
     conn.commit(); cur.close(); conn.close()
+    # email the winner (non-fatal)
+    if winner_email and BREVO_API_KEY and BREVO_SENDER:
+        try:
+            requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+                json={
+                    "sender": {"name": "WAW Cinema", "email": BREVO_SENDER},
+                    "to": [{"email": winner_email}],
+                    "subject": f"🎉 Вы выиграли розыгрыш: {title}",
+                    "textContent": (
+                        f"Поздравляем! Вы победили в розыгрыше «{title}» на WAW.\n\n"
+                        "Зайдите на сайт, нажмите «Получить приз» и заполните данные "
+                        "(город, кинотеатр, сеанс, место) — билет придёт вам на почту.\n\n"
+                        "https://makuku.ddns.net/waw-movie/giveaways\n"
+                    ),
+                },
+                timeout=10,
+            )
+        except Exception as e:
+            print(f"winner email error: {e}")
     return {"winner_name": winner[1], "winner_user_id": winner[0], "winner_email": winner_email}
+
+
+@app.post("/giveaways/{gid}/claim")
+def claim_prize(gid: int, data: dict, authorization: str = Header(None)):
+    """The winner submits prize-delivery details; the admin is emailed."""
+    payload = require_auth(authorization)
+    uid = payload["user_id"]
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT winner_user_id, title FROM giveaways WHERE id=%s", (gid,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Розыгрыш не найден")
+    winner_user_id, title = row
+    if winner_user_id != uid:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=403, detail="Вы не победитель этого розыгрыша")
+
+    city    = (data.get("city") or "").strip()
+    cinema  = (data.get("cinema") or "").strip()
+    session = (data.get("session") or "").strip()
+    seat    = (data.get("seat") or "").strip()
+    comment = (data.get("comment") or "").strip()
+    if not city or not cinema:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Укажите хотя бы город и кинотеатр")
+
+    cur.execute("""
+        INSERT INTO prize_claims (giveaway_id, user_id, city, cinema, session, seat, comment)
+        VALUES (%s,%s,%s,%s,%s,%s,%s)
+        ON CONFLICT (giveaway_id) DO UPDATE SET
+          user_id=EXCLUDED.user_id, city=EXCLUDED.city, cinema=EXCLUDED.cinema,
+          session=EXCLUDED.session, seat=EXCLUDED.seat, comment=EXCLUDED.comment, created_at=NOW()
+    """, (gid, uid, city, cinema, session, seat, comment))
+    cur.execute("SELECT username, email FROM users WHERE id=%s", (uid,))
+    urow = cur.fetchone()
+    uname = urow[0] if urow else "?"
+    uemail = urow[1] if urow else "?"
+    conn.commit(); cur.close(); conn.close()
+
+    # email the admin with the claim details (non-fatal)
+    if BREVO_API_KEY and BREVO_SENDER:
+        body = (
+            f"Победитель розыгрыша «{title}» отправил данные для приза:\n\n"
+            f"Пользователь: {uname} ({uemail})\n"
+            f"Город: {city}\n"
+            f"Кинотеатр: {cinema}\n"
+            f"Сеанс: {session or '—'}\n"
+            f"Ряд / место: {seat or '—'}\n"
+            f"Комментарий: {comment or '—'}\n"
+        )
+        try:
+            requests.post(
+                "https://api.brevo.com/v3/smtp/email",
+                headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+                json={
+                    "sender": {"name": "WAW Cinema", "email": BREVO_SENDER},
+                    "to": [{"email": BREVO_SENDER}],
+                    "subject": f"🎟 Данные для приза: {title}",
+                    "textContent": body,
+                },
+                timeout=10,
+            )
+        except Exception as e:
+            print(f"admin prize email error: {e}")
+
+    return {"ok": True}
 
 
 @app.delete("/admin/giveaways/{gid}")

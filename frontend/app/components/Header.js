@@ -201,6 +201,18 @@ export default function Header() {
               <span className="sm:hidden">👤</span>
             </Link>
           )}
+          {user?.is_admin && (
+            <Link
+              href="/admin"
+              className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
+                pathname === "/admin" ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
+              }`}
+              title="Админка"
+            >
+              <span className="hidden sm:inline">🛠 Админ</span>
+              <span className="sm:hidden">🛠</span>
+            </Link>
+          )}
         </nav>
 
         {/* Auth */}

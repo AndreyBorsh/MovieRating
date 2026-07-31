@@ -23,7 +23,7 @@ function LoginForm() {
     setLoading(true);
     try {
       const data = await login(email, password);
-      authLogin(data.token, { user_id: data.user_id, username: data.username });
+      authLogin(data.token, { user_id: data.user_id, username: data.username, is_admin: data.is_admin });
       router.push("/");
     } catch (err) {
       setError(err.message);

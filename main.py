@@ -8,7 +8,7 @@ import dns.resolver
 import requests
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, HTTPException, Header, Request
-from fastapi.responses import Response
+from fastapi.responses import Response, JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 import psycopg2
 from auth import hash_password, verify_password, create_token, decode_token
@@ -48,6 +48,21 @@ LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
+
+
+def log_error(context: str, message: str):
+    """Best-effort: record an error for the admin panel. Never raises."""
+    try:
+        conn = get_db()
+        conn.autocommit = True
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO app_errors (context, message) VALUES (%s, %s)",
+            (str(context)[:200], str(message)[:2000]),
+        )
+        cur.close(); conn.close()
+    except Exception as e:
+        print(f"log_error failed: {e}")
 
 
 def ensure_tables():
@@ -346,6 +361,16 @@ def ensure_giveaways_tables():
             created_at TIMESTAMP DEFAULT NOW()
         )
     """)
+
+    # app error log (for the admin panel)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS app_errors (
+            id SERIAL PRIMARY KEY,
+            context TEXT,
+            message TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )
+    """)
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_code TEXT")
     cur.execute("ALTER TABLE giveaways ADD COLUMN IF NOT EXISTS winner_email TEXT")
     # manual review of a ticket: NULL | 'pending' | 'approved' | 'rejected'
@@ -399,6 +424,14 @@ class CORSHandler(BaseHTTPMiddleware):
 
 app = FastAPI(title="WAW Cinema API", lifespan=lifespan)
 app.add_middleware(CORSHandler)
+
+
+@app.exception_handler(Exception)
+async def _log_unhandled_exception(request: Request, exc: Exception):
+    # HTTPExceptions are handled by FastAPI separately; this only fires for
+    # real unhandled errors — record them for the admin "Проблемы" panel.
+    log_error(f"{request.method} {request.url.path}", f"{type(exc).__name__}: {exc}")
+    return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервера"})
 
 
 def require_auth(authorization: str = Header(None)) -> dict:
@@ -982,13 +1015,157 @@ def login(data: dict):
         raise HTTPException(status_code=401, detail="Неверный email или пароль")
 
     token = create_token({"user_id": user[0], "username": user[1]})
-    return {"token": token, "user_id": user[0], "username": user[1]}
+    return {"token": token, "user_id": user[0], "username": user[1], "is_admin": user[0] in ADMIN_IDS}
 
 
 @app.get("/auth/me")
 def me(authorization: str = Header(None)):
     payload = require_auth(authorization)
-    return {"user_id": payload["user_id"], "username": payload["username"]}
+    return {
+        "user_id": payload["user_id"],
+        "username": payload["username"],
+        "is_admin": payload["user_id"] in ADMIN_IDS,
+    }
+
+
+# =========================
+# ADMIN PANEL (admin-only)
+# =========================
+
+ADMIN_TABLES = [
+    "users", "movies", "tv_shows", "ratings", "reactions", "comments",
+    "notes", "notifications", "giveaways", "giveaway_entries", "prize_claims",
+    "pending_registrations", "pending_email_changes", "app_errors",
+]
+_MASK_COLS = {"password", "password_hash", "code", "avatar"}  # never expose raw
+
+
+@app.get("/admin/overview")
+def admin_overview(authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+
+    def one(q):
+        cur.execute(q); return cur.fetchone()[0]
+
+    counts = {
+        "users": one("SELECT COUNT(*) FROM users"),
+        "ratings": one("SELECT COUNT(*) FROM ratings"),
+        "reviews": one("SELECT COUNT(*) FROM ratings WHERE review IS NOT NULL"),
+        "movies": one("SELECT COUNT(*) FROM movies"),
+        "tv_shows": one("SELECT COUNT(*) FROM tv_shows"),
+        "giveaways_open": one("SELECT COUNT(*) FROM giveaways WHERE status='open'"),
+        "giveaways_total": one("SELECT COUNT(*) FROM giveaways"),
+        "entries": one("SELECT COUNT(*) FROM giveaway_entries"),
+        "pending_registrations": one("SELECT COUNT(*) FROM pending_registrations"),
+        "errors": one("SELECT COUNT(*) FROM app_errors"),
+    }
+
+    flags = []
+    n = one("SELECT COUNT(*) FROM app_errors WHERE created_at > NOW() - INTERVAL '24 hours'")
+    if n:
+        flags.append({"level": "error", "text": f"Ошибок за последние 24 ч: {n}"})
+    n = one("SELECT COUNT(*) FROM giveaways WHERE status='open' AND deadline IS NOT NULL AND deadline < NOW()")
+    if n:
+        flags.append({"level": "warn", "text": f"Розыгрышей с истёкшим дедлайном (ждут «Разыграть»): {n}"})
+    n = one("SELECT COUNT(*) FROM ratings WHERE manual_status='pending'")
+    if n:
+        flags.append({"level": "warn", "text": f"Запросов на ручную проверку рецензий: {n}"})
+    cur.close(); conn.close()
+    return {"counts": counts, "flags": flags}
+
+
+@app.get("/admin/tables")
+def admin_tables(authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    out = []
+    for t in ADMIN_TABLES:
+        try:
+            cur.execute(f"SELECT COUNT(*) FROM {t}")
+            out.append({"name": t, "rows": cur.fetchone()[0]})
+        except Exception:
+            conn.rollback()
+    cur.close(); conn.close()
+    return out
+
+
+@app.get("/admin/table/{name}")
+def admin_table(name: str, authorization: str = Header(None), limit: int = 50, offset: int = 0):
+    require_admin(authorization)
+    if name not in ADMIN_TABLES:
+        raise HTTPException(status_code=404, detail="Таблица недоступна")
+    limit = max(1, min(limit, 200))
+    offset = max(0, offset)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT column_name FROM information_schema.columns WHERE table_name=%s", (name,))
+    cols = [r[0] for r in cur.fetchall()]
+    order = "created_at DESC" if "created_at" in cols else ("id DESC" if "id" in cols else (cols[0] if cols else "1"))
+    cur.execute(f"SELECT * FROM {name} ORDER BY {order} LIMIT %s OFFSET %s", (limit, offset))
+    rows = cur.fetchall()
+    colnames = [d[0] for d in cur.description]
+
+    def cell(cn, v):
+        if cn in _MASK_COLS and v not in (None, ""):
+            return "•••"
+        s = v.isoformat() if hasattr(v, "isoformat") else v
+        if isinstance(s, str) and len(s) > 300:
+            s = s[:300] + "…"
+        return s
+
+    data = [{cn: cell(cn, v) for cn, v in zip(colnames, row)} for row in rows]
+    cur.close(); conn.close()
+    return {"columns": colnames, "rows": data, "limit": limit, "offset": offset}
+
+
+@app.get("/admin/activity")
+def admin_activity(authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    events = []
+    cur.execute("SELECT username, created_at FROM users ORDER BY created_at DESC LIMIT 15")
+    for u, ts in cur.fetchall():
+        events.append({"type": "user", "text": f"Регистрация: {u}", "at": ts.isoformat() if ts else None})
+    cur.execute("""SELECT u.username, r.media_type, (r.review IS NOT NULL), r.created_at
+                   FROM ratings r JOIN users u ON u.id = r.user_id
+                   ORDER BY r.created_at DESC LIMIT 25""")
+    for uname, mt, hasrev, ts in cur.fetchall():
+        kind = "рецензия" if hasrev else "оценка"
+        events.append({"type": "rating", "text": f"{uname}: {kind} ({'сериал' if mt == 'tv' else 'фильм'})", "at": ts.isoformat() if ts else None})
+    cur.execute("""SELECT u.username, g.title, pc.created_at FROM prize_claims pc
+                   JOIN users u ON u.id = pc.user_id JOIN giveaways g ON g.id = pc.giveaway_id
+                   ORDER BY pc.created_at DESC LIMIT 10""")
+    for uname, title, ts in cur.fetchall():
+        events.append({"type": "claim", "text": f"{uname} отправил данные для приза «{title}»", "at": ts.isoformat() if ts else None})
+    cur.close(); conn.close()
+    events.sort(key=lambda e: e["at"] or "", reverse=True)
+    return events[:60]
+
+
+@app.get("/admin/errors")
+def admin_errors(authorization: str = Header(None), limit: int = 100):
+    require_admin(authorization)
+    limit = max(1, min(limit, 500))
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id, context, message, created_at FROM app_errors ORDER BY id DESC LIMIT %s", (limit,))
+    rows = [{"id": r[0], "context": r[1], "message": r[2], "at": r[3].isoformat() if r[3] else None} for r in cur.fetchall()]
+    cur.close(); conn.close()
+    return rows
+
+
+@app.post("/admin/errors/clear")
+def admin_errors_clear(authorization: str = Header(None)):
+    require_admin(authorization)
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM app_errors")
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True}
 
 
 # =========================

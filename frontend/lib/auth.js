@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { getMe } from "@/lib/api";
 
 const AuthContext = createContext(null);
 
@@ -17,6 +18,15 @@ export function AuthProvider({ children }) {
       try { setUser(JSON.parse(u)); } catch {}
     }
     setReady(true);
+    // refresh from server so is_admin (and any changes) stay current
+    if (t) {
+      getMe(t)
+        .then((fresh) => {
+          setUser(fresh);
+          localStorage.setItem("waw_user", JSON.stringify(fresh));
+        })
+        .catch(() => {});
+    }
   }, []);
 
   const login = (jwt, userData) => {

@@ -419,3 +419,30 @@ export async function decideManualReview(token, ratingId, decision, comment) {
   if (!res.ok) throw new Error(data.detail || "Ошибка");
   return data;
 }
+
+// ── Current user (refresh is_admin etc.) ──
+export async function getMe(token) {
+  const res = await fetch(`${API}/auth/me`, { headers: authHeader(token) });
+  if (!res.ok) throw new Error("unauth");
+  return res.json();
+}
+
+// ── Admin panel ──
+async function adminGet(path, token) {
+  const res = await fetch(`${API}${path}`, { headers: authHeader(token) });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.detail || "Ошибка админки");
+  }
+  return res.json();
+}
+export const adminOverview = (token) => adminGet("/admin/overview", token);
+export const adminTables = (token) => adminGet("/admin/tables", token);
+export const adminTable = (token, name, offset = 0) => adminGet(`/admin/table/${name}?limit=50&offset=${offset}`, token);
+export const adminActivity = (token) => adminGet("/admin/activity", token);
+export const adminErrors = (token) => adminGet("/admin/errors", token);
+export async function adminClearErrors(token) {
+  const res = await fetch(`${API}/admin/errors/clear`, { method: "POST", headers: authHeader(token) });
+  if (!res.ok) throw new Error("Ошибка");
+  return res.json();
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import {
-  adminOverview, adminTables, adminTable, adminActivity, adminErrors, adminClearErrors,
+  adminOverview, adminTables, adminTable, adminActivity, adminErrors, adminClearErrors, adminSetUserEmail,
 } from "@/lib/api";
 
 const TABS = [
@@ -109,6 +109,57 @@ function Overview({ token }) {
   );
 }
 
+function UserEmailTool({ token }) {
+  const [uid, setUid] = useState("");
+  const [email, setEmail] = useState("");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setMsg(""); setBusy(true);
+    try {
+      const r = await adminSetUserEmail(token, parseInt(uid, 10), email.trim());
+      setMsg(`✓ Почта пользователя #${r.user_id} (${r.username}) изменена на ${r.email}`);
+      setUid(""); setEmail("");
+    } catch (e) {
+      setMsg("✗ " + e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
+      <div className="text-sm font-semibold text-stone-700">Сменить почту пользователю (вручную)</div>
+      <div className="flex flex-wrap gap-2 items-center">
+        <input
+          value={uid}
+          onChange={(e) => setUid(e.target.value.replace(/\D/g, ""))}
+          placeholder="id"
+          inputMode="numeric"
+          className="w-20 rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none"
+          style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+        />
+        <input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="new@example.com"
+          className="flex-1 min-w-[200px] rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none"
+          style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+        />
+        <button
+          onClick={save}
+          disabled={busy || !uid || !email.trim()}
+          className="text-sm px-4 py-1.5 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition"
+        >
+          {busy ? "…" : "Сменить"}
+        </button>
+      </div>
+      {msg && <p className={`text-xs ${msg.startsWith("✓") ? "text-emerald-600" : "text-rose-500"}`}>{msg}</p>}
+    </div>
+  );
+}
+
 function DataBrowser({ token }) {
   const [tables, setTables] = useState([]);
   const [active, setActive] = useState(null);
@@ -125,6 +176,8 @@ function DataBrowser({ token }) {
 
   return (
     <div className="space-y-4">
+      <UserEmailTool token={token} />
+
       {err && <p className="text-rose-500 text-sm">{err}</p>}
 
       <div className="flex flex-wrap gap-2">

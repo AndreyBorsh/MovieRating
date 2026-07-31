@@ -1168,6 +1168,33 @@ def admin_errors_clear(authorization: str = Header(None)):
     return {"ok": True}
 
 
+@app.post("/admin/user-email")
+def admin_set_user_email(data: dict, authorization: str = Header(None)):
+    """Admin override: set a user's email directly (no verification code)."""
+    require_admin(authorization)
+    try:
+        uid = int(data.get("user_id"))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="Некорректный id пользователя")
+    email = (data.get("email") or "").strip().lower()
+    if not email or "@" not in email:
+        raise HTTPException(status_code=400, detail="Введите корректную почту")
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT username FROM users WHERE id=%s", (uid,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    cur.execute("SELECT id FROM users WHERE lower(email)=lower(%s) AND id<>%s", (email, uid))
+    if cur.fetchone():
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Эта почта уже занята другим пользователем")
+    cur.execute("UPDATE users SET email=%s WHERE id=%s", (email, uid))
+    conn.commit(); cur.close(); conn.close()
+    return {"ok": True, "user_id": uid, "username": row[0], "email": email}
+
+
 # =========================
 # MOVIES
 # =========================

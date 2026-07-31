@@ -446,3 +446,13 @@ export async function adminClearErrors(token) {
   if (!res.ok) throw new Error("Ошибка");
   return res.json();
 }
+
+export async function adminSetUserEmail(token, userId, email) {
+  const res = await fetch(`${API}/admin/user-email`, {
+    method: "POST", headers: authHeader(token),
+    body: JSON.stringify({ user_id: userId, email }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Ошибка");
+  return data;
+}

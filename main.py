@@ -2253,14 +2253,16 @@ def my_giveaway_reviews(authorization: str = Header(None)):
     rows = cur.fetchall()
     items = []
     for rid, review, genuine, manual, mtype, media_id, title, created in rows:
-        if not is_quality_review(review):
-            continue
+        words = len(_words(review or ""))
         if manual == "pending":
             status = "manual_pending"
         elif manual == "rejected":
             status = "manual_rejected"
         elif manual == "approved":
             status = "passed"  # admin override wins
+        elif not is_quality_review(review):
+            # too short or too repetitive / no real sentences — tell the user why
+            status = "too_short" if words < GIVEAWAY_MIN_WORDS else "low_quality"
         elif genuine is True:
             # passed the AI relevance check — but a plagiarised copy earns no ticket
             status = "duplicate" if is_near_duplicate(cur, rid, review, created) else "passed"
@@ -2270,11 +2272,11 @@ def my_giveaway_reviews(authorization: str = Header(None)):
             status = "checking"
         items.append({
             "rating_id": rid, "title": title, "media_type": mtype, "media_id": media_id,
-            "status": status,
+            "status": status, "words": words,
             "snippet": (review[:240] + ("…" if len(review) > 240 else "")),
         })
     cur.close(); conn.close()
-    return {"open": True, "items": items}
+    return {"open": True, "items": items, "min_words": GIVEAWAY_MIN_WORDS}
 
 
 @app.post("/giveaways/request-manual/{rating_id}")

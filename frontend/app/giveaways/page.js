@@ -198,6 +198,8 @@ const STATUS_UI = {
   passed:          { label: "✓ зачтена",                cls: "text-emerald-600" },
   duplicate:       { label: "♻️ дубликат — не засчитана", cls: "text-rose-500" },
   failed:          { label: "❌ не прошла ИИ-проверку",   cls: "text-rose-500" },
+  too_short:       { label: "❌ слишком короткая",        cls: "text-rose-500" },
+  low_quality:     { label: "❌ не прошла проверку качества (повторы / мало предложений)", cls: "text-rose-500" },
   checking:        { label: "⏳ проверяется",            cls: "text-stone-600" },
   manual_pending:  { label: "🔎 на ручной проверке",     cls: "text-amber-600" },
   manual_rejected: { label: "❌ отклонено вручную",       cls: "text-rose-500" },
@@ -228,12 +230,15 @@ function MyReviewsSummary({ token }) {
       <div className="text-sm font-semibold text-stone-700">Мои рецензии для розыгрыша</div>
       {data.items.map((it) => {
         const ui = STATUS_UI[it.status] || STATUS_UI.checking;
+        const label = it.status === "too_short"
+          ? `❌ мало слов: ${it.words}/${data.min_words} — допишите рецензию`
+          : ui.label;
         return (
           <div key={it.rating_id} className="rounded-lg px-3 py-2 flex items-start justify-between gap-3"
             style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}>
             <div className="min-w-0">
               <div className="text-sm text-stone-800 truncate">🎬 {it.title || "—"}</div>
-              <div className={`text-xs mt-0.5 ${ui.cls}`}>{ui.label}</div>
+              <div className={`text-xs mt-0.5 ${ui.cls}`}>{label}</div>
             </div>
             {(it.status === "failed" || it.status === "duplicate") && (
               <button onClick={() => ask(it.rating_id)} disabled={busy === it.rating_id}

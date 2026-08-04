@@ -47,7 +47,7 @@ function NotificationBell() {
   const itemText = (it) => {
     const where = it.title ? ` к «${it.title}»` : "";
     if (it.type === "giveaway")
-      return `🎉 Вы выиграли билет на «${it.actor_name}»! Админ скоро свяжется с вами по почте, чтобы передать приз.`;
+      return `Поздравляем! Вы выиграли билет на «${it.actor_name}». Откройте «Розыгрыши» и нажмите «Получить приз», чтобы забрать его — билет придёт на почту, привязанную к аккаунту.`;
     if (it.type === "manual_req")
       return `🔎 ${it.actor_name} просит проверить рецензию вручную${where}. Откройте «Розыгрыши» и подтвердите или отклоните билетик.`;
     if (it.type === "manual_ok")

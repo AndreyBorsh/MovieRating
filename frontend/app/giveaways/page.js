@@ -216,6 +216,17 @@ function MyReviewsSummary({ token }) {
   };
   useEffect(() => { if (token) load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [token]);
 
+  // Auto-refresh while any review is still being checked by the AI, so the
+  // status flips to "зачтена"/"не прошла" without a manual page reload.
+  useEffect(() => {
+    if (!token || !data?.open) return;
+    const pending = data.items.some((it) => it.status === "checking");
+    if (!pending) return;
+    const t = setInterval(load, 12000);
+    return () => clearInterval(t);
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [token, data]);
+
   if (!token || !data || !data.open || data.items.length === 0) return null;
 
   const ask = async (rid) => {

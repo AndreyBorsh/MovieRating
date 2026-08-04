@@ -387,6 +387,7 @@ export default function GiveawaysPage() {
   const [error, setError] = useState("");
   const [openEntries, setOpenEntries] = useState(null);
   const [claimId, setClaimId] = useState(null);
+  const [showFinished, setShowFinished] = useState(false);
 
   // admin create form
   const [title, setTitle] = useState("");
@@ -451,6 +452,111 @@ export default function GiveawaysPage() {
   const items = data?.items || [];
   const isAdmin = data?.is_admin;
   const minWords = data?.min_words || 30;
+  const activeItems = items.filter((g) => g.status === "open");
+  const finishedItems = items.filter((g) => g.status !== "open");
+
+  const renderCard = (g) => {
+    const closed = g.status !== "open";
+    return (
+      <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: (closed || g.expired) ? "rgba(0,0,0,0.08)" : "#3a4d2a" }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-bold tracking-tight text-stone-900">🎬 {g.title}</h2>
+              {closed
+                ? <span className="text-xs text-stone-600 bg-stone-700/40 px-2 py-0.5 rounded">завершён</span>
+                : g.expired
+                  ? <span className="text-xs text-amber-700 bg-amber-400/15 px-2 py-0.5 rounded">приём завершён</span>
+                  : <span className="text-xs text-emerald-600 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
+            </div>
+            {g.description && <p className="text-sm text-stone-600 mt-1">{g.description}</p>}
+            <div className="text-xs text-stone-400 mt-2 flex flex-wrap gap-x-4 gap-y-1">
+              <span>Участников: {g.entries}</span>
+              {g.deadline && !closed && <span>{g.expired ? "Приём был до" : "До"}: {fmtDate(g.deadline)}</span>}
+            </div>
+          </div>
+          {isAdmin && (
+            <button onClick={() => remove(g.id)} title="Удалить розыгрыш"
+              className="shrink-0 px-2 py-1 rounded-lg text-sm text-stone-500 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition">
+              🗑
+            </button>
+          )}
+        </div>
+
+        {closed && g.winner_name && (
+          <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
+            🏆 Победитель: <span className="text-amber-600 font-semibold">{g.winner_name}</span>
+            {isAdmin && g.winner_email && (
+              <span className="text-stone-500"> · почта: <span className="font-mono text-stone-700">{g.winner_email}</span></span>
+            )}
+          </div>
+        )}
+
+        {g.is_winner && (
+          <div className="mt-3">
+            {g.claimed ? (
+              <div className="rounded-lg px-3 py-2 text-sm text-emerald-700"
+                   style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
+                🎟 Данные отправлены — ожидайте билет на почте.
+              </div>
+            ) : (
+              <button
+                onClick={() => setClaimId(g.id)}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 transition"
+              >
+                🎁 Получить приз
+              </button>
+            )}
+          </div>
+        )}
+
+        {isAdmin && (
+          <div className="mt-3">
+            <button
+              onClick={() => setOpenEntries(openEntries === g.id ? null : g.id)}
+              className="text-xs text-stone-600 hover:text-amber-600 transition">
+              {openEntries === g.id ? "▾ Скрыть участников" : "▸ Участники и рецензии"}
+            </button>
+            {openEntries === g.id && <EntriesPanel token={token} giveawayId={g.id} />}
+          </div>
+        )}
+
+        {!closed && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {!token ? (
+              <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition">
+                Войдите, чтобы участвовать
+              </Link>
+            ) : g.entered ? (
+              <span className="text-sm text-emerald-600">
+                ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets} 🎟</span>
+              </span>
+            ) : g.expired ? (
+              <span className="text-sm text-stone-500">
+                Приём заявок завершён{(g.my_tickets || 0) > 0 ? " — ваш билетик сгорел (вы не участвовали)" : ""}
+              </span>
+            ) : (g.my_tickets || 0) > 0 ? (
+              <button onClick={() => enter(g.id)} disabled={busyId === g.id}
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
+                {busyId === g.id ? "..." : `Участвовать · ${g.my_tickets} 🎟`}
+              </button>
+            ) : (
+              <span className="text-sm text-stone-500">
+                Напишите рецензию от {minWords} слов <span className="text-stone-400">(после старта розыгрыша)</span>, чтобы получить билетик и участвовать
+              </span>
+            )}
+
+            {isAdmin && (
+              <button onClick={() => draw(g.id)} disabled={busyId === g.id}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-stone-700 border border-stone-300 hover:border-amber-400/50 hover:text-amber-600 transition">
+                🎲 Разыграть
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -516,108 +622,27 @@ export default function GiveawaysPage() {
         </div>
       ) : (
         <div className="space-y-4">
-          {items.map((g) => {
-            const closed = g.status !== "open";
-            return (
-              <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: (closed || g.expired) ? "rgba(0,0,0,0.08)" : "#3a4d2a" }}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <h2 className="text-lg font-bold tracking-tight text-stone-900">🎬 {g.title}</h2>
-                      {closed
-                        ? <span className="text-xs text-stone-600 bg-stone-700/40 px-2 py-0.5 rounded">завершён</span>
-                        : g.expired
-                          ? <span className="text-xs text-amber-700 bg-amber-400/15 px-2 py-0.5 rounded">приём завершён</span>
-                          : <span className="text-xs text-emerald-600 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
-                    </div>
-                    {g.description && <p className="text-sm text-stone-600 mt-1">{g.description}</p>}
-                    <div className="text-xs text-stone-400 mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                      <span>Участников: {g.entries}</span>
-                      {g.deadline && !closed && <span>{g.expired ? "Приём был до" : "До"}: {fmtDate(g.deadline)}</span>}
-                    </div>
-                  </div>
-                  {isAdmin && (
-                    <button onClick={() => remove(g.id)} title="Удалить розыгрыш"
-                      className="shrink-0 px-2 py-1 rounded-lg text-sm text-stone-500 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition">
-                      🗑
-                    </button>
-                  )}
-                </div>
+          {activeItems.length === 0 ? (
+            <div className="rounded-xl p-8 border text-center text-stone-500 text-sm" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}>
+              Сейчас нет активных розыгрышей. Загляните позже!
+            </div>
+          ) : (
+            activeItems.map(renderCard)
+          )}
 
-                {closed && g.winner_name && (
-                  <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
-                    🏆 Победитель: <span className="text-amber-600 font-semibold">{g.winner_name}</span>
-                    {isAdmin && g.winner_email && (
-                      <span className="text-stone-500"> · почта: <span className="font-mono text-stone-700">{g.winner_email}</span></span>
-                    )}
-                  </div>
-                )}
-
-                {g.is_winner && (
-                  <div className="mt-3">
-                    {g.claimed ? (
-                      <div className="rounded-lg px-3 py-2 text-sm text-emerald-700"
-                           style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
-                        🎟 Данные отправлены — ожидайте билет на почте.
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setClaimId(g.id)}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 transition"
-                      >
-                        🎁 Получить приз
-                      </button>
-                    )}
-                  </div>
-                )}
-
-                {isAdmin && (
-                  <div className="mt-3">
-                    <button
-                      onClick={() => setOpenEntries(openEntries === g.id ? null : g.id)}
-                      className="text-xs text-stone-600 hover:text-amber-600 transition">
-                      {openEntries === g.id ? "▾ Скрыть участников" : "▸ Участники и рецензии"}
-                    </button>
-                    {openEntries === g.id && <EntriesPanel token={token} giveawayId={g.id} />}
-                  </div>
-                )}
-
-                {!closed && (
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    {!token ? (
-                      <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition">
-                        Войдите, чтобы участвовать
-                      </Link>
-                    ) : g.entered ? (
-                      <span className="text-sm text-emerald-600">
-                        ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets} 🎟</span>
-                      </span>
-                    ) : g.expired ? (
-                      <span className="text-sm text-stone-500">
-                        Приём заявок завершён{(g.my_tickets || 0) > 0 ? " — ваш билетик сгорел (вы не участвовали)" : ""}
-                      </span>
-                    ) : (g.my_tickets || 0) > 0 ? (
-                      <button onClick={() => enter(g.id)} disabled={busyId === g.id}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
-                        {busyId === g.id ? "..." : `Участвовать · ${g.my_tickets} 🎟`}
-                      </button>
-                    ) : (
-                      <span className="text-sm text-stone-500">
-                        Напишите рецензию от {minWords} слов <span className="text-stone-400">(после старта розыгрыша)</span>, чтобы получить билетик и участвовать
-                      </span>
-                    )}
-
-                    {isAdmin && (
-                      <button onClick={() => draw(g.id)} disabled={busyId === g.id}
-                        className="px-3 py-2 rounded-lg text-sm font-medium text-stone-700 border border-stone-300 hover:border-amber-400/50 hover:text-amber-600 transition">
-                        🎲 Разыграть
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {finishedItems.length > 0 && (
+            <div className="space-y-4 pt-2">
+              <button
+                onClick={() => setShowFinished((v) => !v)}
+                className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 border text-sm font-semibold text-stone-700 hover:text-amber-600 transition"
+                style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
+              >
+                <span>🏁 Завершённые розыгрыши <span className="text-stone-400 font-normal">({finishedItems.length})</span></span>
+                <span className="text-stone-400">{showFinished ? "▾ скрыть" : "▸ показать"}</span>
+              </button>
+              {showFinished && <div className="space-y-4">{finishedItems.map(renderCard)}</div>}
+            </div>
+          )}
         </div>
       )}
     </div>

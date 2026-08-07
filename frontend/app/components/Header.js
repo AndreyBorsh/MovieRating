@@ -63,7 +63,7 @@ function NotificationBell() {
       <button
         onClick={toggle}
         aria-label="Уведомления"
-        className="relative px-2 py-1.5 rounded-md text-stone-600 hover:text-stone-900 transition-colors flex items-center"
+        className="relative px-2 py-1.5 rounded-md text-stone-300 hover:text-stone-50 transition-colors flex items-center"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
           strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -83,25 +83,25 @@ function NotificationBell() {
           <div
             className="absolute right-0 mt-2 w-80 max-w-[90vw] max-h-[70vh] overflow-y-auto rounded-2xl border z-50"
             style={{
-              background: "rgba(255,255,255,0.85)",
-              borderColor: "rgba(0,0,0,0.06)",
+              background: "rgba(16,20,40,0.9)",
+              borderColor: "rgba(255,255,255,0.08)",
               backdropFilter: "blur(18px)",
               WebkitBackdropFilter: "blur(18px)",
-              boxShadow: "0 16px 40px rgba(40,30,15,0.14)",
+              boxShadow: "0 16px 40px rgba(0,0,0,0.14)",
             }}
           >
-            <div className="px-4 py-2.5 border-b text-sm font-semibold text-stone-800" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+            <div className="px-4 py-2.5 border-b text-sm font-semibold text-stone-100" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
               Уведомления
             </div>
             {data.items.length === 0 ? (
-              <div className="px-4 py-6 text-center text-sm text-stone-500">Пока пусто</div>
+              <div className="px-4 py-6 text-center text-sm text-stone-400">Пока пусто</div>
             ) : (
               data.items.map((it) => (
                 <button
                   key={it.id}
                   onClick={() => go(it)}
-                  className="w-full text-left px-4 py-3 border-b hover:bg-black/5 transition-colors flex gap-2"
-                  style={{ borderColor: "rgba(0,0,0,0.08)" }}
+                  className="w-full text-left px-4 py-3 border-b hover:bg-white/5 transition-colors flex gap-2"
+                  style={{ borderColor: "rgba(255,255,255,0.10)" }}
                 >
                   <span className="text-base shrink-0">{
                     it.type === "reaction" ? "❤️"
@@ -112,9 +112,9 @@ function NotificationBell() {
                     : "💬"
                   }</span>
                   <div className="min-w-0">
-                    <p className="text-sm text-stone-700 leading-snug">{itemText(it)}</p>
+                    <p className="text-sm text-stone-200 leading-snug">{itemText(it)}</p>
                     {it.created_at && (
-                      <p className="text-[11px] text-stone-400 mt-0.5">
+                      <p className="text-[11px] text-stone-500 mt-0.5">
                         {new Date(it.created_at).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                       </p>
                     )}
@@ -141,8 +141,8 @@ export default function Header() {
         href={href}
         className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
           active
-            ? "text-amber-600 bg-amber-400/10"
-            : "text-stone-600 hover:text-stone-900"
+            ? "text-red-400 bg-red-500/10"
+            : "text-stone-300 hover:text-stone-50"
         }`}
       >
         {label}
@@ -159,18 +159,20 @@ export default function Header() {
     <header
       className="sticky top-0 z-50"
       style={{
-        background: "rgba(250,247,241,0.72)",
+        background: "rgba(10,14,28,0.82)",
         backdropFilter: "blur(16px)",
         WebkitBackdropFilter: "blur(16px)",
-        borderBottom: "1px solid rgba(0,0,0,0.06)",
+        borderBottom: "1px solid rgba(226,20,29,0.35)",
+        boxShadow: "0 2px 20px rgba(226,20,29,0.10)",
       }}
     >
       <div className="max-w-6xl mx-auto px-2 sm:px-6 h-14 flex items-center justify-between gap-0.5 sm:gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="text-lg sm:text-xl font-extrabold tracking-tight text-amber-600 shrink-0"
+          className="text-lg sm:text-xl font-extrabold tracking-tight text-red-500 shrink-0 flex items-center gap-1.5"
         >
+          <span aria-hidden="true">🕷</span>
           <span className="hidden sm:inline">What's Andrew Watching</span>
           <span className="sm:hidden">WAW</span>
         </Link>
@@ -182,7 +184,7 @@ export default function Header() {
           <Link
             href="/giveaways"
             className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-              pathname === "/giveaways" ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
+              pathname === "/giveaways" ? "text-red-400 bg-red-500/10" : "text-stone-300 hover:text-stone-50"
             }`}
             title="Розыгрыши"
           >
@@ -193,7 +195,7 @@ export default function Header() {
             <Link
               href={`/profile/${user?.user_id}`}
               className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-                pathname === `/profile/${user?.user_id}` ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
+                pathname === `/profile/${user?.user_id}` ? "text-red-400 bg-red-500/10" : "text-stone-300 hover:text-stone-50"
               }`}
               title="Профиль"
             >
@@ -205,7 +207,7 @@ export default function Header() {
             <Link
               href="/admin"
               className={`text-[13px] sm:text-sm font-medium transition-colors px-1.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap ${
-                pathname === "/admin" ? "text-amber-600 bg-amber-400/10" : "text-stone-600 hover:text-stone-900"
+                pathname === "/admin" ? "text-red-400 bg-red-500/10" : "text-stone-300 hover:text-stone-50"
               }`}
               title="Админка"
             >
@@ -220,12 +222,12 @@ export default function Header() {
           {token ? (
             <>
               <NotificationBell />
-              <span className="text-xs text-stone-500 hidden sm:block">
+              <span className="text-xs text-stone-400 hidden sm:block">
                 {user?.username}
               </span>
               <button
                 onClick={handleLogout}
-                className="text-sm text-stone-600 hover:text-rose-500 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
+                className="text-sm text-stone-300 hover:text-rose-500 transition-colors px-2 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Выйти
               </button>
@@ -234,13 +236,13 @@ export default function Header() {
             <>
               <Link
                 href="/login"
-                className="text-sm text-stone-600 hover:text-stone-900 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
+                className="text-sm text-stone-300 hover:text-stone-50 transition-colors px-2 sm:px-3 py-1.5 whitespace-nowrap"
               >
                 Войти
               </Link>
               <Link
                 href="/register"
-                className="text-sm font-medium text-amber-600 border border-amber-400/40 hover:bg-amber-400/10 transition-colors px-2.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
+                className="text-sm font-medium text-red-400 border border-red-500/40 hover:bg-red-500/10 transition-colors px-2.5 sm:px-3 py-1.5 rounded-md whitespace-nowrap"
               >
                 Регистрация
               </Link>

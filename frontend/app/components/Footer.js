@@ -20,18 +20,18 @@ export default function Footer() {
   return (
     <footer className="max-w-6xl mx-auto px-4 sm:px-6 pb-10 pt-2">
       <div
-        className="border-t pt-4 text-center text-sm text-stone-500"
-        style={{ borderColor: "rgba(0,0,0,0.08)" }}
+        className="border-t pt-4 text-center text-sm text-stone-400"
+        style={{ borderColor: "rgba(255,255,255,0.10)" }}
       >
         Возникла проблема или ошибка? Напишите нам —{" "}
         <button
           onClick={copy}
           title="Нажмите, чтобы скопировать"
-          className="text-amber-600 hover:text-amber-500 font-medium transition-colors"
+          className="text-red-400 hover:text-red-600 font-medium transition-colors"
         >
           {SUPPORT_EMAIL}
         </button>
-        {copied && <span className="ml-2 text-emerald-600 text-xs">скопировано ✓</span>}
+        {copied && <span className="ml-2 text-emerald-400 text-xs">скопировано ✓</span>}
       </div>
     </footer>
   );

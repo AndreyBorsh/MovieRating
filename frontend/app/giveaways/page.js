@@ -52,9 +52,9 @@ function FilmPicker({ value, onPick }) {
 
   if (value) {
     return (
-      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}>
-        <span className="text-sm text-stone-900 flex-1 min-w-0 truncate">🎬 {value}</span>
-        <button onClick={() => onPick("")} className="text-xs text-stone-500 hover:text-rose-500 transition shrink-0">сменить</button>
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2" style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}>
+        <span className="text-sm text-stone-50 flex-1 min-w-0 truncate">🎬 {value}</span>
+        <button onClick={() => onPick("")} className="text-xs text-stone-400 hover:text-rose-500 transition shrink-0">сменить</button>
       </div>
     );
   }
@@ -66,27 +66,27 @@ function FilmPicker({ value, onPick }) {
         onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
         onFocus={() => setOpen(true)}
         placeholder="Найдите фильм или сериал…"
-        className="w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
-        style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}
+        className="w-full rounded-lg px-3 py-2 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50"
+        style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}
       />
       {open && query.trim().length >= 2 && (
         <div className="absolute z-30 mt-1 w-full max-h-72 overflow-y-auto rounded-lg border shadow-2xl"
-          style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
+          style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}>
           {loading && results.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-stone-500">Поиск…</div>
+            <div className="px-3 py-3 text-sm text-stone-400">Поиск…</div>
           ) : results.length === 0 ? (
-            <div className="px-3 py-3 text-sm text-stone-500">Ничего не найдено</div>
+            <div className="px-3 py-3 text-sm text-stone-400">Ничего не найдено</div>
           ) : (
             results.map((f) => (
               <button key={`${f.media_type}-${f.id}`} onClick={() => pick(f)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-black/5 transition border-b last:border-b-0"
-                style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+                className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/5 transition border-b last:border-b-0"
+                style={{ borderColor: "rgba(255,255,255,0.10)" }}>
                 {POSTER(f.poster)
                   ? <img src={POSTER(f.poster)} alt="" className="w-8 h-12 object-cover rounded shrink-0" />
-                  : <div className="w-8 h-12 rounded shrink-0 flex items-center justify-center text-base" style={{ background: "rgba(255,255,255,0.72)" }}>{f.media_type === "tv" ? "📺" : "🎬"}</div>}
+                  : <div className="w-8 h-12 rounded shrink-0 flex items-center justify-center text-base" style={{ background: "rgba(22,28,52,0.72)" }}>{f.media_type === "tv" ? "📺" : "🎬"}</div>}
                 <div className="min-w-0">
-                  <div className="text-sm text-stone-900 truncate">{f.title}</div>
-                  <div className="text-xs text-stone-500">{f.media_type === "tv" ? "Сериал" : "Фильм"}{f.year ? ` · ${f.year}` : ""}</div>
+                  <div className="text-sm text-stone-50 truncate">{f.title}</div>
+                  <div className="text-xs text-stone-400">{f.media_type === "tv" ? "Сериал" : "Фильм"}{f.year ? ` · ${f.year}` : ""}</div>
                 </div>
               </button>
             ))
@@ -133,32 +133,32 @@ function EntriesPanel({ token, giveawayId }) {
   };
 
   return (
-    <div className="mt-3 rounded-lg p-3" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
+    <div className="mt-3 rounded-lg p-3" style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="text-xs font-semibold text-stone-600">Участники и зачтённые рецензии</span>
+        <span className="text-xs font-semibold text-stone-300">Участники и зачтённые рецензии</span>
         <button onClick={recheck} disabled={busy}
-          className="text-xs px-2 py-1 rounded border border-stone-300 text-stone-600 hover:text-amber-600 hover:border-amber-400/50 transition disabled:opacity-50">
+          className="text-xs px-2 py-1 rounded border border-stone-600 text-stone-300 hover:text-red-400 hover:border-red-500/50 transition disabled:opacity-50">
           {busy ? "Проверяю…" : "🤖 Перепроверить рецензии"}
         </button>
       </div>
-      {msg && <div className="text-[11px] text-stone-500 mb-2">{msg}</div>}
+      {msg && <div className="text-[11px] text-stone-400 mb-2">{msg}</div>}
       {rows === null ? (
-        <div className="text-xs text-stone-400">Загрузка…</div>
+        <div className="text-xs text-stone-500">Загрузка…</div>
       ) : rows.length === 0 ? (
-        <div className="text-xs text-stone-400">Пока никто не участвует.</div>
+        <div className="text-xs text-stone-500">Пока никто не участвует.</div>
       ) : (
         <div className="space-y-2">
           {rows.map((e, i) => (
-            <div key={i} className="rounded-md px-3 py-2" style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}>
+            <div key={i} className="rounded-md px-3 py-2" style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-stone-800 min-w-0 truncate">{e.username}</span>
-                <span className={`text-xs font-semibold shrink-0 ${e.tickets > 0 ? "text-emerald-600" : "text-stone-500"}`}>
+                <span className="text-sm text-stone-100 min-w-0 truncate">{e.username}</span>
+                <span className={`text-xs font-semibold shrink-0 ${e.tickets > 0 ? "text-emerald-400" : "text-stone-400"}`}>
                   {e.tickets > 0 ? `${e.tickets} 🎟` : "0 🎟"}
                 </span>
               </div>
               {e.review
-                ? <p className="text-xs text-stone-600 mt-1 whitespace-pre-wrap break-words leading-snug">{e.review}</p>
-                : <p className="text-xs text-stone-400 mt-1 italic">нет зачтённой рецензии (оффтоп / не подтверждена / удалена)</p>}
+                ? <p className="text-xs text-stone-300 mt-1 whitespace-pre-wrap break-words leading-snug">{e.review}</p>
+                : <p className="text-xs text-stone-500 mt-1 italic">нет зачтённой рецензии (оффтоп / не подтверждена / удалена)</p>}
 
               {e.review && e.rating_id && (
                 rejecting === e.rating_id ? (
@@ -166,22 +166,22 @@ function EntriesPanel({ token, giveawayId }) {
                     <textarea value={comment} onChange={(ev) => setComment(ev.target.value)}
                       placeholder="Почему рецензия не проходит (необязательно) — увидит пользователь"
                       rows={2}
-                      className="w-full rounded-md px-2 py-1.5 text-xs text-stone-900 outline-none resize-none"
-                      style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }} />
+                      className="w-full rounded-md px-2 py-1.5 text-xs text-stone-50 outline-none resize-none"
+                      style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }} />
                     <div className="flex gap-2">
                       <button onClick={() => confirmReject(e.rating_id)} disabled={deciding}
-                        className="text-xs px-3 py-1.5 rounded-lg text-stone-900 bg-red-400 hover:bg-red-300 transition disabled:opacity-50">
+                        className="text-xs px-3 py-1.5 rounded-lg text-stone-50 bg-red-400 hover:bg-red-300 transition disabled:opacity-50">
                         {deciding ? "…" : "Подтвердить отклонение"}
                       </button>
                       <button onClick={() => { setRejecting(null); setComment(""); }}
-                        className="text-xs px-3 py-1.5 rounded-lg text-stone-600 border border-stone-300 hover:text-stone-800 transition">
+                        className="text-xs px-3 py-1.5 rounded-lg text-stone-300 border border-stone-600 hover:text-stone-100 transition">
                         Отмена
                       </button>
                     </div>
                   </div>
                 ) : (
                   <button onClick={() => { setRejecting(e.rating_id); setComment(""); }}
-                    className="mt-2 text-xs px-2 py-1 rounded border border-stone-300 text-stone-500 hover:text-rose-500 hover:border-red-400/50 transition">
+                    className="mt-2 text-xs px-2 py-1 rounded border border-stone-600 text-stone-400 hover:text-rose-500 hover:border-red-400/50 transition">
                     🔎 Перепроверить · отклонить
                   </button>
                 )
@@ -195,13 +195,13 @@ function EntriesPanel({ token, giveawayId }) {
 }
 
 const STATUS_UI = {
-  passed:          { label: "✓ зачтена",                cls: "text-emerald-600" },
+  passed:          { label: "✓ зачтена",                cls: "text-emerald-400" },
   duplicate:       { label: "♻️ дубликат — не засчитана", cls: "text-rose-500" },
   failed:          { label: "❌ не прошла ИИ-проверку",   cls: "text-rose-500" },
   too_short:       { label: "❌ слишком короткая",        cls: "text-rose-500" },
   low_quality:     { label: "❌ не прошла проверку качества (повторы / мало предложений)", cls: "text-rose-500" },
-  checking:        { label: "⏳ проверяется",            cls: "text-stone-600" },
-  manual_pending:  { label: "🔎 на ручной проверке",     cls: "text-amber-600" },
+  checking:        { label: "⏳ проверяется",            cls: "text-stone-300" },
+  manual_pending:  { label: "🔎 на ручной проверке",     cls: "text-red-400" },
   manual_rejected: { label: "❌ отклонено вручную",       cls: "text-rose-500" },
 };
 
@@ -237,8 +237,8 @@ function MyReviewsSummary({ token }) {
   };
 
   return (
-    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
-      <div className="text-sm font-semibold text-stone-700">Мои рецензии для розыгрыша</div>
+    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}>
+      <div className="text-sm font-semibold text-stone-200">Мои рецензии для розыгрыша</div>
       {data.items.map((it) => {
         const ui = STATUS_UI[it.status] || STATUS_UI.checking;
         const label = it.status === "too_short"
@@ -246,14 +246,14 @@ function MyReviewsSummary({ token }) {
           : ui.label;
         return (
           <div key={it.rating_id} className="rounded-lg px-3 py-2 flex items-start justify-between gap-3"
-            style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}>
+            style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}>
             <div className="min-w-0">
-              <div className="text-sm text-stone-800 truncate">🎬 {it.title || "—"}</div>
+              <div className="text-sm text-stone-100 truncate">🎬 {it.title || "—"}</div>
               <div className={`text-xs mt-0.5 ${ui.cls}`}>{label}</div>
             </div>
             {(it.status === "failed" || it.status === "duplicate") && (
               <button onClick={() => ask(it.rating_id)} disabled={busy === it.rating_id}
-                className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg border border-stone-300 text-stone-700 hover:border-amber-400/50 hover:text-amber-600 transition disabled:opacity-50">
+                className="shrink-0 text-xs px-2.5 py-1.5 rounded-lg border border-stone-600 text-stone-200 hover:border-red-500/50 hover:text-red-400 transition disabled:opacity-50">
                 {busy === it.rating_id ? "…" : "Запросить ручную проверку"}
               </button>
             )}
@@ -284,19 +284,19 @@ function ManualQueue({ token, onChange }) {
   if (rows.length === 0) return null;
 
   return (
-    <div className="rounded-xl p-4 border space-y-3" style={{ background: "#efe9df", borderColor: "#3a4d2a" }}>
-      <div className="text-sm font-semibold text-amber-600">🔎 Запросы на ручную проверку ({rows.length})</div>
+    <div className="rounded-xl p-4 border space-y-3" style={{ background: "#141b31", borderColor: "#3b5bd0" }}>
+      <div className="text-sm font-semibold text-red-400">🔎 Запросы на ручную проверку ({rows.length})</div>
       {rows.map((r) => (
-        <div key={r.rating_id} className="rounded-lg px-3 py-2" style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}>
-          <div className="text-sm text-stone-800 break-words">{r.username} · 🎬 {r.title || "—"}</div>
-          <p className="text-xs text-stone-600 mt-1 whitespace-pre-wrap break-words leading-snug">{r.review}</p>
+        <div key={r.rating_id} className="rounded-lg px-3 py-2" style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}>
+          <div className="text-sm text-stone-100 break-words">{r.username} · 🎬 {r.title || "—"}</div>
+          <p className="text-xs text-stone-300 mt-1 whitespace-pre-wrap break-words leading-snug">{r.review}</p>
           <div className="flex gap-2 mt-2">
             <button onClick={() => decide(r.rating_id, "approve")} disabled={busy === r.rating_id}
-              className="text-xs px-3 py-1.5 rounded-lg font-semibold text-stone-900 bg-emerald-400 hover:bg-emerald-300 transition disabled:opacity-50">
+              className="text-xs px-3 py-1.5 rounded-lg font-semibold text-stone-50 bg-emerald-400 hover:bg-emerald-300 transition disabled:opacity-50">
               ✓ Засчитать билетик
             </button>
             <button onClick={() => decide(r.rating_id, "reject")} disabled={busy === r.rating_id}
-              className="text-xs px-3 py-1.5 rounded-lg text-stone-700 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition disabled:opacity-50">
+              className="text-xs px-3 py-1.5 rounded-lg text-stone-200 border border-stone-600 hover:border-red-400/50 hover:text-rose-500 transition disabled:opacity-50">
               ✕ Отклонить
             </button>
           </div>
@@ -322,55 +322,55 @@ function ClaimPrizeModal({ token, giveawayId, onClose, onDone }) {
     finally { setBusy(false); }
   };
 
-  const field = "w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50";
-  const fieldStyle = { background: "#fff", border: "1px solid rgba(0,0,0,0.12)" };
+  const field = "w-full rounded-lg px-3 py-2 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50";
+  const fieldStyle = { background: "#0f1526", border: "1px solid rgba(255,255,255,0.14)" };
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-      style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+      style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
       onClick={onClose}
     >
       <div
         className="relative w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[90vh] p-5 space-y-3"
-        style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+        style={{ background: "#1a2139", borderColor: "rgba(255,255,255,0.08)", boxShadow: "0 24px 60px rgba(0,0,0,0.28)" }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-extrabold tracking-tight text-stone-900">🎁 Получить приз</h3>
-          <button onClick={onClose} className="text-stone-500 hover:text-stone-800 text-lg leading-none" aria-label="Закрыть">✕</button>
+          <h3 className="text-lg font-extrabold tracking-tight text-stone-50">🎁 Получить приз</h3>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-100 text-lg leading-none" aria-label="Закрыть">✕</button>
         </div>
-        <p className="text-xs text-stone-500">
+        <p className="text-xs text-stone-400">
           Заполните данные — админ их получит и пришлёт билет вам на почту.
         </p>
 
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Город <span className="text-rose-400">*</span></label>
+          <label className="block text-xs font-medium text-stone-300 mb-1">Город <span className="text-rose-400">*</span></label>
           <input value={form.city} onChange={set("city")} placeholder="Москва" className={field} style={fieldStyle} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Кинотеатр — название или ссылка <span className="text-rose-400">*</span></label>
+          <label className="block text-xs font-medium text-stone-300 mb-1">Кинотеатр — название или ссылка <span className="text-rose-400">*</span></label>
           <input value={form.cinema} onChange={set("cinema")} placeholder="Кинотеатр «Октябрь» / ссылка на сайт" className={field} style={fieldStyle} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Сеанс (дата и время) <span className="text-rose-400">*</span></label>
+          <label className="block text-xs font-medium text-stone-300 mb-1">Сеанс (дата и время) <span className="text-rose-400">*</span></label>
           <input value={form.session} onChange={set("session")} placeholder="30 июля, 19:30" className={field} style={fieldStyle} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Ряд и место</label>
+          <label className="block text-xs font-medium text-stone-300 mb-1">Ряд и место</label>
           <input value={form.seat} onChange={set("seat")} placeholder="ряд 5, место 12" className={field} style={fieldStyle} />
         </div>
         <div>
-          <label className="block text-xs font-medium text-stone-600 mb-1">Комментарий</label>
+          <label className="block text-xs font-medium text-stone-300 mb-1">Комментарий</label>
           <textarea value={form.comment} onChange={set("comment")} rows={2} placeholder="Необязательно" className={`${field} resize-none`} style={fieldStyle} />
         </div>
 
         {err && <p className="text-xs text-rose-500">{err}</p>}
 
         <div className="flex gap-2 justify-end pt-1">
-          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg text-stone-600 hover:text-stone-800 transition">Отмена</button>
+          <button onClick={onClose} className="text-sm px-4 py-2 rounded-lg text-stone-300 hover:text-stone-100 transition">Отмена</button>
           <button onClick={submit} disabled={busy}
-            className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition">
+            className="text-sm px-4 py-2 rounded-lg font-semibold text-stone-50 bg-gradient-to-br from-red-400 to-red-600 hover:brightness-105 disabled:opacity-50 transition">
             {busy ? "Отправка…" : "Отправить"}
           </button>
         </div>
@@ -446,7 +446,7 @@ export default function GiveawaysPage() {
   };
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[40vh] text-stone-500 text-sm">Загрузка...</div>;
+    return <div className="flex items-center justify-center min-h-[40vh] text-stone-400 text-sm">Загрузка...</div>;
   }
 
   const items = data?.items || [];
@@ -458,36 +458,36 @@ export default function GiveawaysPage() {
   const renderCard = (g) => {
     const closed = g.status !== "open";
     return (
-      <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: (closed || g.expired) ? "rgba(0,0,0,0.08)" : "#3a4d2a" }}>
+      <div key={g.id} className="rounded-xl p-5 border" style={{ background: "rgba(22,28,52,0.72)", borderColor: (closed || g.expired) ? "rgba(255,255,255,0.10)" : "#3b5bd0" }}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-bold tracking-tight text-stone-900">🎬 {g.title}</h2>
+              <h2 className="text-lg font-bold tracking-tight text-stone-50">🎬 {g.title}</h2>
               {closed
-                ? <span className="text-xs text-stone-600 bg-stone-700/40 px-2 py-0.5 rounded">завершён</span>
+                ? <span className="text-xs text-stone-300 bg-stone-200/40 px-2 py-0.5 rounded">завершён</span>
                 : g.expired
-                  ? <span className="text-xs text-amber-700 bg-amber-400/15 px-2 py-0.5 rounded">приём завершён</span>
-                  : <span className="text-xs text-emerald-600 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
+                  ? <span className="text-xs text-red-500 bg-red-500/15 px-2 py-0.5 rounded">приём завершён</span>
+                  : <span className="text-xs text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded">идёт</span>}
             </div>
-            {g.description && <p className="text-sm text-stone-600 mt-1">{g.description}</p>}
-            <div className="text-xs text-stone-400 mt-2 flex flex-wrap gap-x-4 gap-y-1">
+            {g.description && <p className="text-sm text-stone-300 mt-1">{g.description}</p>}
+            <div className="text-xs text-stone-500 mt-2 flex flex-wrap gap-x-4 gap-y-1">
               <span>Участников: {g.entries}</span>
               {g.deadline && !closed && <span>{g.expired ? "Приём был до" : "До"}: {fmtDate(g.deadline)}</span>}
             </div>
           </div>
           {isAdmin && (
             <button onClick={() => remove(g.id)} title="Удалить розыгрыш"
-              className="shrink-0 px-2 py-1 rounded-lg text-sm text-stone-500 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition">
+              className="shrink-0 px-2 py-1 rounded-lg text-sm text-stone-400 border border-stone-600 hover:border-red-400/50 hover:text-rose-500 transition">
               🗑
             </button>
           )}
         </div>
 
         {closed && g.winner_name && (
-          <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
-            🏆 Победитель: <span className="text-amber-600 font-semibold">{g.winner_name}</span>
+          <div className="mt-3 rounded-lg px-3 py-2 text-sm" style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}>
+            🏆 Победитель: <span className="text-red-400 font-semibold">{g.winner_name}</span>
             {isAdmin && g.winner_email && (
-              <span className="text-stone-500"> · почта: <span className="font-mono text-stone-700">{g.winner_email}</span></span>
+              <span className="text-stone-400"> · почта: <span className="font-mono text-stone-200">{g.winner_email}</span></span>
             )}
           </div>
         )}
@@ -495,14 +495,14 @@ export default function GiveawaysPage() {
         {g.is_winner && (
           <div className="mt-3">
             {g.claimed ? (
-              <div className="rounded-lg px-3 py-2 text-sm text-emerald-700"
+              <div className="rounded-lg px-3 py-2 text-sm text-emerald-300"
                    style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.25)" }}>
                 🎟 Данные отправлены — ожидайте билет на почте.
               </div>
             ) : (
               <button
                 onClick={() => setClaimId(g.id)}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 transition"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-50 bg-gradient-to-br from-red-400 to-red-600 hover:brightness-105 transition"
               >
                 🎁 Получить приз
               </button>
@@ -514,7 +514,7 @@ export default function GiveawaysPage() {
           <div className="mt-3">
             <button
               onClick={() => setOpenEntries(openEntries === g.id ? null : g.id)}
-              className="text-xs text-stone-600 hover:text-amber-600 transition">
+              className="text-xs text-stone-300 hover:text-red-400 transition">
               {openEntries === g.id ? "▾ Скрыть участников" : "▸ Участники и рецензии"}
             </button>
             {openEntries === g.id && <EntriesPanel token={token} giveawayId={g.id} />}
@@ -524,31 +524,31 @@ export default function GiveawaysPage() {
         {!closed && (
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {!token ? (
-              <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition">
+              <Link href="/login" className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 transition">
                 Войдите, чтобы участвовать
               </Link>
             ) : g.entered ? (
-              <span className="text-sm text-emerald-600">
+              <span className="text-sm text-emerald-400">
                 ✓ Вы участвуете · <span className="font-semibold">{g.my_tickets} 🎟</span>
               </span>
             ) : g.expired ? (
-              <span className="text-sm text-stone-500">
+              <span className="text-sm text-stone-400">
                 Приём заявок завершён{(g.my_tickets || 0) > 0 ? " — ваш билетик сгорел (вы не участвовали)" : ""}
               </span>
             ) : (g.my_tickets || 0) > 0 ? (
               <button onClick={() => enter(g.id)} disabled={busyId === g.id}
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-50 transition">
                 {busyId === g.id ? "..." : `Участвовать · ${g.my_tickets} 🎟`}
               </button>
             ) : (
-              <span className="text-sm text-stone-500">
-                Напишите рецензию от {minWords} слов <span className="text-stone-400">(после старта розыгрыша)</span>, чтобы получить билетик и участвовать
+              <span className="text-sm text-stone-400">
+                Напишите рецензию от {minWords} слов <span className="text-stone-500">(после старта розыгрыша)</span>, чтобы получить билетик и участвовать
               </span>
             )}
 
             {isAdmin && (
               <button onClick={() => draw(g.id)} disabled={busyId === g.id}
-                className="px-3 py-2 rounded-lg text-sm font-medium text-stone-700 border border-stone-300 hover:border-amber-400/50 hover:text-amber-600 transition">
+                className="px-3 py-2 rounded-lg text-sm font-medium text-stone-200 border border-stone-600 hover:border-red-500/50 hover:text-red-400 transition">
                 🎲 Разыграть
               </button>
             )}
@@ -570,21 +570,21 @@ export default function GiveawaysPage() {
       )}
 
       <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 mb-1">🎟 Розыгрыш билета</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-3xl font-extrabold tracking-tight text-stone-50 mb-1">🎟 Розыгрыш билета</h1>
+        <p className="text-sm text-stone-400">
           Пиши развёрнутые рецензии после старта розыгрыша — и участвуй в розыгрыше билета в кино.
         </p>
       </div>
 
-      <div className="rounded-xl px-4 py-3 border text-sm text-stone-600" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}>
-        Как это работает: напиши <span className="text-stone-700">оригинальную рецензию (от {minWords} слов)</span> на любой
-        фильм или сериал <span className="text-stone-700">после старта</span> розыгрыша — и получишь 1 билетик 🎟.
+      <div className="rounded-xl px-4 py-3 border text-sm text-stone-300" style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}>
+        Как это работает: напиши <span className="text-stone-200">оригинальную рецензию (от {minWords} слов)</span> на любой
+        фильм или сериал <span className="text-stone-200">после старта</span> розыгрыша — и получишь 1 билетик 🎟.
         Один билетик на участника, у всех равный шанс.
         «Вода», набор слов, оффтоп (рецензия не по теме) и копии чужих рецензий не засчитываются — это проверяет ИИ.
         Не согласен с проверкой — можно запросить ручную проверку ниже. Удалишь рецензию — билетик пропадёт.
       </div>
 
-      <p className="text-xs text-stone-400 px-1">
+      <p className="text-xs text-stone-500 px-1">
         📧 Выдача приза осуществляется через почту, привязанную к аккаунту.
       </p>
 
@@ -597,33 +597,33 @@ export default function GiveawaysPage() {
       <MyReviewsSummary token={token} />
 
       {isAdmin && (
-        <div className="rounded-xl p-4 border space-y-3" style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
-          <div className="text-sm font-semibold text-amber-600">Админ · создать розыгрыш</div>
+        <div className="rounded-xl p-4 border space-y-3" style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}>
+          <div className="text-sm font-semibold text-red-400">Админ · создать розыгрыш</div>
           <FilmPicker value={title} onPick={setTitle} />
           <input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Описание / кинотеатр / сеанс (необязательно)"
-            className="w-full rounded-lg px-3 py-2 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
-            style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }} />
+            className="w-full rounded-lg px-3 py-2 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50"
+            style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }} />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs text-stone-500">Дедлайн участия:</label>
+            <label className="text-xs text-stone-400">Дедлайн участия:</label>
             <input type="datetime-local" value={deadline} onChange={(e) => setDeadline(e.target.value)}
-              className="rounded-lg px-2 py-1.5 text-sm text-stone-900 outline-none"
-              style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }} />
+              className="rounded-lg px-2 py-1.5 text-sm text-stone-50 outline-none"
+              style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }} />
           </div>
           <button onClick={create} disabled={!title.trim()}
-            className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition">
+            className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-50 transition">
             Создать розыгрыш
           </button>
         </div>
       )}
 
       {items.length === 0 ? (
-        <div className="rounded-xl p-8 border text-center text-stone-500 text-sm" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}>
+        <div className="rounded-xl p-8 border text-center text-stone-400 text-sm" style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}>
           Пока нет активных розыгрышей. Загляните позже!
         </div>
       ) : (
         <div className="space-y-4">
           {activeItems.length === 0 ? (
-            <div className="rounded-xl p-8 border text-center text-stone-500 text-sm" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}>
+            <div className="rounded-xl p-8 border text-center text-stone-400 text-sm" style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}>
               Сейчас нет активных розыгрышей. Загляните позже!
             </div>
           ) : (
@@ -634,11 +634,11 @@ export default function GiveawaysPage() {
             <div className="space-y-4 pt-2">
               <button
                 onClick={() => setShowFinished((v) => !v)}
-                className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 border text-sm font-semibold text-stone-700 hover:text-amber-600 transition"
-                style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
+                className="w-full flex items-center justify-between gap-3 rounded-xl px-4 py-3 border text-sm font-semibold text-stone-200 hover:text-red-400 transition"
+                style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}
               >
-                <span>🏁 Завершённые розыгрыши <span className="text-stone-400 font-normal">({finishedItems.length})</span></span>
-                <span className="text-stone-400">{showFinished ? "▾ скрыть" : "▸ показать"}</span>
+                <span>🏁 Завершённые розыгрыши <span className="text-stone-500 font-normal">({finishedItems.length})</span></span>
+                <span className="text-stone-500">{showFinished ? "▾ скрыть" : "▸ показать"}</span>
               </button>
               {showFinished && <div className="space-y-4">{finishedItems.map(renderCard)}</div>}
             </div>

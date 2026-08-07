@@ -36,7 +36,7 @@ export default function ExpandableText({ text, className = "", clampClass = "lin
       {(overflowing || expanded) && (
         <button
           onClick={() => setExpanded((v) => !v)}
-          className="text-xs text-amber-600 hover:text-amber-500 mt-1 transition-colors"
+          className="text-xs text-red-400 hover:text-red-600 mt-1 transition-colors"
         >
           {expanded ? "Скрыть ▲" : "Читать далее ▼"}
         </button>

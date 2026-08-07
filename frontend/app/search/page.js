@@ -73,8 +73,8 @@ function SearchContent() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900 mb-1">Поиск</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-50 mb-1">Поиск</h1>
+        <p className="text-sm text-stone-400">
           Начните вводить название — фильмы и сериалы появятся сразу
         </p>
       </div>
@@ -85,14 +85,14 @@ function SearchContent() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Название фильма или сериала..."
-          className="w-full rounded-xl px-5 py-3.5 pr-11 text-base text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 transition"
-          style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.08)" }}
+          className="w-full rounded-xl px-5 py-3.5 pr-11 text-base text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50 transition"
+          style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.10)" }}
           autoFocus
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-800 transition"
+            className="absolute right-4 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-100 transition"
             aria-label="Очистить"
           >
             ✕
@@ -102,19 +102,19 @@ function SearchContent() {
 
       {/* Filter chips — always visible when there's something to show */}
       {active.length > 0 && (
-        <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
+        <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}>
           {FILTERS.map((f) => (
             <button
               key={f.key}
               onClick={() => setFilter(f.key)}
               className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                 filter === f.key
-                  ? "bg-amber-400 text-stone-900"
-                  : "text-stone-600 hover:text-stone-800"
+                  ? "bg-red-500 text-stone-50"
+                  : "text-stone-300 hover:text-stone-100"
               }`}
             >
               {f.label}
-              <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-700" : "text-stone-400"}`}>
+              <span className={`ml-1.5 text-xs ${filter === f.key ? "text-stone-200" : "text-stone-500"}`}>
                 {countFor(f.key)}
               </span>
             </button>
@@ -123,17 +123,17 @@ function SearchContent() {
       )}
 
       {loading && (
-        <div className="text-center text-stone-500 text-sm py-8">Поиск...</div>
+        <div className="text-center text-stone-400 text-sm py-8">Поиск...</div>
       )}
 
       {!loading && searched && results.length === 0 && (
-        <div className="text-center text-stone-500 text-sm py-8">
+        <div className="text-center text-stone-400 text-sm py-8">
           Ничего не найдено по запросу «{query.trim()}»
         </div>
       )}
 
       {!isSearching && shown.length > 0 && (
-        <h2 className="text-lg font-extrabold tracking-tight text-stone-900">🔥 Популярное сейчас</h2>
+        <h2 className="text-lg font-extrabold tracking-tight text-stone-50">🔥 Популярное сейчас</h2>
       )}
 
       {shown.length > 0 && (
@@ -148,7 +148,7 @@ function SearchContent() {
                 href={href}
                 className="group glass glass-lift rounded-2xl overflow-hidden"
               >
-                <div className="relative aspect-[2/3] bg-stone-200 overflow-hidden">
+                <div className="relative aspect-[2/3] bg-stone-700 overflow-hidden">
                   {POSTER(item.poster) ? (
                     <img
                       src={POSTER(item.poster)}
@@ -156,28 +156,28 @@ function SearchContent() {
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-stone-400 text-4xl">
+                    <div className="w-full h-full flex items-center justify-center text-stone-500 text-4xl">
                       {item.media_type === "tv" ? "📺" : "🎬"}
                     </div>
                   )}
                   {item.year && (
-                    <div className="absolute top-2 left-2 text-xs font-medium text-stone-700 px-2 py-0.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(255,255,255,0.8)" }}>
+                    <div className="absolute top-2 left-2 text-xs font-medium text-stone-200 px-2 py-0.5 rounded-full backdrop-blur-sm" style={{ background: "rgba(16,20,40,0.85)" }}>
                       {item.year}
                     </div>
                   )}
-                  <div className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${item.media_type === "tv" ? "text-amber-700" : "text-sky-700"}`} style={{ background: "rgba(255,255,255,0.8)" }}>
+                  <div className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${item.media_type === "tv" ? "text-red-500" : "text-sky-400"}`} style={{ background: "rgba(16,20,40,0.85)" }}>
                     {item.media_type === "tv" ? "сериал" : "фильм"}
                   </div>
                 </div>
                 <div className="p-3">
-                  <div className="text-sm font-bold tracking-tight text-stone-900 line-clamp-2 group-hover:text-amber-600 transition-colors">
+                  <div className="text-sm font-bold tracking-tight text-stone-50 line-clamp-2 group-hover:text-red-400 transition-colors">
                     {item.title}
                   </div>
                   {item.original && item.original !== item.title && (
-                    <div className="text-[11px] text-stone-400 line-clamp-1 mt-0.5">{item.original}</div>
+                    <div className="text-[11px] text-stone-500 line-clamp-1 mt-0.5">{item.original}</div>
                   )}
                   {item.overview && (
-                    <p className="text-xs text-stone-500 mt-1 line-clamp-2">
+                    <p className="text-xs text-stone-400 mt-1 line-clamp-2">
                       {item.overview}
                     </p>
                   )}

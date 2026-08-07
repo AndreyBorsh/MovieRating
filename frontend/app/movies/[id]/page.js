@@ -51,8 +51,8 @@ function Tooltip({ tip, children }) {
     <div className="relative group/tip">
       {children}
       {tip && (
-        <div className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-stone-700 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
-             style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
+        <div className="absolute left-0 bottom-full mb-2 w-60 p-2.5 rounded-lg text-xs text-stone-200 leading-relaxed z-30 hidden group-hover/tip:block pointer-events-none shadow-xl"
+             style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}>
           {tip}
         </div>
       )}
@@ -62,19 +62,19 @@ function Tooltip({ tip, children }) {
 
 function CriteriaBar({ label, value, weight, main, tip }) {
   const pct = ((value - 1) / 9) * 100;
-  const barColor = main ? "bg-amber-400" : "bg-stone-400";
+  const barColor = main ? "bg-red-500" : "bg-stone-500";
   return (
     <div className="flex items-center gap-2 text-sm">
       <Tooltip tip={tip}>
-        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-amber-600 font-medium" : "text-stone-600"}`}>
+        <div className={`w-24 sm:w-36 shrink-0 text-xs sm:text-sm cursor-help ${main ? "text-red-400 font-medium" : "text-stone-300"}`}>
           {label}
         </div>
       </Tooltip>
-      <div className="flex-1 h-1.5 bg-stone-200 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-stone-700 rounded-full overflow-hidden">
         <div className={`h-full ${barColor} rounded-full`} style={{ width: `${pct}%` }} />
       </div>
-      <div className="w-6 text-right text-stone-700 font-semibold">{value}</div>
-      <div className="w-8 text-right text-stone-400 text-xs">{weight}</div>
+      <div className="w-6 text-right text-stone-200 font-semibold">{value}</div>
+      <div className="w-8 text-right text-stone-500 text-xs">{weight}</div>
     </div>
   );
 }
@@ -84,16 +84,16 @@ function Slider({ criterion, value, onChange }) {
     <div>
       <div className="flex justify-between items-center mb-1.5">
         <Tooltip tip={criterion.tip}>
-          <span className={`text-sm cursor-help ${criterion.main ? "text-amber-600 font-semibold" : "text-stone-700"}`}>
+          <span className={`text-sm cursor-help ${criterion.main ? "text-red-400 font-semibold" : "text-stone-200"}`}>
             {criterion.label}
-            {criterion.main && <span className="ml-1 text-xs text-stone-500">(главный)</span>}
+            {criterion.main && <span className="ml-1 text-xs text-stone-400">(главный)</span>}
           </span>
         </Tooltip>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-stone-500">{criterion.weight}</span>
+          <span className="text-xs text-stone-400">{criterion.weight}</span>
           <span
             className={`text-lg font-bold w-8 text-right ${
-              criterion.main ? "text-amber-600" : "text-stone-900"
+              criterion.main ? "text-red-400" : "text-stone-50"
             }`}
           >
             {value}
@@ -107,7 +107,7 @@ function Slider({ criterion, value, onChange }) {
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />
-      <div className="flex justify-between text-xs text-stone-400 mt-0.5">
+      <div className="flex justify-between text-xs text-stone-500 mt-0.5">
         <span>1</span>
         <span>10</span>
       </div>
@@ -131,7 +131,7 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
   };
 
   return (
-    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+    <div className="flex flex-wrap gap-1.5 pt-2 border-t" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
       {EMOJIS.map((emoji) => {
         const count = reactions[emoji] || 0;
         const active = myReaction === emoji;
@@ -142,10 +142,10 @@ function Reactions({ ratingId, reactions, myReaction, token, onUpdate }) {
             disabled={!token || pending}
             className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-sm transition-all
               ${active
-                ? "bg-amber-400/20 border border-amber-400/50 text-amber-500"
-                : "border text-stone-600 hover:border-stone-400 hover:text-stone-800 disabled:opacity-40 disabled:cursor-default"
+                ? "bg-red-500/20 border border-red-500/50 text-red-600"
+                : "border text-stone-300 hover:border-stone-500 hover:text-stone-100 disabled:opacity-40 disabled:cursor-default"
               }`}
-            style={{ borderColor: active ? undefined : "rgba(0,0,0,0.08)" }}
+            style={{ borderColor: active ? undefined : "rgba(255,255,255,0.10)" }}
             title={!token ? "Войдите чтобы реагировать" : undefined}
           >
             <span>{emoji}</span>
@@ -182,10 +182,10 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
   };
 
   return (
-    <div className="pt-2 border-t space-y-2" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+    <div className="pt-2 border-t space-y-2" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
       <button
         onClick={() => setOpen((v) => !v)}
-        className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
+        className="text-xs text-stone-400 hover:text-stone-200 transition-colors"
       >
         {open ? "Скрыть комментарии ▲" : `Комментарии${comments.length > 0 ? ` (${comments.length})` : ""} ▼`}
       </button>
@@ -193,12 +193,12 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
       {open && (
         <div className="space-y-2">
           {comments.length === 0 && (
-            <p className="text-xs text-stone-400">Комментариев пока нет</p>
+            <p className="text-xs text-stone-500">Комментариев пока нет</p>
           )}
           {comments.map((c, i) => (
             <div key={c.id ?? i} className="text-xs overflow-hidden">
-              <span className="text-amber-600 font-medium mr-2">{c.username}</span>
-              <span className="text-stone-600 break-all">{c.text}</span>
+              <span className="text-red-400 font-medium mr-2">{c.username}</span>
+              <span className="text-stone-300 break-all">{c.text}</span>
             </div>
           ))}
 
@@ -210,13 +210,13 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && submit()}
                 maxLength={500}
                 placeholder="Написать комментарий..."
-                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50"
-                style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}
+                className="flex-1 rounded-lg px-3 py-1.5 text-xs text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50"
+                style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}
               />
               <button
                 onClick={submit}
                 disabled={sending || !text.trim()}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 transition"
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-40 transition"
               >
                 →
               </button>
@@ -224,7 +224,7 @@ function Comments({ ratingId, initialComments, token, currentUserId, reviewAutho
           )}
           {error && <p className="text-xs text-rose-500">{error}</p>}
           {!token && (
-            <p className="text-xs text-stone-400">Войдите чтобы оставить комментарий</p>
+            <p className="text-xs text-stone-500">Войдите чтобы оставить комментарий</p>
           )}
         </div>
       )}
@@ -376,14 +376,14 @@ export default function MoviePage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="text-stone-500 text-sm">Загрузка...</div>
+        <div className="text-stone-400 text-sm">Загрузка...</div>
       </div>
     );
   }
 
   if (!movie) {
     return (
-      <div className="text-center py-16 text-stone-500">Фильм не найден</div>
+      <div className="text-center py-16 text-stone-400">Фильм не найден</div>
     );
   }
 
@@ -395,7 +395,7 @@ export default function MoviePage() {
   return (
     <div className="space-y-8">
       {/* ── Movie header ── */}
-      <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+      <div className="relative rounded-2xl overflow-hidden border" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
         {heroBackdrop && (
           <>
             <img
@@ -403,7 +403,7 @@ export default function MoviePage() {
               alt=""
               className="absolute inset-0 w-full h-full object-cover"
             />
-            <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.12)" }} />
+            <div className="absolute inset-0" style={{ background: "rgba(255,255,255,0.14)" }} />
           </>
         )}
         <div className="relative z-10 flex flex-col sm:flex-row gap-5 p-4 sm:p-7">
@@ -415,8 +415,8 @@ export default function MoviePage() {
             />
           ) : (
             <div
-              className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-400 text-5xl"
-              style={{ background: "rgba(255,255,255,0.72)" }}
+              className="w-32 sm:w-40 h-48 sm:h-56 rounded-xl shrink-0 flex items-center justify-center text-stone-500 text-5xl"
+              style={{ background: "rgba(22,28,52,0.72)" }}
             >
               🎬
             </div>
@@ -424,32 +424,32 @@ export default function MoviePage() {
 
           <div
             className="flex-1 min-w-0 rounded-2xl p-4 sm:p-5"
-            style={{ background: "rgba(255,255,255,0.85)", border: "1px solid rgba(0,0,0,0.05)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
+            style={{ background: "rgba(16,20,40,0.9)", border: "1px solid rgba(255,255,255,0.07)", backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)" }}
           >
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-900">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-stone-50">
               {movie.title}
               {movie.year && (
-                <span className="ml-2 text-base font-medium text-stone-500">
+                <span className="ml-2 text-base font-medium text-stone-400">
                   ({movie.year})
                 </span>
               )}
             </h1>
             {details?.original_title && details.original_title !== movie.title && (
-              <p className="text-sm text-stone-400 mt-0.5">{details.original_title}</p>
+              <p className="text-sm text-stone-500 mt-0.5">{details.original_title}</p>
             )}
 
             {movie.overview && (
-              <ExpandableText text={movie.overview} className="text-sm text-stone-600 leading-relaxed" />
+              <ExpandableText text={movie.overview} className="text-sm text-stone-300 leading-relaxed" />
             )}
 
             <div className="flex items-center gap-3 mt-4">
               <div
                 className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-2 flex items-center justify-center shrink-0"
-                style={{ borderColor: "rgba(210,154,60,0.5)", background: "rgba(255,255,255,0.9)", boxShadow: "0 4px 16px rgba(40,30,15,0.1)" }}
+                style={{ borderColor: "rgba(210,154,60,0.5)", background: "rgba(14,18,36,0.92)", boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}
               >
                 <ScoreBadge score={communityScore} size="lg" />
               </div>
-              <span className="text-stone-600 text-sm">
+              <span className="text-stone-300 text-sm">
                 средняя оценка · {ratingCount}{" "}
                 {ratingCount === 1 ? "рецензия" : ratingCount < 5 ? "рецензии" : "рецензий"}
               </span>
@@ -463,14 +463,14 @@ export default function MoviePage() {
       <div className="grid lg:grid-cols-[1fr_380px] gap-8">
         {/* ── Left: reviews ── */}
         <div className="space-y-4 order-2 lg:order-1 min-w-0">
-          <h2 className="text-lg font-semibold text-stone-900">
+          <h2 className="text-lg font-semibold text-stone-50">
             Рецензии ({reviews.length})
           </h2>
 
           {reviews.length === 0 && (
             <div
-              className="rounded-xl p-6 text-center text-stone-500 text-sm border"
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              className="rounded-xl p-6 text-center text-stone-400 text-sm border"
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
               Пока нет рецензий. Будьте первым!
             </div>
@@ -481,14 +481,14 @@ export default function MoviePage() {
               key={idx}
               id={`review-${r.user_id}`}
               className={`rounded-xl p-4 border space-y-3 scroll-mt-20 transition-all ${
-                highlightUser === r.user_id ? "ring-2 ring-amber-400" : ""
+                highlightUser === r.user_id ? "ring-2 ring-red-500" : ""
               }`}
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
               <div className="flex items-center justify-between">
                 <Link
                   href={`/profile/${r.user_id}`}
-                  className="text-sm font-semibold text-amber-600 hover:underline"
+                  className="text-sm font-semibold text-red-400 hover:underline"
                 >
                   {r.username}
                 </Link>
@@ -509,13 +509,13 @@ export default function MoviePage() {
               </div>
 
               {r.review && (
-                <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+                <div className="border-t pt-3" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
                   <ReviewText text={r.review} />
                 </div>
               )}
 
               <div className="flex items-center justify-between">
-                <div className="text-xs text-stone-400">
+                <div className="text-xs text-stone-500">
                   {r.created_at
                     ? new Date(r.created_at).toLocaleDateString("ru-RU", {
                         day: "numeric",
@@ -549,19 +549,19 @@ export default function MoviePage() {
           {!token ? (
             <div
               className="rounded-xl p-6 border text-center"
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
               {sessionExpired && (
-                <p className="text-sm text-amber-600 mb-3">
+                <p className="text-sm text-red-400 mb-3">
                   Сессия истекла. Войдите заново, чтобы оценить.
                 </p>
               )}
-              <p className="text-sm text-stone-600 mb-4">
+              <p className="text-sm text-stone-300 mb-4">
                 Войдите, чтобы оставить оценку
               </p>
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 transition"
+                className="px-4 py-2 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 transition"
               >
                 Войти
               </Link>
@@ -569,10 +569,10 @@ export default function MoviePage() {
           ) : myRating && !editing ? (
             <div
               className="rounded-xl p-5 border space-y-3"
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-stone-700">Ваша оценка</span>
+                <span className="text-sm font-semibold text-stone-200">Ваша оценка</span>
                 <ScoreBadge score={myRating.score} size="sm" />
               </div>
               <div className="space-y-1.5">
@@ -582,20 +582,20 @@ export default function MoviePage() {
                 ))}
               </div>
               {myRating.review && (
-                <div className="border-t pt-3" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+                <div className="border-t pt-3" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
                   <ReviewText text={myRating.review} muted />
                 </div>
               )}
               <div className="flex gap-2">
                 <button
                   onClick={startEditing}
-                  className="flex-1 py-2 rounded-lg text-sm font-medium text-stone-700 border border-stone-300 hover:border-amber-400/50 hover:text-amber-600 transition"
+                  className="flex-1 py-2 rounded-lg text-sm font-medium text-stone-200 border border-stone-600 hover:border-red-500/50 hover:text-red-400 transition"
                 >
                   ✏️ Редактировать
                 </button>
                 <button
                   onClick={removeRating}
-                  className="px-3 py-2 rounded-lg text-sm text-stone-500 border border-stone-300 hover:border-red-400/50 hover:text-rose-500 transition"
+                  className="px-3 py-2 rounded-lg text-sm text-stone-400 border border-stone-600 hover:border-red-400/50 hover:text-rose-500 transition"
                   aria-label="Удалить оценку"
                 >
                   🗑
@@ -605,18 +605,18 @@ export default function MoviePage() {
           ) : success && !editing ? (
             <div
               className="rounded-xl p-6 border text-center"
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
               <div className="text-3xl mb-2">✅</div>
-              <p className="text-sm text-stone-700 font-medium">Оценка сохранена!</p>
-              <p className="text-xs text-stone-500 mt-1">Ваша рецензия добавлена</p>
+              <p className="text-sm text-stone-200 font-medium">Оценка сохранена!</p>
+              <p className="text-xs text-stone-400 mt-1">Ваша рецензия добавлена</p>
             </div>
           ) : (editing || (!myRating && !success)) && (
             <div
               className="rounded-xl p-5 border space-y-5"
-              style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+              style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
             >
-              <h3 className="text-base font-semibold text-stone-900">
+              <h3 className="text-base font-semibold text-stone-50">
                 {editing ? "Редактировать оценку" : "Оценить фильм"}
               </h3>
 
@@ -634,22 +634,22 @@ export default function MoviePage() {
               {/* Live score */}
               <div
                 className="flex items-center justify-between rounded-lg px-4 py-3 border"
-                style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}
+                style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}
               >
-                <span className="text-sm text-stone-600">Итоговая оценка</span>
+                <span className="text-sm text-stone-300">Итоговая оценка</span>
                 <span className={`font-display text-2xl font-medium ${scoreColor(parseFloat(preview))}`}>
                   {preview}
                 </span>
               </div>
-              <p className="text-[10px] text-stone-700 text-center leading-relaxed -mt-3">
+              <p className="text-[10px] text-stone-200 text-center leading-relaxed -mt-3">
                 {FORMULA_TEXT}
               </p>
 
               {/* Review editor */}
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                <label className="block text-xs font-medium text-stone-300 mb-1.5">
                   Рецензия{" "}
-                  <span className="text-stone-400">(необязательно)</span>
+                  <span className="text-stone-500">(необязательно)</span>
                 </label>
                 <ReviewEditor
                   value={reviewText}
@@ -667,14 +667,14 @@ export default function MoviePage() {
               <button
                 onClick={submit}
                 disabled={submitting}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-50 transition"
               >
                 {submitting ? "Сохраняем..." : editing ? "Сохранить изменения" : "Опубликовать рецензию"}
               </button>
               {editing && (
                 <button
                   onClick={cancelEditing}
-                  className="w-full py-2 rounded-lg text-sm text-stone-500 hover:text-stone-700 transition"
+                  className="w-full py-2 rounded-lg text-sm text-stone-400 hover:text-stone-200 transition"
                 >
                   Отмена
                 </button>
@@ -695,15 +695,15 @@ export default function MoviePage() {
       {/* Similar Movies */}
       {similar.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-lg font-semibold text-stone-900 mb-4">Похожие фильмы</h2>
-          <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-stone-700 scrollbar-track-transparent">
+          <h2 className="text-lg font-semibold text-stone-50 mb-4">Похожие фильмы</h2>
+          <div className="flex gap-3 overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent">
             {similar.map((item) => (
               <Link
                 key={item.id}
                 href={`/movies/${item.id}`}
                 className="shrink-0 group"
               >
-                <div className="w-28 rounded-lg overflow-hidden border border-transparent group-hover:border-amber-400/40 transition-all">
+                <div className="w-28 rounded-lg overflow-hidden border border-transparent group-hover:border-red-500/40 transition-all">
                   {item.poster ? (
                     <img
                       src={POSTER_SM(item.poster)}
@@ -711,16 +711,16 @@ export default function MoviePage() {
                       className="w-28 h-40 object-cover"
                     />
                   ) : (
-                    <div className="w-28 h-40 bg-stone-200 flex items-center justify-center text-3xl text-stone-400">
+                    <div className="w-28 h-40 bg-stone-700 flex items-center justify-center text-3xl text-stone-500">
                       🎬
                     </div>
                   )}
-                  <div className="px-1.5 py-1.5" style={{ background: "rgba(255,255,255,0.72)" }}>
-                    <p className="text-xs text-stone-700 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">
+                  <div className="px-1.5 py-1.5" style={{ background: "rgba(22,28,52,0.72)" }}>
+                    <p className="text-xs text-stone-200 leading-tight line-clamp-2 group-hover:text-red-400 transition-colors">
                       {item.title}
                     </p>
                     {item.year && (
-                      <p className="text-[10px] text-stone-400 mt-0.5">{item.year}</p>
+                      <p className="text-[10px] text-stone-500 mt-0.5">{item.year}</p>
                     )}
                   </div>
                 </div>

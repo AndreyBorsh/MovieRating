@@ -14,7 +14,7 @@ function Spoiler({ children }) {
       className={
         revealed
           ? "rounded px-0.5"
-          : "rounded px-1 cursor-pointer select-none bg-stone-300 text-transparent transition"
+          : "rounded px-1 cursor-pointer select-none bg-stone-600 text-transparent transition"
       }
       style={revealed ? { background: "rgba(148,163,184,0.12)" } : undefined}
     >
@@ -34,7 +34,7 @@ function parseInline(text, keyPrefix) {
   while ((m = re.exec(text)) !== null) {
     if (m.index > last) nodes.push(text.slice(last, m.index));
     if (m[1] !== undefined) {
-      nodes.push(<strong key={`${keyPrefix}-b-${i}`} className="font-bold text-stone-900">{m[1]}</strong>);
+      nodes.push(<strong key={`${keyPrefix}-b-${i}`} className="font-bold text-stone-50">{m[1]}</strong>);
     } else if (m[2] !== undefined) {
       nodes.push(<Spoiler key={`${keyPrefix}-s-${i}`}>{m[2]}</Spoiler>);
     } else if (m[3] !== undefined) {
@@ -71,14 +71,14 @@ export default function ReviewText({ text, muted = false }) {
   if (!text) return null;
   const isLong = text.length > REVIEW_LIMIT;
   const displayed = isLong && !expanded ? text.slice(0, REVIEW_LIMIT).trimEnd() + "…" : text;
-  const color = muted ? "text-stone-600" : "text-stone-700";
+  const color = muted ? "text-stone-300" : "text-stone-200";
   return (
     <div className={`text-sm ${color} leading-relaxed text-justify hyphens-auto`}>
       {renderFormatted(displayed)}
       {isLong && (
         <button
           onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-          className="block mt-1.5 text-xs text-amber-600 hover:text-amber-500 transition-colors"
+          className="block mt-1.5 text-xs text-red-400 hover:text-red-600 transition-colors"
         >
           {expanded ? "Свернуть ↑" : "Читать дальше ↓"}
         </button>

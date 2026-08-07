@@ -19,13 +19,13 @@ function CastCard({ c, onClick }) {
           className="w-20 h-28 rounded-lg object-cover mb-1 group-hover:brightness-95 transition"
         />
       ) : (
-        <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-400 mb-1">
+        <div className="w-20 h-28 rounded-lg bg-stone-700 flex items-center justify-center text-2xl text-stone-500 mb-1">
           👤
         </div>
       )}
-      <p className="text-xs text-stone-800 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">{c.name}</p>
+      <p className="text-xs text-stone-100 leading-tight line-clamp-2 group-hover:text-red-400 transition-colors">{c.name}</p>
       {c.character && (
-        <p className="text-[10px] text-stone-500 leading-tight line-clamp-2 mt-0.5">{c.character}</p>
+        <p className="text-[10px] text-stone-400 leading-tight line-clamp-2 mt-0.5">{c.character}</p>
       )}
     </>
   );
@@ -41,8 +41,8 @@ function CastCard({ c, onClick }) {
 function Chip({ children }) {
   return (
     <span
-      className="text-[11px] px-2 py-0.5 rounded-full text-stone-700"
-      style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}
+      className="text-[11px] px-2 py-0.5 rounded-full text-stone-200"
+      style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}
     >
       {children}
     </span>
@@ -138,18 +138,18 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {showMeta && hasMeta && (
         <div
           className="rounded-xl px-4 py-3 border"
-          style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+          style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
         >
           {cleanTagline && (
-            <p className="text-xs italic text-stone-500 mb-2">«{cleanTagline}»</p>
+            <p className="text-xs italic text-stone-400 mb-2">«{cleanTagline}»</p>
           )}
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-sm">
             {genres.map((g) => (
               <Chip key={g}>{g}</Chip>
             ))}
             {metaItems.map((it, i) => (
-              <span key={i} className="flex items-center gap-2 text-stone-600">
-                {(genres.length > 0 || i > 0) && <span className="text-stone-700">·</span>}
+              <span key={i} className="flex items-center gap-2 text-stone-300">
+                {(genres.length > 0 || i > 0) && <span className="text-stone-200">·</span>}
                 <span>{it}</span>
               </span>
             ))}
@@ -160,14 +160,14 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Backdrop gallery (clickable → lightbox) */}
       {showMedia && backdrops.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-stone-900 mb-2">Кадры</h2>
+          <h2 className="text-base font-semibold text-stone-50 mb-2">Кадры</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {backdrops.map((b, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => setLbIndex(i)}
-                className="shrink-0 rounded-lg overflow-hidden border border-transparent hover:border-amber-400/50 transition focus:outline-none"
+                className="shrink-0 rounded-lg overflow-hidden border border-transparent hover:border-red-500/50 transition focus:outline-none"
               >
                 <img
                   src={BACKDROP(b)}
@@ -184,7 +184,7 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {/* Cast */}
       {showMedia && cast.length > 0 && (
         <div>
-          <h2 className="text-base font-semibold text-stone-900 mb-2">В ролях</h2>
+          <h2 className="text-base font-semibold text-stone-50 mb-2">В ролях</h2>
           <div className="flex gap-2 overflow-x-auto pb-2">
             {cast.slice(0, 12).map((c, i) => (
               <CastCard key={c.id ?? i} c={c} />
@@ -194,10 +194,10 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
                 onClick={() => setCastOpen(true)}
                 className="shrink-0 w-20 flex flex-col items-center justify-center gap-1 text-center group"
               >
-                <div className="w-20 h-28 rounded-lg bg-stone-200 flex items-center justify-center text-2xl text-stone-500 group-hover:bg-stone-300 transition">
+                <div className="w-20 h-28 rounded-lg bg-stone-700 flex items-center justify-center text-2xl text-stone-400 group-hover:bg-stone-600 transition">
                   +{cast.length - 12}
                 </div>
-                <span className="text-xs text-amber-600 group-hover:text-amber-500 transition-colors leading-tight">Все актёры</span>
+                <span className="text-xs text-red-400 group-hover:text-red-600 transition-colors leading-tight">Все актёры</span>
               </button>
             )}
           </div>
@@ -208,19 +208,19 @@ export default function MediaExtras({ details, mediaType, variant = "all" }) {
       {castOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4"
-          style={{ background: "rgba(30,22,12,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
+          style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}
           onClick={() => setCastOpen(false)}
         >
           <div
             className="relative w-full sm:max-w-2xl rounded-t-3xl sm:rounded-3xl border overflow-y-auto max-h-[85vh] p-5"
-            style={{ background: "#fbf9f4", borderColor: "rgba(0,0,0,0.06)", boxShadow: "0 24px 60px rgba(40,30,15,0.28)" }}
+            style={{ background: "#1a2139", borderColor: "rgba(255,255,255,0.08)", boxShadow: "0 24px 60px rgba(0,0,0,0.28)" }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-extrabold tracking-tight text-stone-900">В ролях · {cast.length}</h3>
+              <h3 className="text-lg font-extrabold tracking-tight text-stone-50">В ролях · {cast.length}</h3>
               <button
                 onClick={() => setCastOpen(false)}
-                className="text-stone-500 hover:text-stone-800 transition-colors text-lg leading-none"
+                className="text-stone-400 hover:text-stone-100 transition-colors text-lg leading-none"
                 aria-label="Закрыть"
               >
                 ✕

@@ -39,22 +39,22 @@ export default function AdminPage() {
   const { token, user, ready } = useAuth();
   const [tab, setTab] = useState("overview");
 
-  if (!ready) return <div className="text-center text-stone-500 text-sm py-16">Загрузка...</div>;
+  if (!ready) return <div className="text-center text-stone-400 text-sm py-16">Загрузка...</div>;
   if (!user?.is_admin) {
-    return <div className="text-center text-stone-500 text-sm py-16">Доступ только для администратора.</div>;
+    return <div className="text-center text-stone-400 text-sm py-16">Доступ только для администратора.</div>;
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-extrabold tracking-tight text-stone-900">🛠 Админка</h1>
+      <h1 className="text-3xl font-extrabold tracking-tight text-stone-50">🛠 Админка</h1>
 
-      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" }}>
+      <div className="flex gap-1 p-1 rounded-lg w-fit" style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" }}>
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
             className={`px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition ${
-              tab === t.key ? "bg-amber-400 text-stone-900" : "text-stone-600 hover:text-stone-800"
+              tab === t.key ? "bg-red-500 text-stone-50" : "text-stone-300 hover:text-stone-100"
             }`}
           >
             {t.label}
@@ -76,7 +76,7 @@ function Overview({ token }) {
   useEffect(() => { adminOverview(token).then(setData).catch((e) => setErr(e.message)); }, [token]);
 
   if (err) return <p className="text-rose-500 text-sm">{err}</p>;
-  if (!data) return <p className="text-stone-500 text-sm">Загрузка...</p>;
+  if (!data) return <p className="text-stone-400 text-sm">Загрузка...</p>;
 
   return (
     <div className="space-y-5">
@@ -91,7 +91,7 @@ function Overview({ token }) {
                 border: `1px solid ${f.level === "error" ? "rgba(244,63,94,0.30)" : "rgba(210,154,60,0.28)"}`,
               }}
             >
-              {f.level === "error" ? "🔴" : "🟡"} <span className="text-stone-700">{f.text}</span>
+              {f.level === "error" ? "🔴" : "🟡"} <span className="text-stone-200">{f.text}</span>
             </div>
           ))}
         </div>
@@ -99,9 +99,9 @@ function Overview({ token }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
         {Object.entries(data.counts).map(([k, v]) => (
-          <div key={k} className="rounded-xl p-4 border" style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}>
-            <div className="text-2xl font-extrabold text-stone-900">{v}</div>
-            <div className="text-xs text-stone-500 mt-1">{COUNT_LABELS[k] || k}</div>
+          <div key={k} className="rounded-xl p-4 border" style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}>
+            <div className="text-2xl font-extrabold text-stone-50">{v}</div>
+            <div className="text-xs text-stone-400 mt-1">{COUNT_LABELS[k] || k}</div>
           </div>
         ))}
       </div>
@@ -129,33 +129,33 @@ function UserEmailTool({ token }) {
   };
 
   return (
-    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#efe9df", borderColor: "rgba(0,0,0,0.08)" }}>
-      <div className="text-sm font-semibold text-stone-700">Сменить почту пользователю (вручную)</div>
+    <div className="rounded-xl p-4 border space-y-2" style={{ background: "#141b31", borderColor: "rgba(255,255,255,0.10)" }}>
+      <div className="text-sm font-semibold text-stone-200">Сменить почту пользователю (вручную)</div>
       <div className="flex flex-wrap gap-2 items-center">
         <input
           value={uid}
           onChange={(e) => setUid(e.target.value.replace(/\D/g, ""))}
           placeholder="id"
           inputMode="numeric"
-          className="w-20 rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none"
-          style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+          className="w-20 rounded-lg px-3 py-1.5 text-sm text-stone-50 outline-none"
+          style={{ background: "#0f1526", border: "1px solid rgba(255,255,255,0.14)" }}
         />
         <input
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="new@example.com"
-          className="flex-1 min-w-[200px] rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none"
-          style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+          className="flex-1 min-w-[200px] rounded-lg px-3 py-1.5 text-sm text-stone-50 outline-none"
+          style={{ background: "#0f1526", border: "1px solid rgba(255,255,255,0.14)" }}
         />
         <button
           onClick={save}
           disabled={busy || !uid || !email.trim()}
-          className="text-sm px-4 py-1.5 rounded-lg font-semibold text-stone-900 bg-gradient-to-br from-amber-300 to-amber-500 hover:brightness-105 disabled:opacity-50 transition"
+          className="text-sm px-4 py-1.5 rounded-lg font-semibold text-stone-50 bg-gradient-to-br from-red-400 to-red-600 hover:brightness-105 disabled:opacity-50 transition"
         >
           {busy ? "…" : "Сменить"}
         </button>
       </div>
-      {msg && <p className={`text-xs ${msg.startsWith("✓") ? "text-emerald-600" : "text-rose-500"}`}>{msg}</p>}
+      {msg && <p className={`text-xs ${msg.startsWith("✓") ? "text-emerald-400" : "text-rose-500"}`}>{msg}</p>}
     </div>
   );
 }
@@ -186,32 +186,32 @@ function DataBrowser({ token }) {
             key={t.name}
             onClick={() => { setActive(t.name); setOffset(0); }}
             className={`text-xs px-3 py-1.5 rounded-lg border transition ${
-              active === t.name ? "border-amber-400/60 text-amber-600 bg-amber-400/10" : "border-stone-300 text-stone-600 hover:text-stone-900"
+              active === t.name ? "border-red-500/60 text-red-400 bg-red-500/10" : "border-stone-600 text-stone-300 hover:text-stone-50"
             }`}
           >
-            {t.name} <span className="text-stone-400">({t.rows})</span>
+            {t.name} <span className="text-stone-500">({t.rows})</span>
           </button>
         ))}
       </div>
 
-      {active && !tableData && <p className="text-stone-500 text-sm">Загрузка...</p>}
+      {active && !tableData && <p className="text-stone-400 text-sm">Загрузка...</p>}
 
       {tableData && (
         <div className="space-y-2">
-          <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
+          <div className="overflow-x-auto rounded-xl border" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
             <table className="text-xs min-w-full">
               <thead>
-                <tr className="bg-stone-100">
+                <tr className="bg-stone-800">
                   {tableData.columns.map((c) => (
-                    <th key={c} className="text-left px-2 py-1.5 font-semibold text-stone-700 whitespace-nowrap">{c}</th>
+                    <th key={c} className="text-left px-2 py-1.5 font-semibold text-stone-200 whitespace-nowrap">{c}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {tableData.rows.map((row, i) => (
-                  <tr key={i} className="border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+                  <tr key={i} className="border-t" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                     {tableData.columns.map((c) => (
-                      <td key={c} className="px-2 py-1.5 text-stone-700 align-top max-w-[280px] truncate" title={String(row[c] ?? "")}>
+                      <td key={c} className="px-2 py-1.5 text-stone-200 align-top max-w-[280px] truncate" title={String(row[c] ?? "")}>
                         {String(row[c] ?? "")}
                       </td>
                     ))}
@@ -220,13 +220,13 @@ function DataBrowser({ token }) {
               </tbody>
             </table>
           </div>
-          {tableData.rows.length === 0 && <p className="text-stone-500 text-sm">Пусто.</p>}
+          {tableData.rows.length === 0 && <p className="text-stone-400 text-sm">Пусто.</p>}
           <div className="flex gap-2 items-center text-sm">
             <button disabled={offset === 0} onClick={() => setOffset(Math.max(0, offset - 50))}
-              className="px-3 py-1 rounded-lg border border-stone-300 text-stone-600 disabled:opacity-40">← Назад</button>
-            <span className="text-stone-400 text-xs">строки {tableData.rows.length ? offset + 1 : 0}–{offset + tableData.rows.length}</span>
+              className="px-3 py-1 rounded-lg border border-stone-600 text-stone-300 disabled:opacity-40">← Назад</button>
+            <span className="text-stone-500 text-xs">строки {tableData.rows.length ? offset + 1 : 0}–{offset + tableData.rows.length}</span>
             <button disabled={tableData.rows.length < 50} onClick={() => setOffset(offset + 50)}
-              className="px-3 py-1 rounded-lg border border-stone-300 text-stone-600 disabled:opacity-40">Вперёд →</button>
+              className="px-3 py-1 rounded-lg border border-stone-600 text-stone-300 disabled:opacity-40">Вперёд →</button>
           </div>
         </div>
       )}
@@ -240,17 +240,17 @@ function Activity({ token }) {
   useEffect(() => { adminActivity(token).then(setItems).catch((e) => setErr(e.message)); }, [token]);
 
   if (err) return <p className="text-rose-500 text-sm">{err}</p>;
-  if (!items) return <p className="text-stone-500 text-sm">Загрузка...</p>;
+  if (!items) return <p className="text-stone-400 text-sm">Загрузка...</p>;
 
   const icon = { user: "👤", rating: "⭐", claim: "🎟" };
   return (
-    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "rgba(0,0,0,0.08)" }}>
-      {items.length === 0 && <div className="px-4 py-3 text-stone-500 text-sm">Пока пусто.</div>}
+    <div className="rounded-xl border overflow-hidden" style={{ borderColor: "rgba(255,255,255,0.10)" }}>
+      {items.length === 0 && <div className="px-4 py-3 text-stone-400 text-sm">Пока пусто.</div>}
       {items.map((e, i) => (
-        <div key={i} className="flex items-center gap-3 px-4 py-2.5 text-sm border-t first:border-t-0" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
+        <div key={i} className="flex items-center gap-3 px-4 py-2.5 text-sm border-t first:border-t-0" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
           <span>{icon[e.type] || "•"}</span>
-          <span className="text-stone-700 flex-1 min-w-0">{e.text}</span>
-          <span className="text-xs text-stone-400 shrink-0">{fmt(e.at)}</span>
+          <span className="text-stone-200 flex-1 min-w-0">{e.text}</span>
+          <span className="text-xs text-stone-500 shrink-0">{fmt(e.at)}</span>
         </div>
       ))}
     </div>
@@ -269,14 +269,14 @@ function Errors({ token }) {
   };
 
   if (err) return <p className="text-rose-500 text-sm">{err}</p>;
-  if (!items) return <p className="text-stone-500 text-sm">Загрузка...</p>;
+  if (!items) return <p className="text-stone-400 text-sm">Загрузка...</p>;
 
   return (
     <div className="space-y-3">
       <div className="flex justify-between items-center">
-        <p className="text-sm text-stone-500">{items.length === 0 ? "Ошибок нет 🎉" : `Записей: ${items.length}`}</p>
+        <p className="text-sm text-stone-400">{items.length === 0 ? "Ошибок нет 🎉" : `Записей: ${items.length}`}</p>
         {items.length > 0 && (
-          <button onClick={clear} className="text-xs px-3 py-1.5 rounded-lg border border-stone-300 text-stone-600 hover:text-rose-500 hover:border-rose-400/50 transition">
+          <button onClick={clear} className="text-xs px-3 py-1.5 rounded-lg border border-stone-600 text-stone-300 hover:text-rose-500 hover:border-rose-400/50 transition">
             Очистить
           </button>
         )}
@@ -285,10 +285,10 @@ function Errors({ token }) {
         {items.map((e) => (
           <div key={e.id} className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(244,63,94,0.06)", border: "1px solid rgba(244,63,94,0.2)" }}>
             <div className="flex justify-between gap-3">
-              <span className="font-mono text-xs text-rose-600 break-all">{e.context}</span>
-              <span className="text-xs text-stone-400 shrink-0">{fmt(e.at)}</span>
+              <span className="font-mono text-xs text-rose-400 break-all">{e.context}</span>
+              <span className="text-xs text-stone-500 shrink-0">{fmt(e.at)}</span>
             </div>
-            <div className="text-stone-700 mt-1 break-words font-mono text-xs">{e.message}</div>
+            <div className="text-stone-200 mt-1 break-words font-mono text-xs">{e.message}</div>
           </div>
         ))}
       </div>

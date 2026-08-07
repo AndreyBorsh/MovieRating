@@ -63,10 +63,10 @@ export default function PersonPage() {
   }, [id]);
 
   if (loading) {
-    return <div className="text-center text-stone-500 text-sm py-16">Загрузка...</div>;
+    return <div className="text-center text-stone-400 text-sm py-16">Загрузка...</div>;
   }
   if (!person) {
-    return <div className="text-center text-stone-500 text-sm py-16">Не удалось загрузить информацию об актёре.</div>;
+    return <div className="text-center text-stone-400 text-sm py-16">Не удалось загрузить информацию об актёре.</div>;
   }
 
   const dept = DEPT[person.known_for] || person.known_for;
@@ -99,18 +99,18 @@ export default function PersonPage() {
             className="w-40 sm:w-48 rounded-2xl object-cover shrink-0 self-start shadow-lg"
           />
         ) : (
-          <div className="w-40 sm:w-48 h-56 sm:h-72 rounded-2xl bg-stone-200 flex items-center justify-center text-6xl text-stone-400 shrink-0 self-start">
+          <div className="w-40 sm:w-48 h-56 sm:h-72 rounded-2xl bg-stone-700 flex items-center justify-center text-6xl text-stone-500 shrink-0 self-start">
             👤
           </div>
         )}
 
         <div className="min-w-0 flex-1">
-          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-900 leading-tight">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-stone-50 leading-tight">
             {person.name}
           </h1>
-          {dept && <div className="text-amber-700 font-medium mt-1">{dept}</div>}
+          {dept && <div className="text-red-500 font-medium mt-1">{dept}</div>}
 
-          <div className="mt-3 space-y-1 text-sm text-stone-600">
+          <div className="mt-3 space-y-1 text-sm text-stone-300">
             {person.birthday && (
               <div>
                 🎂 {fmtDate(person.birthday)}
@@ -129,7 +129,7 @@ export default function PersonPage() {
           {person.biography && (
             <ExpandableText
               text={person.biography}
-              className="text-sm text-stone-700 leading-relaxed whitespace-pre-line"
+              className="text-sm text-stone-200 leading-relaxed whitespace-pre-line"
               clampClass="line-clamp-5"
             />
           )}
@@ -140,22 +140,22 @@ export default function PersonPage() {
       {person.filmography?.length > 0 && (
         <section>
           <div className="flex flex-wrap items-center gap-3 mb-4">
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-900">
-              Фильмография <span className="text-stone-400 font-semibold text-base">{person.filmography.length}</span>
+            <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-stone-50">
+              Фильмография <span className="text-stone-500 font-semibold text-base">{person.filmography.length}</span>
             </h2>
             <div className="flex items-center gap-2 ml-auto">
               <input
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Поиск по проектам…"
-                className="rounded-lg px-3 py-1.5 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 w-40 sm:w-56"
-                style={{ background: "rgba(255,255,255,0.72)", border: "1px solid rgba(0,0,0,0.1)" }}
+                className="rounded-lg px-3 py-1.5 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50 w-40 sm:w-56"
+                style={{ background: "rgba(22,28,52,0.72)", border: "1px solid rgba(255,255,255,0.12)" }}
               />
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="rounded-lg px-2 py-1.5 text-sm text-stone-900 outline-none cursor-pointer"
-                style={{ background: "#fff", border: "1px solid rgba(0,0,0,0.12)" }}
+                className="rounded-lg px-2 py-1.5 text-sm text-stone-50 outline-none cursor-pointer"
+                style={{ background: "#0f1526", border: "1px solid rgba(255,255,255,0.14)" }}
               >
                 <option value="new">Сначала новые</option>
                 <option value="old">Сначала старые</option>
@@ -165,7 +165,7 @@ export default function PersonPage() {
             </div>
           </div>
           {films.length === 0 ? (
-            <p className="text-sm text-stone-500 py-6">Ничего не найдено по запросу «{q.trim()}».</p>
+            <p className="text-sm text-stone-400 py-6">Ничего не найдено по запросу «{q.trim()}».</p>
           ) : (
           <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
             {films.map((f) => (
@@ -174,7 +174,7 @@ export default function PersonPage() {
                 href={`/${f.media_type === "tv" ? "tv" : "movies"}/${f.id}`}
                 className="group"
               >
-                <div className="rounded-xl overflow-hidden bg-stone-100 aspect-[2/3] mb-1.5 border border-transparent group-hover:border-amber-400/40 transition-all">
+                <div className="rounded-xl overflow-hidden bg-stone-800 aspect-[2/3] mb-1.5 border border-transparent group-hover:border-red-500/40 transition-all">
                   {POSTER(f.poster) ? (
                     <img
                       src={POSTER(f.poster)}
@@ -183,15 +183,15 @@ export default function PersonPage() {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center text-3xl text-stone-300">
+                    <div className="w-full h-full flex items-center justify-center text-3xl text-stone-600">
                       {f.media_type === "tv" ? "📺" : "🎬"}
                     </div>
                   )}
                 </div>
-                <p className="text-xs font-medium text-stone-800 leading-tight line-clamp-2 group-hover:text-amber-600 transition-colors">
+                <p className="text-xs font-medium text-stone-100 leading-tight line-clamp-2 group-hover:text-red-400 transition-colors">
                   {f.title}
                 </p>
-                <p className="text-[10px] text-stone-500 leading-tight line-clamp-1 mt-0.5">
+                <p className="text-[10px] text-stone-400 leading-tight line-clamp-1 mt-0.5">
                   {f.year || ""}
                   {f.character ? `${f.year ? " · " : ""}${f.character}` : ""}
                 </p>

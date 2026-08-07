@@ -1,8 +1,8 @@
 // Score color tuned for the light theme (darker stops read on off-white).
 export function scoreColor(score) {
   const n = typeof score === "number" ? score : parseFloat(score);
-  if (n >= 7.5) return "text-emerald-600";
-  if (n >= 5.5) return "text-amber-600";
+  if (n >= 7.5) return "text-emerald-400";
+  if (n >= 5.5) return "text-red-400";
   return "text-rose-500";
 }
 

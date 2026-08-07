@@ -39,8 +39,8 @@ export default function ReviewEditor({ value, onChange, placeholder }) {
       onMouseDown={(e) => e.preventDefault()} // keep textarea selection
       onClick={onClick}
       title={title}
-      className={`px-2.5 py-1 rounded-md text-xs font-medium text-stone-700 hover:text-amber-600 hover:bg-amber-400/10 transition ${className}`}
-      style={{ border: "1px solid rgba(0,0,0,0.08)" }}
+      className={`px-2.5 py-1 rounded-md text-xs font-medium text-stone-200 hover:text-red-400 hover:bg-red-500/10 transition ${className}`}
+      style={{ border: "1px solid rgba(255,255,255,0.10)" }}
     >
       {children}
     </button>
@@ -73,13 +73,13 @@ export default function ReviewEditor({ value, onChange, placeholder }) {
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-lg px-3 py-2.5 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 resize-y transition leading-relaxed"
-        style={{ background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)", minHeight: expanded ? 320 : 120 }}
+        className="w-full rounded-lg px-3 py-2.5 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50 resize-y transition leading-relaxed"
+        style={{ background: "#141b31", border: "1px solid rgba(255,255,255,0.10)", minHeight: expanded ? 320 : 120 }}
       />
 
-      <p className="text-[10px] text-stone-400 mt-1.5">
-        Выделите текст и нажмите кнопку: <b className="text-stone-600">Ж</b> жирный,{" "}
-        <i className="text-stone-600">К</i> курсив, ▦ спойлер (скрытый текст)
+      <p className="text-[10px] text-stone-500 mt-1.5">
+        Выделите текст и нажмите кнопку: <b className="text-stone-300">Ж</b> жирный,{" "}
+        <i className="text-stone-300">К</i> курсив, ▦ спойлер (скрытый текст)
       </p>
     </div>
   );

@@ -75,28 +75,28 @@ export default function RegisterPage() {
     }
   };
 
-  const inputClass = "w-full rounded-lg px-3 py-2.5 text-sm text-stone-900 outline-none focus:ring-1 focus:ring-amber-400/50 transition";
-  const inputStyle = { background: "#efe9df", border: "1px solid rgba(0,0,0,0.08)" };
+  const inputClass = "w-full rounded-lg px-3 py-2.5 text-sm text-stone-50 outline-none focus:ring-1 focus:ring-red-500/50 transition";
+  const inputStyle = { background: "#141b31", border: "1px solid rgba(255,255,255,0.10)" };
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center">
       <div
         className="w-full max-w-sm rounded-xl p-8 border"
-        style={{ background: "rgba(255,255,255,0.72)", borderColor: "rgba(0,0,0,0.08)" }}
+        style={{ background: "rgba(22,28,52,0.72)", borderColor: "rgba(255,255,255,0.10)" }}
       >
         {step === "form" ? (
           <>
-            <h1 className="text-3xl font-extrabold tracking-tight text-stone-900 mb-1">Регистрация</h1>
-            <p className="text-sm text-stone-500 mb-6">
+            <h1 className="text-3xl font-extrabold tracking-tight text-stone-50 mb-1">Регистрация</h1>
+            <p className="text-sm text-stone-400 mb-6">
               Уже есть аккаунт?{" "}
-              <Link href="/login" className="text-amber-600 hover:underline">
+              <Link href="/login" className="text-red-400 hover:underline">
                 Войдите
               </Link>
             </p>
 
             <form onSubmit={submitForm} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                <label className="block text-xs font-medium text-stone-300 mb-1.5">
                   Имя пользователя
                 </label>
                 <input
@@ -112,7 +112,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                <label className="block text-xs font-medium text-stone-300 mb-1.5">
                   Email
                 </label>
                 <input
@@ -126,7 +126,7 @@ export default function RegisterPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-1.5">
+                <label className="block text-xs font-medium text-stone-300 mb-1.5">
                   Пароль
                 </label>
                 <input
@@ -150,7 +150,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-50 transition"
               >
                 {loading ? "Отправляем код..." : "Продолжить"}
               </button>
@@ -158,14 +158,14 @@ export default function RegisterPage() {
           </>
         ) : (
           <>
-            <h1 className="text-2xl font-bold text-stone-900 mb-1">Подтверждение</h1>
-            <p className="text-sm text-stone-500 mb-4">
+            <h1 className="text-2xl font-bold text-stone-50 mb-1">Подтверждение</h1>
+            <p className="text-sm text-stone-400 mb-4">
               Отправили 6-значный код на{" "}
-              <span className="text-amber-600">{form.email}</span>
+              <span className="text-red-400">{form.email}</span>
             </p>
             <form onSubmit={submitCode} className="space-y-5">
               <div>
-                <label className="block text-xs font-medium text-stone-600 mb-3">
+                <label className="block text-xs font-medium text-stone-300 mb-3">
                   Введите код из письма
                 </label>
                 <div className="flex gap-2 justify-between" onPaste={onCodePaste}>
@@ -179,8 +179,8 @@ export default function RegisterPage() {
                       value={digit}
                       onChange={(e) => onCodeInput(i, e.target.value)}
                       onKeyDown={(e) => onCodeKey(i, e)}
-                      className="w-10 h-12 rounded-lg text-center text-lg font-bold text-stone-900 outline-none focus:ring-2 focus:ring-amber-400/60 transition"
-                      style={{ background: "#efe9df", border: `1px solid ${digit ? "#b8860b" : "rgba(0,0,0,0.08)"}` }}
+                      className="w-10 h-12 rounded-lg text-center text-lg font-bold text-stone-50 outline-none focus:ring-2 focus:ring-red-500/60 transition"
+                      style={{ background: "#141b31", border: `1px solid ${digit ? "#e2141d" : "rgba(255,255,255,0.10)"}` }}
                     />
                   ))}
                 </div>
@@ -195,7 +195,7 @@ export default function RegisterPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-900 bg-amber-400 hover:bg-amber-300 disabled:opacity-50 transition"
+                className="w-full py-2.5 rounded-lg text-sm font-semibold text-stone-50 bg-red-500 hover:bg-red-400 disabled:opacity-50 transition"
               >
                 {loading ? "Проверяем..." : "Подтвердить"}
               </button>
@@ -203,7 +203,7 @@ export default function RegisterPage() {
               <button
                 type="button"
                 onClick={() => { setStep("form"); setCode(["","","","","",""]); setError(""); }}
-                className="w-full text-xs text-stone-500 hover:text-stone-700 transition"
+                className="w-full text-xs text-stone-400 hover:text-stone-200 transition"
               >
                 ← Изменить email
               </button>

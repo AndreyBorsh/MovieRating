@@ -3,6 +3,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ServiceWorkerRegister from "./components/ServiceWorkerRegister";
 
 // Single modern grotesk for the whole UI — glossy/streaming look uses one
 // clean sans, heavy weights for display, no serif.
@@ -11,6 +12,11 @@ const inter = Inter({ subsets: ["latin", "cyrillic"], variable: "--font-inter", 
 export const metadata = {
   title: "WAW — Оцени фильм 🕷",
   description: "Платформа для критических оценок фильмов",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "WAW" },
+};
+
+export const viewport = {
+  themeColor: "#0b1226",
 };
 
 // A corner spider-web (radiating from the corner): spokes + concentric arcs.
@@ -47,6 +53,7 @@ export default function RootLayout({ children }) {
           <CornerWeb className="web-tr" />
           <CornerWeb className="web-bl" />
         </div>
+        <ServiceWorkerRegister />
         <AuthProvider>
           <Header />
           <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-8 overflow-x-hidden">

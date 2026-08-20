@@ -2930,6 +2930,38 @@ def _tmdb_media_item(m):
     return None
 
 
+def _attach_site_scores(items):
+    """Add this site's average rating (site_score) + rating count (site_count) to
+    each search/trending item that has been rated here — like Kinopoisk's badge."""
+    if not items:
+        return items
+    movie_ids = [it["id"] for it in items if it["media_type"] == "movie"]
+    tv_ids = [it["id"] for it in items if it["media_type"] == "tv"]
+    scores = {}  # (media_type, tmdb_id) -> (avg, count)
+    try:
+        conn = get_db(); cur = conn.cursor()
+        if movie_ids:
+            cur.execute("""SELECT tmdb_id, AVG(score), COUNT(*) FROM ratings
+                           WHERE tv_tmdb_id IS NULL AND tmdb_id = ANY(%s) GROUP BY tmdb_id""",
+                        (movie_ids,))
+            for tid, avg, cnt in cur.fetchall():
+                scores[("movie", tid)] = (float(avg), cnt)
+        if tv_ids:
+            cur.execute("""SELECT tv_tmdb_id, AVG(score), COUNT(*) FROM ratings
+                           WHERE tv_tmdb_id = ANY(%s) GROUP BY tv_tmdb_id""",
+                        (tv_ids,))
+            for tid, avg, cnt in cur.fetchall():
+                scores[("tv", tid)] = (float(avg), cnt)
+        cur.close(); conn.close()
+    except Exception as e:
+        log_error("attach_site_scores", str(e))
+    for it in items:
+        s = scores.get((it["media_type"], it["id"]))
+        it["site_score"] = round(s[0], 1) if s else None
+        it["site_count"] = s[1] if s else 0
+    return items
+
+
 @app.get("/trending")
 def trending():
     """Popular movies + TV this week (most popular first) — the default search
@@ -2950,7 +2982,7 @@ def trending():
         if item:
             out.append(item)
     out.sort(key=lambda x: x["popularity"], reverse=True)
-    return out
+    return _attach_site_scores(out)
 
 
 @app.get("/search/multi")
@@ -2973,7 +3005,7 @@ def search_multi(query: str):
     out = [it for it in (_tmdb_media_item(m) for m in res.json().get("results", [])) if it]
     # most popular first (TMDB relevance often buries the obvious hits)
     out.sort(key=lambda x: x["popularity"], reverse=True)
-    return out
+    return _attach_site_scores(out)
 
 
 @app.get("/search")

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { searchMulti, getTrending } from "@/lib/api";
+import { scoreColor } from "@/app/components/Score";
 import { img } from "@/lib/base";
 
 const POSTER = (path) => img("w342", path);
@@ -168,6 +169,12 @@ function SearchContent() {
                   <div className={`absolute top-2 right-2 text-xs px-2 py-0.5 rounded-full font-medium backdrop-blur-sm ${item.media_type === "tv" ? "text-red-500" : "text-sky-400"}`} style={{ background: "rgba(16,20,40,0.85)" }}>
                     {item.media_type === "tv" ? "сериал" : "фильм"}
                   </div>
+                  {item.site_score != null && (
+                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md backdrop-blur-md flex items-center gap-1"
+                      style={{ background: "rgba(16,20,40,0.9)" }} title={`Средняя оценка на сайте · ${item.site_count} оцен.`}>
+                      <span className={`text-[11px] font-bold ${scoreColor(item.site_score)}`}>{item.site_score.toFixed(1)}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="p-3">
                   <div className="text-sm font-bold tracking-tight text-stone-50 line-clamp-2 group-hover:text-red-400 transition-colors">

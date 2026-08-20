@@ -2,9 +2,42 @@
 
 import { useRef, useEffect, useState } from "react";
 
-export default function ReviewEditor({ value, onChange, placeholder }) {
+export default function ReviewEditor({ value, onChange, placeholder, draftKey }) {
   const taRef = useRef(null);
   const [expanded, setExpanded] = useState(false);
+  const [restored, setRestored] = useState(false);
+  const hydrated = useRef(false);
+
+  // Restore an unsent draft once, if the field is empty on mount. Survives a
+  // dropped session / reload / crash so a long review is never lost.
+  useEffect(() => {
+    if (hydrated.current) return;
+    hydrated.current = true;
+    if (!draftKey) return;
+    try {
+      const saved = localStorage.getItem(draftKey);
+      if (saved && saved.trim() && !(value || "").trim()) {
+        onChange(saved);
+        setRestored(true);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey]);
+
+  // Persist every keystroke immediately; drop the draft once the field is empty.
+  useEffect(() => {
+    if (!draftKey || !hydrated.current) return;
+    try {
+      if ((value || "").trim()) localStorage.setItem(draftKey, value);
+      else localStorage.removeItem(draftKey);
+    } catch {}
+  }, [value, draftKey]);
+
+  const clearDraft = () => {
+    try { if (draftKey) localStorage.removeItem(draftKey); } catch {}
+    setRestored(false);
+    onChange("");
+  };
 
   // Auto-grow textarea with content
   useEffect(() => {
@@ -48,6 +81,16 @@ export default function ReviewEditor({ value, onChange, placeholder }) {
 
   return (
     <div>
+      {restored && (
+        <div className="flex items-center justify-between gap-2 mb-2 text-xs rounded-md px-2.5 py-1.5"
+          style={{ background: "rgba(226,20,29,0.08)", border: "1px solid rgba(226,20,29,0.25)" }}>
+          <span className="text-red-300">🕸 Восстановлен несохранённый черновик</span>
+          <button type="button" onClick={clearDraft} className="text-stone-400 hover:text-red-400 transition shrink-0">
+            стереть
+          </button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center gap-1.5 mb-2 flex-wrap">
         <Btn onClick={() => wrap("**")} title="Жирный — выделите текст и нажмите">

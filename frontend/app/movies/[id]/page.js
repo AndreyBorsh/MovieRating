@@ -358,6 +358,8 @@ export default function MoviePage() {
         await sendRating(token, payload);
         setSuccess(true);
       }
+      try { if (movieId) localStorage.removeItem(`waw-review-draft-movie-${movieId}`); } catch {}
+      setReviewText("");
       await loadAll();
     } catch (e) {
       if (e.status === 401) {
@@ -655,6 +657,7 @@ export default function MoviePage() {
                   value={reviewText}
                   onChange={setReviewText}
                   placeholder="Напишите подробный отзыв о фильме..."
+                  draftKey={movieId ? `waw-review-draft-movie-${movieId}` : null}
                 />
               </div>
 

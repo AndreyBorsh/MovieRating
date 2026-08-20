@@ -1,6 +1,7 @@
-// Where TMDB images are fetched from. Override with a proxy (e.g. a Cloudflare
-// Worker) when the server can't reach image.tmdb.org directly.
-const IMAGE_BASE = process.env.TMDB_IMAGE_BASE || "https://image.tmdb.org";
+// Where TMDB images are fetched from. Defaults to a Cloudflare Worker proxy so the
+// server needs no VPN (image.tmdb.org is blocked in some regions). The worker
+// forwards /t/p/... to TMDB. Override with TMDB_IMAGE_BASE=https://image.tmdb.org.
+const IMAGE_BASE = process.env.TMDB_IMAGE_BASE || "https://tmdb.andreykuzn19.workers.dev";
 
 export async function GET(request, context) {
   const { path } = await context.params;

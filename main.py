@@ -17,9 +17,11 @@ BREVO_API_KEY  = os.environ.get("BREVO_API_KEY", "")
 BREVO_SENDER   = os.environ.get("BREVO_SENDER", "")
 
 TMDB_API_KEY = "83d9d6d30f6249cd32695476886cf858"
-# Where TMDB is reached. Override with a proxy (e.g. a Cloudflare Worker) when the
-# server can't reach api.themoviedb.org directly — see cloudflare-tmdb-proxy.js.
-TMDB_BASE = os.environ.get("TMDB_BASE", "https://api.themoviedb.org/3")
+# Where TMDB is reached. Defaults to a Cloudflare Worker proxy so the server does
+# NOT need a VPN (api.themoviedb.org is blocked in some regions). The worker runs
+# on Cloudflare's edge and forwards /3/... to TMDB — see cloudflare-tmdb-proxy.js.
+# Override with TMDB_BASE=https://api.themoviedb.org/3 to hit TMDB directly.
+TMDB_BASE = os.environ.get("TMDB_BASE", "https://tmdb.andreykuzn19.workers.dev/3")
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",

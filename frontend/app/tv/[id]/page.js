@@ -420,6 +420,8 @@ export default function TvPage() {
       } else {
         await sendRating(token, payload);
       }
+      try { if (tvId) localStorage.removeItem(`waw-review-draft-tv-${tvId}`); } catch {}
+      setReviewText("");
       setFormOpen(false);
       setEditingId(null);
       await loadAll();
@@ -835,6 +837,7 @@ export default function TvPage() {
                   value={reviewText}
                   onChange={setReviewText}
                   placeholder="Напишите подробный отзыв о сериале..."
+                  draftKey={tvId ? `waw-review-draft-tv-${tvId}` : null}
                 />
               </div>
 

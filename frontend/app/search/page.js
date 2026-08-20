@@ -170,9 +170,9 @@ function SearchContent() {
                     {item.media_type === "tv" ? "сериал" : "фильм"}
                   </div>
                   {item.site_score != null && (
-                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded-md backdrop-blur-md flex items-center gap-1"
-                      style={{ background: "rgba(16,20,40,0.9)" }} title={`Средняя оценка на сайте · ${item.site_count} оцен.`}>
-                      <span className={`text-[11px] font-bold ${scoreColor(item.site_score)}`}>{item.site_score.toFixed(1)}</span>
+                    <div className="absolute bottom-2 left-2 px-2 py-1 rounded-lg backdrop-blur-md flex items-center gap-1"
+                      style={{ background: "rgba(16,20,40,0.92)", boxShadow: "0 2px 8px rgba(0,0,0,0.35)" }} title={`Средняя оценка на сайте · ${item.site_count} оцен.`}>
+                      <span className={`text-base sm:text-lg font-extrabold tracking-tight ${scoreColor(item.site_score)}`}>{item.site_score.toFixed(1)}</span>
                     </div>
                   )}
                 </div>

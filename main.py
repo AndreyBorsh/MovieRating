@@ -218,6 +218,15 @@ def ensure_tables():
         )
     """)
 
+    # --- pending password resets (one per email; confirmed with a code) ---
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS pending_password_resets (
+            email TEXT PRIMARY KEY,
+            code TEXT NOT NULL,
+            expires_at TIMESTAMP NOT NULL
+        )
+    """)
+
     # --- private notes (one per user per title; owner-only) ---
     cur.execute("""
         CREATE TABLE IF NOT EXISTS notes (
@@ -850,6 +859,29 @@ def send_verification_email(to_email: str, code: str):
         raise Exception(f"Brevo error {res.status_code}: {res.text}")
 
 
+def send_password_reset_email(to_email: str, code: str):
+    if not BREVO_API_KEY or not BREVO_SENDER:
+        raise Exception("Brevo is not configured")
+    res = requests.post(
+        "https://api.brevo.com/v3/smtp/email",
+        headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
+        json={
+            "sender": {"name": "WAW Cinema", "email": BREVO_SENDER},
+            "to": [{"email": to_email}],
+            "subject": f"Сброс пароля WAW: {code}",
+            "textContent": (
+                f"Привет!\n\nВы запросили сброс пароля на WAW.\n"
+                f"Код для сброса: {code}\n\nКод действителен 15 минут.\n"
+                "Если вы не запрашивали сброс — просто игнорируйте это письмо, "
+                "ваш пароль останется прежним."
+            ),
+        },
+        timeout=10,
+    )
+    if res.status_code >= 400:
+        raise Exception(f"Brevo error {res.status_code}: {res.text}")
+
+
 def send_giveaway_announcement(giveaway_id, title, description):
     """Email every registered user about a new giveaway. Best-effort, runs in a
     background thread; no-op (logs) if Brevo isn't configured."""
@@ -1028,6 +1060,77 @@ def me(authorization: str = Header(None)):
         "username": payload["username"],
         "is_admin": payload["user_id"] in ADMIN_IDS,
     }
+
+
+@app.post("/auth/password/request")
+def request_password_reset(data: dict):
+    """Step 1 of 'forgot password': email a reset code to a registered address.
+    Responds the same whether or not the email exists (anti-enumeration)."""
+    email = (data.get("email") or "").strip().lower()
+    if not email:
+        raise HTTPException(status_code=400, detail="Введите почту")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM users WHERE lower(email)=lower(%s)", (email,))
+    if not cur.fetchone():
+        cur.close(); conn.close()
+        return {"sent": True}  # don't reveal that the account doesn't exist
+
+    code = str(random.randint(100000, 999999))
+    expires_at = datetime.utcnow() + timedelta(minutes=15)
+    cur.execute("""
+        INSERT INTO pending_password_resets (email, code, expires_at)
+        VALUES (%s, %s, %s)
+        ON CONFLICT (email) DO UPDATE
+          SET code=EXCLUDED.code, expires_at=EXCLUDED.expires_at
+    """, (email, code, expires_at))
+    conn.commit()
+
+    try:
+        send_password_reset_email(email, code)
+    except Exception as e:
+        log_error("password_reset_send", str(e))
+        cur.execute("DELETE FROM pending_password_resets WHERE email=%s", (email,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=502, detail="Не удалось отправить письмо с кодом. Попробуйте позже.")
+
+    cur.close(); conn.close()
+    return {"sent": True}
+
+
+@app.post("/auth/password/confirm")
+def confirm_password_reset(data: dict):
+    """Step 2 of 'forgot password': verify the code and set a new password."""
+    email = (data.get("email") or "").strip().lower()
+    code = (data.get("code") or "").strip()
+    new_password = data.get("password") or ""
+    if not email or not code or not new_password:
+        raise HTTPException(status_code=400, detail="Заполните все поля")
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Пароль должен быть минимум 6 символов")
+
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT code, expires_at FROM pending_password_resets WHERE email=%s", (email,))
+    row = cur.fetchone()
+    if not row:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Запрос на сброс не найден. Запросите код заново.")
+    stored_code, expires_at = row
+    if datetime.utcnow() > expires_at:
+        cur.execute("DELETE FROM pending_password_resets WHERE email=%s", (email,))
+        conn.commit(); cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Код устарел. Запросите сброс снова.")
+    if code != stored_code:
+        cur.close(); conn.close()
+        raise HTTPException(status_code=400, detail="Неверный код")
+
+    cur.execute("UPDATE users SET password=%s WHERE lower(email)=lower(%s)",
+                (hash_password(new_password), email))
+    cur.execute("DELETE FROM pending_password_resets WHERE email=%s", (email,))
+    conn.commit(); cur.close(); conn.close()
+    return {"message": "Пароль изменён"}
 
 
 # =========================

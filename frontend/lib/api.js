@@ -43,6 +43,28 @@ export async function login(email, password) {
   return data; // { token, user_id, username }
 }
 
+export async function requestPasswordReset(email) {
+  const res = await fetch(`${API}/auth/password/request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось отправить код");
+  return data;
+}
+
+export async function confirmPasswordReset(email, code, password) {
+  const res = await fetch(`${API}/auth/password/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code, password }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Не удалось сменить пароль");
+  return data;
+}
+
 // =========================
 // MOVIES
 // =========================

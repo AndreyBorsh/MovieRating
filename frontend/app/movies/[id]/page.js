@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
   const rated = movie.count > 0 ? `Оценка ${movie.score}/10 от зрителей (${movie.count}). ` : "";
   const description = (`${rated}${movie.overview || ""}`).trim().slice(0, 300)
     || `Оценки и рецензии зрителей на фильм ${name}.`;
-  const poster = movie.poster ? `${SITE}${img("w500", movie.poster)}` : null;
+  const poster = movie.poster ? img("w500", movie.poster) : null;
   return {
     title,
     description,

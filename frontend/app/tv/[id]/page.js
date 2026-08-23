@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
   const rated = show.count > 0 ? `Оценка ${show.score}/10 от зрителей (${show.count}). ` : "";
   const description = (`${rated}${show.overview || ""}`).trim().slice(0, 300)
     || `Оценки и рецензии зрителей на сериал ${name}.`;
-  const poster = show.poster ? `${SITE}${img("w500", show.poster)}` : null;
+  const poster = show.poster ? img("w500", show.poster) : null;
   return {
     title,
     description,

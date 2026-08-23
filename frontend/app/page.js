@@ -173,7 +173,7 @@ function ReviewModal({ item, onClose }) {
                 </Link>
                 <span className="text-xs text-stone-400">·</span>
                 <span className={`text-sm font-display font-medium ${scoreColor(item.score)}`}>
-                  {item.score?.toFixed(1)}
+                  {item.score?.toFixed(2)}
                 </span>
                 <span className={`text-xs px-1.5 py-0.5 rounded ${isTV ? "text-red-400 bg-red-500/10" : "text-sky-400 bg-sky-400/10"}`}>{isTV ? "сериал" : "фильм"}</span>
               </div>
@@ -251,7 +251,7 @@ function RecentCard({ item, onClick }) {
         <div className="flex items-center gap-2 mt-0.5">
           <span className="text-xs text-red-500 font-semibold">{item.username}</span>
           <span className="text-xs text-stone-500">·</span>
-          <span className={`text-xs font-bold ${scoreColor(item.score)}`}>{item.score?.toFixed(1)}</span>
+          <span className={`text-xs font-bold ${scoreColor(item.score)}`}>{item.score?.toFixed(2)}</span>
         </div>
         {item.review && (
           <p className="text-xs text-stone-400 mt-1 line-clamp-2">{stripMarkers(item.review)}</p>
@@ -292,7 +292,7 @@ function MediaCard({ item }) {
             </div>
           )}
           <div className="absolute bottom-2 left-2 px-2.5 py-1 rounded-full backdrop-blur-md" style={{ background: "rgba(16,20,40,0.9)", boxShadow: "0 2px 8px rgba(0,0,0,0.15)" }}>
-            <span className={`text-sm font-bold ${scoreColor(item.score)}`}>{item.score > 0 ? item.score.toFixed(1) : "—"}</span>
+            <span className={`text-sm font-bold ${scoreColor(item.score)}`}>{item.score > 0 ? item.score.toFixed(2) : "—"}</span>
           </div>
         </div>
         <div className="p-3">

@@ -17,7 +17,7 @@ export default function ScoreBadge({ score, size = "md" }) {
   const n = typeof score === "number" ? score : parseFloat(score);
   return (
     <span className={`font-bold tracking-tight ${scoreColor(n)} ${SIZES[size] || SIZES.md}`}>
-      {n > 0 ? n.toFixed(1) : "—"}
+      {n > 0 ? n.toFixed(2) : "—"}
     </span>
   );
 }

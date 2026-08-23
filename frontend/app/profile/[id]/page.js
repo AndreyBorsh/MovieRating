@@ -37,7 +37,7 @@ function seasonLabel(from, to) {
 
 // Competition-style ranks: equal scores (by displayed value) share a place ("5-6")
 function rankLabels(sorted) {
-  const key = (r) => r.score.toFixed(1);
+  const key = (r) => r.score.toFixed(2);
   const labels = [];
   let i = 0;
   while (i < sorted.length) {
@@ -90,15 +90,15 @@ function ProfileStats({ ratings, onOpen }) {
       <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
         {/* Indicators — fixed, compact width */}
         <div className="grid grid-cols-2 gap-2 content-start shrink-0 md:w-[320px]">
-          <Stat icon="⭐" value={avg.toFixed(1)} label="средняя" color={scoreColor(avg)} />
-          <Stat icon="🔺" value={max.toFixed(1)} label="максимум" color={scoreColor(max)} />
-          <Stat icon="🔻" value={min.toFixed(1)} label="минимум" color={scoreColor(min)} />
+          <Stat icon="⭐" value={avg.toFixed(2)} label="средняя" color={scoreColor(avg)} />
+          <Stat icon="🔺" value={max.toFixed(2)} label="максимум" color={scoreColor(max)} />
+          <Stat icon="🔻" value={min.toFixed(2)} label="минимум" color={scoreColor(min)} />
           <Stat icon="🎞️" value={ratings.length} label="всего" />
           {movieAvg != null && (
-            <Stat icon="🎬" value={movieAvg.toFixed(1)} label="фильмы" color={scoreColor(movieAvg)} />
+            <Stat icon="🎬" value={movieAvg.toFixed(2)} label="фильмы" color={scoreColor(movieAvg)} />
           )}
           {tvAvg != null && (
-            <Stat icon="📺" value={tvAvg.toFixed(1)} label="сериалы" color={scoreColor(tvAvg)} />
+            <Stat icon="📺" value={tvAvg.toFixed(2)} label="сериалы" color={scoreColor(tvAvg)} />
           )}
         </div>
 
@@ -137,7 +137,7 @@ function ProfileStats({ ratings, onOpen }) {
                     <span className="flex-1 min-w-0 text-sm text-stone-200 truncate group-hover:text-red-400 transition-colors">
                       {r.movie_title}
                     </span>
-                    <span className={`text-xs font-display font-medium shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</span>
+                    <span className={`text-xs font-display font-medium shrink-0 ${scoreColor(r.score)}`}>{r.score.toFixed(2)}</span>
                   </button>
                 ))}
               </div>
@@ -164,7 +164,7 @@ function Podium({ top, labels, onOpen }) {
     return (
       <div className="w-20 sm:w-24 flex flex-col items-center justify-end">
         <div className="text-2xl mb-1">{MEDAL[rank]}</div>
-        <button onClick={() => onOpen(r)} className="group" title={`${r.movie_title} · ${r.score.toFixed(1)}`}>
+        <button onClick={() => onOpen(r)} className="group" title={`${r.movie_title} · ${r.score.toFixed(2)}`}>
           {POSTER(r.poster) ? (
             <img
               src={POSTER(r.poster)}
@@ -181,7 +181,7 @@ function Podium({ top, labels, onOpen }) {
             </div>
           )}
         </button>
-        <div className={`text-sm font-display font-medium mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(1)}</div>
+        <div className={`text-sm font-display font-medium mt-1 ${scoreColor(r.score)}`}>{r.score.toFixed(2)}</div>
         <div
           className={`${BASE_H[rank]} w-full rounded-t-md mt-1 flex items-start justify-center`}
           style={{ background: `linear-gradient(180deg, ${ACCENT[rank]}40, ${ACCENT[rank]}10)`, borderTop: `2px solid ${ACCENT[rank]}` }}

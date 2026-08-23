@@ -3060,7 +3060,7 @@ def _attach_site_scores(items):
         log_error("attach_site_scores", str(e))
     for it in items:
         s = scores.get((it["media_type"], it["id"]))
-        it["site_score"] = round(s[0], 1) if s else None
+        it["site_score"] = round(s[0], 2) if s else None
         it["site_count"] = s[1] if s else 0
     return items
 

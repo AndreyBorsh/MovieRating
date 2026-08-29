@@ -36,9 +36,13 @@ GIVEAWAY_MIN_WORDS = 200         # min words for a review to count toward ticket
 # OpenAI-compatible chat-completions API — works with OpenRouter, Groq, Mistral,
 # etc. Just set the three env vars below to switch providers (no code changes).
 LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
-# Groq's OpenAI-compatible endpoint — free tier is fast and reliable (OpenRouter's
-# free pool was permanently rate-limited/deprecated). Needs a Groq API key.
-LLM_API_URL = os.environ.get("LLM_API_URL", "https://api.groq.com/openai/v1/chat/completions")
+# Groq's OpenAI-compatible endpoint, reached THROUGH the Cloudflare Worker because
+# api.groq.com is geo-blocked (403) from the server's region — same as TMDB. The
+# worker proxies /groq/* → api.groq.com/* (forwarding auth + body).
+LLM_API_URL = os.environ.get(
+    "LLM_API_URL",
+    "https://tmdb.andreykuzn19.workers.dev/groq/openai/v1/chat/completions",
+)
 # Comma-separated; tried in order until one responds. gpt-oss-120b (with
 # reasoning_effort=low) reliably returns a clean YES/NO for the review prompt.
 LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")

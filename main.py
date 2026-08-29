@@ -47,6 +47,18 @@ LLM_API_URL = os.environ.get(
 # reasoning_effort=low) reliably returns a clean YES/NO for the review prompt.
 LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
 
+# GigaChat (Sber) — a Russian LLM, reachable from RU with no geo-block (Groq/
+# OpenRouter get 403/429 from the server's region). When GIGACHAT_AUTH_KEY is set
+# the review check uses GigaChat instead of the OpenAI-compatible endpoint above.
+# The auth key is the base64 "Ключ авторизации" from developers.sber.ru.
+GIGACHAT_AUTH_KEY = os.environ.get("GIGACHAT_AUTH_KEY", "")
+GIGACHAT_SCOPE    = os.environ.get("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")  # PERS = individuals
+GIGACHAT_MODEL    = os.environ.get("GIGACHAT_MODEL", "GigaChat")
+# Sber's endpoints use the Russian Trusted Root CA, which most containers don't
+# trust — so requests to them run with verify=False. Silence the noisy warning.
+requests.packages.urllib3.disable_warnings()
+_gigachat_tok = {"token": None, "exp": 0.0}
+
 
 def get_db():
     return psycopg2.connect(DATABASE_URL)
@@ -477,6 +489,62 @@ def is_quality_review(text):
     return len(sentences) >= 2
 
 
+def _gigachat_token():
+    """Cached GigaChat OAuth access token (valid ~30 min). Refreshes when expired."""
+    now = time.time()
+    if _gigachat_tok["token"] and _gigachat_tok["exp"] - 60 > now:
+        return _gigachat_tok["token"]
+    import uuid
+    r = requests.post(
+        "https://ngw.devices.sberbank.ru:9443/api/v2/oauth",
+        headers={
+            "Authorization": f"Basic {GIGACHAT_AUTH_KEY}",
+            "RqUID": str(uuid.uuid4()),
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Accept": "application/json",
+        },
+        data={"scope": GIGACHAT_SCOPE},
+        timeout=20,
+        verify=False,
+    )
+    r.raise_for_status()
+    d = r.json()
+    _gigachat_tok["token"] = d["access_token"]
+    # expires_at is a millisecond epoch; fall back to 25 min if absent
+    _gigachat_tok["exp"] = (d.get("expires_at") or 0) / 1000 or (now + 1500)
+    return _gigachat_tok["token"]
+
+
+def _gigachat_classify(prompt, attempts=3):
+    """GigaChat variant of _llm_classify — two-step (OAuth token, then chat).
+    Returns (text_or_None, info)."""
+    last = {}
+    for attempt in range(attempts):
+        try:
+            token = _gigachat_token()
+            r = requests.post(
+                "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+                json={"model": GIGACHAT_MODEL, "max_tokens": 24, "temperature": 0.1,
+                      "messages": [{"role": "user", "content": prompt}]},
+                timeout=30,
+                verify=False,
+            )
+            if r.status_code == 401:
+                _gigachat_tok["token"] = None  # force refresh next attempt
+            if r.status_code == 200:
+                ch = r.json().get("choices", [])
+                txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
+                if txt.strip():
+                    return txt.strip(), {"provider": "gigachat", "http": 200}
+            last = {"provider": "gigachat", "http": r.status_code, "body": r.text[:200]}
+        except Exception as e:
+            last = {"provider": "gigachat", "error": str(e)[:200]}
+        if attempt < attempts - 1:
+            time.sleep(2)
+    return None, last
+
+
 def _llm_classify(prompt, attempts=3):
     """Try the configured free models until one returns HTTP 200. Free models are
     often rate-limited (429), so on a pass where every model failed transiently
@@ -519,8 +587,8 @@ def check_review_genuine(title, overview, text):
     """Ask a free OpenAI-compatible LLM whether the text is a genuine review OF
     THIS title. Returns True / False / None. None means 'could not determine'
     (no API key or every model failed) — callers must NOT treat None as genuine."""
-    if not LLM_API_KEY:
-        log_error("llm_review_check", "LLM_API_KEY is empty — key not configured in the container")
+    if not (GIGACHAT_AUTH_KEY or LLM_API_KEY):
+        log_error("llm_review_check", "no LLM configured (neither GIGACHAT_AUTH_KEY nor LLM_API_KEY)")
         return None
     prompt = (
         "Ты — модератор рецензий на фильмы/сериалы.\n"
@@ -535,9 +603,12 @@ def check_review_genuine(title, overview, text):
         "пересказ комментариев или вообще не про этот фильм/сериал.\n"
         "Ответь строго одним словом: YES или NO."
     )
-    txt, info = _llm_classify(prompt)
+    if GIGACHAT_AUTH_KEY:
+        txt, info = _gigachat_classify(prompt)
+    else:
+        txt, info = _llm_classify(prompt)
     if txt is None:
-        log_error("llm_review_check", f"no verdict via {LLM_API_URL} — last: {info}")
+        log_error("llm_review_check", f"no verdict — last: {info}")
         return None
     up = txt.upper()
     if "YES" in up and "NO" not in up:

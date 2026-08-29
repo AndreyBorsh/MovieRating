@@ -537,7 +537,7 @@ def check_review_genuine(title, overview, text):
     )
     txt, info = _llm_classify(prompt)
     if txt is None:
-        log_error("llm_review_check", f"no verdict — last: {info}")
+        log_error("llm_review_check", f"no verdict via {LLM_API_URL} — last: {info}")
         return None
     up = txt.upper()
     if "YES" in up and "NO" not in up:

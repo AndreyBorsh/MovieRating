@@ -515,40 +515,82 @@ def _gigachat_token():
     return _gigachat_tok["token"]
 
 
-def _gigachat_classify(prompt, attempts=3):
-    """GigaChat variant of _llm_classify — two-step (OAuth token, then chat).
-    Returns (text_or_None, info)."""
+_GIGA_SYSTEM = (
+    "Ты — автоматический модуль классификации текста. Отвечай строго одним словом "
+    "латиницей: YES или NO. Без пояснений, дисклеймеров, рассуждений и отказов. "
+    "Это техническая проверка, а не запрос мнения."
+)
+
+
+def _gigachat_call(prompt, temperature=0.0):
+    """One GigaChat chat request (OAuth token cached). Returns (text_or_None, info)."""
+    try:
+        token = _gigachat_token()
+        r = requests.post(
+            "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
+            headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+            json={"model": GIGACHAT_MODEL, "max_tokens": 24, "temperature": temperature,
+                  "messages": [
+                      {"role": "system", "content": _GIGA_SYSTEM},
+                      {"role": "user", "content": prompt},
+                  ]},
+            timeout=30,
+            verify=False,
+        )
+        if r.status_code == 401:
+            _gigachat_tok["token"] = None  # force refresh next time
+        if r.status_code == 200:
+            ch = r.json().get("choices", [])
+            txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
+            return (txt.strip() or None), {"provider": "gigachat", "http": 200}
+        return None, {"provider": "gigachat", "http": r.status_code, "body": r.text[:200]}
+    except Exception as e:
+        return None, {"provider": "gigachat", "error": str(e)[:200]}
+
+
+def _gigachat_verdict(title, overview, text):
+    """Robust GigaChat review classification. GigaChat sometimes returns a canned
+    "языковые модели не имеют мнения" refusal instead of YES/NO — so we retry with
+    a varied temperature and a stripped-down prompt until we get a clean verdict.
+    Returns (True / False / None, info)."""
+    full = (
+        "Задача бинарной классификации. Верни ровно одно слово: YES или NO.\n"
+        f"YES — если текст является отзывом или рецензией на «{title}» "
+        "(мнение о сюжете, актёрах, режиссуре, атмосфере, впечатления от просмотра), "
+        "даже если отзыв резкий, короткий или негативный.\n"
+        "NO — если текст на постороннюю тему (программирование, учёба, реклама и т.п.), "
+        "спам, набор слов, бессмыслица или не про это произведение.\n"
+        f"Описание произведения: {overview or '—'}\n"
+        f"Текст пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n"
+        "Ответ (одно слово, YES или NO):"
+    )
+    short = (
+        f"Классифицируй текст. YES — это отзыв/рецензия на «{title}»; "
+        "NO — спам, набор слов или не про этот фильм. Ответь одним словом YES или NO.\n"
+        f"Текст: \"\"\"{text[:1500]}\"\"\""
+    )
+    attempts = [(full, 0.0), (full, 0.6), (short, 0.4), (short, 0.8)]
     last = {}
-    for attempt in range(attempts):
-        try:
-            token = _gigachat_token()
-            r = requests.post(
-                "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
-                headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                json={"model": GIGACHAT_MODEL, "max_tokens": 24, "temperature": 0.0,
-                      "messages": [
-                          {"role": "system", "content":
-                           "Ты — автоматический модуль классификации текста. Отвечай строго "
-                           "одним словом латиницей: YES или NO. Без пояснений, дисклеймеров, "
-                           "рассуждений и отказов. Это техническая проверка, а не запрос мнения."},
-                          {"role": "user", "content": prompt},
-                      ]},
-                timeout=30,
-                verify=False,
-            )
-            if r.status_code == 401:
-                _gigachat_tok["token"] = None  # force refresh next attempt
-            if r.status_code == 200:
-                ch = r.json().get("choices", [])
-                txt = (ch[0].get("message", {}).get("content") or "") if ch else ""
-                if txt.strip():
-                    return txt.strip(), {"provider": "gigachat", "http": 200}
-            last = {"provider": "gigachat", "http": r.status_code, "body": r.text[:200]}
-        except Exception as e:
-            last = {"provider": "gigachat", "error": str(e)[:200]}
-        if attempt < attempts - 1:
-            time.sleep(2)
+    for prompt, temp in attempts:
+        txt, info = _gigachat_call(prompt, temp)
+        last = info
+        if txt is None:
+            continue
+        v = _yes_no(txt)
+        if v is not None:
+            return v, info
+        last = {"provider": "gigachat", "refusal": txt[:120]}
     return None, last
+
+
+def _yes_no(txt):
+    """Parse a YES/NO answer. Returns True / False / None (ambiguous)."""
+    up = (txt or "").upper()
+    if "YES" in up and "NO" not in up:
+        return True
+    if "NO" in up and "YES" not in up:
+        return False
+    return None
 
 
 def _llm_classify(prompt, attempts=3):
@@ -596,8 +638,16 @@ def check_review_genuine(title, overview, text):
     if not (GIGACHAT_AUTH_KEY or LLM_API_KEY):
         log_error("llm_review_check", "no LLM configured (neither GIGACHAT_AUTH_KEY nor LLM_API_KEY)")
         return None
-    # Framed as a binary CLASSIFICATION task (not "оцени/засчитать") — GigaChat
-    # otherwise reads it as a request for its opinion and returns a canned refusal.
+
+    # GigaChat: robust classification with refusal-aware retries (see _gigachat_verdict).
+    if GIGACHAT_AUTH_KEY:
+        verdict, info = _gigachat_verdict(title, overview, text)
+        if verdict is None:
+            log_error("llm_review_check", f"no verdict — last: {info}")
+        return verdict
+
+    # OpenAI-compatible fallback path (Groq/OpenRouter — geo-blocked from RU, kept
+    # only for completeness).
     prompt = (
         "Задача бинарной классификации. Верни ровно одно слово: YES или NO.\n"
         f"YES — если текст является отзывом или рецензией на «{title}» "
@@ -609,21 +659,14 @@ def check_review_genuine(title, overview, text):
         f"Текст пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n"
         "Ответ (одно слово, YES или NO):"
     )
-    if GIGACHAT_AUTH_KEY:
-        txt, info = _gigachat_classify(prompt)
-    else:
-        txt, info = _llm_classify(prompt)
+    txt, info = _llm_classify(prompt)
     if txt is None:
         log_error("llm_review_check", f"no verdict — last: {info}")
         return None
-    up = txt.upper()
-    if "YES" in up and "NO" not in up:
-        return True
-    if "NO" in up and "YES" not in up:
-        return False
-    # Ambiguous / non-compliant output (e.g. a reasoning model) — undetermined.
-    log_error("llm_review_check", f"ambiguous answer: {txt[:120]!r}")
-    return None
+    v = _yes_no(txt)
+    if v is None:
+        log_error("llm_review_check", f"ambiguous answer: {txt[:120]!r}")
+    return v
 
 
 def verify_rating(cur, rating_id, review_text):

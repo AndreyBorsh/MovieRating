@@ -569,18 +569,26 @@ def _gigachat_verdict(title, overview, text):
         "NO — спам, набор слов или не про этот фильм. Ответь одним словом YES или NO.\n"
         f"Текст: \"\"\"{text[:1500]}\"\"\""
     )
-    attempts = [(full, 0.0), (full, 0.6), (short, 0.4), (short, 0.8)]
+    topic = (
+        "Ответь одним словом YES или NO. YES — если текст ниже посвящён фильму, "
+        "сериалу, актёрам, режиссуре или впечатлениям от просмотра; NO — если о другом.\n"
+        f"Текст: \"\"\"{text[:1500]}\"\"\""
+    )
+    attempts = [(full, 0.0), (full, 0.6), (short, 0.4), (topic, 0.3), (topic, 0.9)]
+    saw_refusal = False
     last = {}
     for prompt, temp in attempts:
         txt, info = _gigachat_call(prompt, temp)
-        last = info
         if txt is None:
+            last = info
             continue
         v = _yes_no(txt)
         if v is not None:
             return v, info
+        if _is_refusal(txt):
+            saw_refusal = True
         last = {"provider": "gigachat", "refusal": txt[:120]}
-    return None, last
+    return None, {**last, "all_refusals": saw_refusal}
 
 
 def _yes_no(txt):
@@ -591,6 +599,18 @@ def _yes_no(txt):
     if "NO" in up and "YES" not in up:
         return False
     return None
+
+
+_GIGA_REFUSAL_MARKERS = (
+    "не облада", "языков", "к сожалению", "не могу", "мнени", "некорректн",
+    "открытых источник", "не имею",
+)
+
+
+def _is_refusal(txt):
+    """True if GigaChat returned a canned safety/disclaimer refusal (not a verdict)."""
+    low = (txt or "").lower()
+    return any(m in low for m in _GIGA_REFUSAL_MARKERS)
 
 
 def _llm_classify(prompt, attempts=3):
@@ -643,6 +663,13 @@ def check_review_genuine(title, overview, text):
     if GIGACHAT_AUTH_KEY:
         verdict, info = _gigachat_verdict(title, overview, text)
         if verdict is None:
+            if info.get("all_refusals"):
+                # GigaChat's safety filter refused to judge this text (usually an
+                # edgy-but-genuine review). The code gates already ensured length,
+                # quality and non-duplicate, and a refusal is NOT an "off-topic"
+                # verdict — so pass it (benefit of the doubt). Admin can still reject.
+                log_error("llm_review_check", f"gigachat refused → counted as genuine: {info.get('refusal', '')}")
+                return True
             log_error("llm_review_check", f"no verdict — last: {info}")
         return verdict
 

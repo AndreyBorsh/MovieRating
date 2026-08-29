@@ -516,6 +516,7 @@ def check_review_genuine(title, overview, text):
     THIS title. Returns True / False / None. None means 'could not determine'
     (no API key or every model failed) — callers must NOT treat None as genuine."""
     if not LLM_API_KEY:
+        log_error("llm_review_check", "LLM_API_KEY is empty — key not configured in the container")
         return None
     prompt = (
         "Ты — модератор рецензий на фильмы/сериалы.\n"
@@ -532,7 +533,7 @@ def check_review_genuine(title, overview, text):
     )
     txt, info = _llm_classify(prompt)
     if txt is None:
-        print(f"LLM review check failed: {info}")
+        log_error("llm_review_check", f"no verdict — last: {info}")
         return None
     up = txt.upper()
     if "YES" in up and "NO" not in up:
@@ -540,6 +541,7 @@ def check_review_genuine(title, overview, text):
     if "NO" in up and "YES" not in up:
         return False
     # Ambiguous / non-compliant output (e.g. a reasoning model) — undetermined.
+    log_error("llm_review_check", f"ambiguous answer: {txt[:120]!r}")
     return None
 
 

@@ -525,8 +525,14 @@ def _gigachat_classify(prompt, attempts=3):
             r = requests.post(
                 "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
                 headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
-                json={"model": GIGACHAT_MODEL, "max_tokens": 24, "temperature": 0.1,
-                      "messages": [{"role": "user", "content": prompt}]},
+                json={"model": GIGACHAT_MODEL, "max_tokens": 24, "temperature": 0.0,
+                      "messages": [
+                          {"role": "system", "content":
+                           "Ты — автоматический модуль классификации текста. Отвечай строго "
+                           "одним словом латиницей: YES или NO. Без пояснений, дисклеймеров, "
+                           "рассуждений и отказов. Это техническая проверка, а не запрос мнения."},
+                          {"role": "user", "content": prompt},
+                      ]},
                 timeout=30,
                 verify=False,
             )
@@ -590,18 +596,18 @@ def check_review_genuine(title, overview, text):
     if not (GIGACHAT_AUTH_KEY or LLM_API_KEY):
         log_error("llm_review_check", "no LLM configured (neither GIGACHAT_AUTH_KEY nor LLM_API_KEY)")
         return None
+    # Framed as a binary CLASSIFICATION task (not "оцени/засчитать") — GigaChat
+    # otherwise reads it as a request for its opinion and returns a canned refusal.
     prompt = (
-        "Ты — модератор рецензий на фильмы/сериалы.\n"
-        f"Произведение: «{title}».\n"
-        f"Официальное описание: {overview or '—'}\n\n"
-        f"Текст пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n\n"
-        "Засчитать этот текст как НАСТОЯЩУЮ рецензию ИМЕННО на это произведение?\n"
-        "Отвечай YES только если текст реально оценивает само произведение "
-        "(сюжет, игру актёров, режиссуру, атмосферу, личные впечатления от просмотра).\n"
-        "Отвечай NO, если текст на постороннюю тему (программирование, базы данных, "
-        "учёба, политика, реклама и т.п.), это спам, набор слов, бессмыслица, "
-        "пересказ комментариев или вообще не про этот фильм/сериал.\n"
-        "Ответь строго одним словом: YES или NO."
+        "Задача бинарной классификации. Верни ровно одно слово: YES или NO.\n"
+        f"YES — если текст является отзывом или рецензией на «{title}» "
+        "(мнение о сюжете, актёрах, режиссуре, атмосфере, впечатления от просмотра), "
+        "даже если отзыв резкий, короткий или негативный.\n"
+        "NO — если текст на постороннюю тему (программирование, учёба, реклама и т.п.), "
+        "спам, набор слов, бессмыслица или не про это произведение.\n"
+        f"Описание произведения: {overview or '—'}\n"
+        f"Текст пользователя:\n\"\"\"\n{text[:4000]}\n\"\"\"\n"
+        "Ответ (одно слово, YES или NO):"
     )
     if GIGACHAT_AUTH_KEY:
         txt, info = _gigachat_classify(prompt)

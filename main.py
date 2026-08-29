@@ -39,13 +39,9 @@ LLM_API_KEY = os.environ.get("LLM_API_KEY", "")
 # Groq's OpenAI-compatible endpoint — free tier is fast and reliable (OpenRouter's
 # free pool was permanently rate-limited/deprecated). Needs a Groq API key.
 LLM_API_URL = os.environ.get("LLM_API_URL", "https://api.groq.com/openai/v1/chat/completions")
-# Comma-separated; tried in order until one responds. Plain instruction-tuned
-# models that answer YES/NO directly (no chain-of-thought models).
-LLM_MODEL = os.environ.get("LLM_MODEL", ",".join([
-    "llama-3.3-70b-versatile",
-    "llama-3.1-8b-instant",
-    "gemma2-9b-it",
-]))
+# Comma-separated; tried in order until one responds. gpt-oss-120b (with
+# reasoning_effort=low) reliably returns a clean YES/NO for the review prompt.
+LLM_MODEL = os.environ.get("LLM_MODEL", "openai/gpt-oss-120b")
 
 
 def get_db():
@@ -491,7 +487,8 @@ def _llm_classify(prompt, attempts=3):
                 r = requests.post(
                     LLM_API_URL,
                     headers={"Authorization": f"Bearer {LLM_API_KEY}", "content-type": "application/json"},
-                    json={"model": m, "max_tokens": 16, "temperature": 0,
+                    json={"model": m, "max_tokens": 1000, "temperature": 0,
+                          "reasoning_effort": "low",
                           "messages": [{"role": "user", "content": prompt}]},
                     timeout=20,
                 )
